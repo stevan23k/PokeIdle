@@ -70,7 +70,7 @@ export async function useItemOnPokemon(
     if (itemDef.category === "special") {
       // Permanent Stat Boost (Vitamins -> EVs)
       const stat = itemDef.effect.stat;
-      if (stat === "crit") {
+      if (stat === "crit" || stat === "acc" || stat === "eva") {
         return {
           resultLog: "Este objeto no se puede usar así.",
           success: false,
@@ -79,13 +79,15 @@ export async function useItemOnPokemon(
         };
       }
 
+      // At this point, stat is guaranteed to be a key of PokemonStats
+      const statKey = stat as keyof typeof nextPokemon.evs;
       const currentEvs = nextPokemon.evs;
       const totalEvs = Object.values(currentEvs).reduce(
         (a: number, b: number) => a + b,
         0,
       );
 
-      if (currentEvs[stat] >= 252) {
+      if (currentEvs[statKey] >= 252) {
         return {
           resultLog: `¡${nextPokemon.name} ya no puede mejorar más su ${stat}!`,
           success: false,
@@ -103,10 +105,14 @@ export async function useItemOnPokemon(
         };
       }
 
-      const amountToAdd = Math.min(10, 252 - currentEvs[stat], 510 - totalEvs);
+      const amountToAdd = Math.min(
+        10,
+        252 - currentEvs[statKey],
+        510 - totalEvs,
+      );
       nextPokemon.evs = {
         ...currentEvs,
-        [stat]: currentEvs[stat] + amountToAdd,
+        [statKey]: currentEvs[statKey] + amountToAdd,
       };
 
       // Recalculate stats
