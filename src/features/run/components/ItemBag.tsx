@@ -7,10 +7,10 @@ import { useItemOnPokemon } from "../../../engine/items.engine";
 import { equipItem } from "../../../engine/heldItems.engine";
 import { ItemSprite } from "../../../components/ui/ItemSprite";
 import { PixelSprite } from "../../../components/ui/PixelSprite";
+import { StarOff } from "lucide-react";
 
 export function ItemBag() {
   const { run, setRun, setMeta } = useGame();
-  const [tab, setTab] = useState<"heal" | "ball" | "battle">("heal");
   const [useTargetModal, setUseTargetModal] = useState<string | null>(null);
 
   if (!run.isActive) return null;
@@ -25,7 +25,7 @@ export function ItemBag() {
     if (!itemDef) return;
 
     if (itemDef.category === "held") {
-      const { success, newPokemon, newInventory, msg } = equipItem(
+      const { success, newPokemon, newInventory } = equipItem(
         pokemon,
         useTargetModal,
         run.items,
@@ -61,9 +61,17 @@ export function ItemBag() {
             [useTargetModal]: (prev.itemUsage[useTargetModal] || 0) + 1,
           },
           team: prev.team.map((p) => (p.uid === pokemon!.uid ? newPokemon : p)),
+          currentBattle:
+            prev.currentBattle?.playerPokemon?.uid === pokemon!.uid
+              ? { ...prev.currentBattle, playerPokemon: newPokemon }
+              : prev.currentBattle,
           battleLog: [
             ...prev.battleLog,
-            { id: Date.now().toString(), text: resultLog, type: "normal" as const },
+            {
+              id: Date.now().toString(),
+              text: resultLog,
+              type: "normal" as const,
+            },
           ].slice(-40),
         }));
         setMeta((prev) => ({
@@ -80,42 +88,29 @@ export function ItemBag() {
     setUseTargetModal(null);
   };
 
-  const currentItems = Object.entries(run.items).filter(([id, qty]) => {
-    if (qty <= 0) return false;
-    const cat = ITEMS[id]?.category;
-    if (tab === "heal") return cat === "heal";
-    if (tab === "ball") return cat === "ball";
-    return cat === "battle" || cat === "held" || cat === "evo";
-  });
+  const unpinItem = (itemId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRun((prev) => ({
+      ...prev,
+      pinnedItems: (prev.pinnedItems || []).filter((id) => id !== itemId),
+    }));
+  };
+
+  const pinnedItemsIds = run.pinnedItems || [];
+  const currentItems = pinnedItemsIds
+    .filter((id) => (run.items[id] || 0) > 0)
+    .map((id) => [id, run.items[id]] as const);
 
   return (
     <div className="flex flex-col p-3 border-b-2 border-border mb-2 bg-surface">
       <h2 className="font-display text-brand text-[0.65rem] uppercase mb-3 tracking-wider flex justify-between">
-        <span>MOCHILA</span>
-        {/* <span className="text-accent drop-shadow-md">¥ {run.totalBattlesWon * 50}</span> */}
+        <span>ACCESO RÁPIDO</span>
       </h2>
-
-      <div className="flex bg-surface-dark border-2 border-border p-0.5 mb-3 select-none">
-        {(["heal", "ball", "battle"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={clsx(
-              "flex-1 py-1.5 font-display text-[0.45rem] tracking-widest text-center transition-colors border",
-              tab === t
-                ? "bg-surface text-brand border-brand"
-                : "text-muted hover:text-white border-transparent",
-            )}
-          >
-            {t === "heal" ? "CURA" : t === "ball" ? "BALLS" : "BATALLA"}
-          </button>
-        ))}
-      </div>
 
       <div className="flex flex-col gap-1.5 min-h-[120px] max-h-[220px] overflow-y-auto pr-1">
         {currentItems.length === 0 ? (
           <div className="text-center font-body text-xs text-muted italic p-4">
-            Sección vacía.
+            No hay objetos anclados. Usa la Mochila para anclar objetos aquí.
           </div>
         ) : (
           currentItems.map(([id, qty]) => {
@@ -124,7 +119,7 @@ export function ItemBag() {
             return (
               <div
                 key={id}
-                className="flex items-center justify-between p-2 bg-surface-alt border border-border group"
+                className="flex items-center justify-between p-2 bg-surface-alt border border-border group relative"
               >
                 <div className="flex items-center gap-3">
                   <ItemSprite
@@ -132,8 +127,8 @@ export function ItemBag() {
                     size={24}
                     className="drop-shadow-sm group-hover:scale-110 transition-transform"
                   />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-display text-[0.5rem] tracking-wider truncate max-w-[90px] text-foreground">
+                  <div className="flex flex-col gap-0.5 max-w-[80px]">
+                    <span className="font-display text-[0.5rem] tracking-wider truncate text-foreground">
                       {item.name}
                     </span>
                     <span className="font-body text-[0.55rem] font-bold text-muted">
@@ -141,37 +136,49 @@ export function ItemBag() {
                     </span>
                   </div>
                 </div>
-                {(item.category === "heal" ||
-                  item.category === "held" ||
-                  item.category === "evo") && (
+
+                <div className="flex items-center gap-1">
                   <button
-                    onClick={() => setUseTargetModal(id)}
-                    className="px-2 py-1.5 bg-surface-dark border border-border text-[0.45rem] text-muted font-display uppercase tracking-widest hover:border-brand hover:text-brand transition-colors"
+                    onClick={(e) => unpinItem(id, e)}
+                    className="p-1 px-1.5 bg-surface border border-transparent text-muted hover:text-danger hover:border-danger transition-colors opacity-0 group-hover:opacity-100"
+                    title="Desanclar"
                   >
-                    {item.category === "held" ? "EQUIPAR" : "USAR"}
+                    <StarOff size={12} />
                   </button>
-                )}
+
+                  {(item.category === "heal" ||
+                    item.category === "held" ||
+                    item.category === "evo" ||
+                    item.category === "ball" ||
+                    item.category === "battle" ||
+                    item.category === "berry") && (
+                    <button
+                      onClick={() => setUseTargetModal(id)}
+                      className="px-2 py-1.5 bg-surface-dark border border-border text-[0.45rem] text-muted font-display uppercase tracking-widest hover:border-brand hover:text-brand transition-colors"
+                    >
+                      {item.category === "held" ? "EQUIPAR" : "USAR"}
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })
         )}
       </div>
 
-      {tab === "heal" && (
-        <div className="mt-4 flex items-center justify-between border-t border-dashed border-border pt-3">
-          <span className="font-display text-[0.55rem] text-muted tracking-widest">
-            AUTO-CURACIÓN
-          </span>
-          <button
-            onClick={() =>
-              setRun((prev) => ({ ...prev, autoItems: !prev.autoItems }))
-            }
-            className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.autoItems ? "bg-success/20 text-success border-success" : "bg-surface-dark text-muted border-border hover:border-muted"}`}
-          >
-            {run.autoItems ? "ON" : "OFF"}
-          </button>
-        </div>
-      )}
+      <div className="mt-4 flex items-center justify-between border-t border-dashed border-border pt-3">
+        <span className="font-display text-[0.55rem] text-muted tracking-widest">
+          AUTO-CURACIÓN
+        </span>
+        <button
+          onClick={() =>
+            setRun((prev) => ({ ...prev, autoItems: !prev.autoItems }))
+          }
+          className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.autoItems ? "bg-success/20 text-success border-success" : "bg-surface-dark text-muted border-border hover:border-muted"}`}
+        >
+          {run.autoItems ? "ON" : "OFF"}
+        </button>
+      </div>
 
       {useTargetModal !== null && (
         <ConfirmModal

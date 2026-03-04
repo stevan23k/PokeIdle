@@ -25,13 +25,14 @@ interface GameContextValue {
   setMeta: React.Dispatch<React.SetStateAction<MetaState>>;
   setTraining: React.Dispatch<React.SetStateAction<TrainingState>>;
   saveGame: () => void;
+  resetRun: () => void;
   notify: (notification: Omit<GameNotification, "id">) => void;
   removeNotification: (id: string) => void;
   notifications: GameNotification[];
   isCloudSyncing: boolean;
 }
 
-const defaultRun: RunState = {
+export const defaultRun: RunState = {
   runId: "",
   startedAt: 0,
   isActive: false,
@@ -47,7 +48,6 @@ const defaultRun: RunState = {
   eliteFourDefeated: false,
   items: { "poke-ball": 10, potion: 5 }, // Starter items
   expMultiplier: 1.0,
-  hasExpShare: false,
   hasMegaBracelet: false,
   speedMultiplier: 1,
   autoCapture: true,
@@ -65,6 +65,8 @@ const defaultRun: RunState = {
   maxWinStreak: 0,
   itemUsage: {},
   pendingLootSelection: null,
+  pendingZoneTransition: false,
+  pinnedItems: [],
 };
 
 const defaultTrainingState: TrainingState = {
@@ -135,41 +137,58 @@ const defaultMeta: MetaState = {
   lastShiny: null,
   capturedUniqueIds: [],
   totalItemsUsed: {},
+  gachaPity: {},
 };
 
 const GameContext = createContext<GameContextValue | null>(null);
 
 function runMigrationsMeta(loaded: any) {
-    if (loaded.unlockedStarters && loaded.unlockedStarters.length > 0) {
-      if (typeof loaded.unlockedStarters[0] === "number") {
-        loaded.unlockedStarters = defaultMeta.unlockedStarters;
-      } else {
-        loaded.unlockedStarters = loaded.unlockedStarters.map((s: any) => ({
-          ...s,
-          maxIvs: s.maxIvs || { hp: 15, attack: 15, defense: 15, spAtk: 15, spDef: 15, speed: 15 },
-          maxEvs: s.maxEvs || { hp: 0, attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 },
-          unlockedNatures: s.unlockedNatures || [],
-        }));
-      }
+  if (loaded.unlockedStarters && loaded.unlockedStarters.length > 0) {
+    if (typeof loaded.unlockedStarters[0] === "number") {
+      loaded.unlockedStarters = defaultMeta.unlockedStarters;
+    } else {
+      loaded.unlockedStarters = loaded.unlockedStarters.map((s: any) => ({
+        ...s,
+        maxIvs: s.maxIvs || {
+          hp: 15,
+          attack: 15,
+          defense: 15,
+          spAtk: 15,
+          spDef: 15,
+          speed: 15,
+        },
+        maxEvs: s.maxEvs || {
+          hp: 0,
+          attack: 0,
+          defense: 0,
+          spAtk: 0,
+          spDef: 0,
+          speed: 0,
+        },
+        unlockedNatures: s.unlockedNatures || [],
+      }));
     }
-    if (loaded.pokeCoins === undefined) loaded.pokeCoins = 0;
-    loaded.totalTimePlayed = loaded.totalTimePlayed ?? 0;
-    loaded.highestLevelReached = loaded.highestLevelReached ?? 0;
-    loaded.mostCapturedPokemonId = loaded.mostCapturedPokemonId ?? null;
-    loaded.fastestGym1Time = loaded.fastestGym1Time ?? null;
-    loaded.maxWinStreakEver = loaded.maxWinStreakEver ?? 0;
-    loaded.firstShiny = loaded.firstShiny ?? null;
-    loaded.lastShiny = loaded.lastShiny ?? null;
-    loaded.capturedUniqueIds = loaded.capturedUniqueIds ?? [];
-    loaded.totalItemsUsed = loaded.totalItemsUsed ?? {};
-    return loaded;
+  }
+  if (loaded.pokeCoins === undefined) loaded.pokeCoins = 0;
+  loaded.totalTimePlayed = loaded.totalTimePlayed ?? 0;
+  loaded.highestLevelReached = loaded.highestLevelReached ?? 0;
+  loaded.mostCapturedPokemonId = loaded.mostCapturedPokemonId ?? null;
+  loaded.fastestGym1Time = loaded.fastestGym1Time ?? null;
+  loaded.maxWinStreakEver = loaded.maxWinStreakEver ?? 0;
+  loaded.firstShiny = loaded.firstShiny ?? null;
+  loaded.lastShiny = loaded.lastShiny ?? null;
+  loaded.capturedUniqueIds = loaded.capturedUniqueIds ?? [];
+  loaded.totalItemsUsed = loaded.totalItemsUsed ?? {};
+  return loaded;
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
-  const [run, setRun] = useState<RunState>(() => loadFromStorage("pokeidle_run", defaultRun));
+  const [run, setRun] = useState<RunState>(() =>
+    loadFromStorage("pokeidle_run", defaultRun),
+  );
   const [training, setTraining] = useState<TrainingState>(() => {
     const loaded = loadFromStorage("pokeidle_training", defaultTrainingState);
     if (!loaded.items) loaded.items = {};
@@ -179,7 +198,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [meta, setMeta] = useState<MetaState>(() => {
     return runMigrationsMeta(loadFromStorage("pokeidle_meta", defaultMeta));
   });
-  
+
   const {
     queue: notifications,
     notify,
@@ -193,22 +212,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const loadFromCloud = async () => {
         try {
           const { data, error } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', user.id)
+            .from("user_profiles")
+            .select("*")
+            .eq("id", user.id)
             .single();
 
           if (error) throw error;
 
           if (data) {
             if (data.run_state && Object.keys(data.run_state).length > 0) {
-               setRun(data.run_state as RunState);
+              setRun(data.run_state as RunState);
             }
-            if (data.training_state && Object.keys(data.training_state).length > 0) {
-               setTraining(data.training_state as TrainingState);
+            if (
+              data.training_state &&
+              Object.keys(data.training_state).length > 0
+            ) {
+              setTraining(data.training_state as TrainingState);
             }
             if (data.meta_state && Object.keys(data.meta_state).length > 0) {
-               setMeta(runMigrationsMeta(data.meta_state) as MetaState);
+              setMeta(runMigrationsMeta(data.meta_state) as MetaState);
             }
           }
         } catch (e) {
@@ -229,19 +251,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (user) {
       try {
         await supabase
-          .from('user_profiles')
+          .from("user_profiles")
           .update({
             run_state: run,
             meta_state: meta,
             training_state: training,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           })
-          .eq('id', user.id);
+          .eq("id", user.id);
       } catch (e) {
         console.error("Failed to sync state to cloud", e);
       }
     }
   }, [run, meta, training, user]);
+
+  const resetRun = useCallback(() => {
+    setRun(defaultRun);
+    saveToStorage("pokeidle_run", defaultRun);
+  }, []);
 
   // Auto-save every 10s
   useEffect(() => {
@@ -268,10 +295,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setMeta,
         setTraining,
         saveGame,
+        resetRun,
         notify,
         removeNotification,
         notifications,
-        isCloudSyncing
+        isCloudSyncing,
       }}
     >
       {children}

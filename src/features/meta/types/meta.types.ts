@@ -44,4 +44,5 @@ export interface MetaState {
   lastShiny: { id: number; runId: string; timestamp: number } | null;
   capturedUniqueIds: number[];
   totalItemsUsed: Record<string, number>; // category -> count
+  gachaPity: Record<string, number>; // bannerId -> pulls since last legendary
 }

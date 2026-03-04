@@ -7,6 +7,9 @@ import { XPBar } from "../../../components/ui/XPBar";
 import { TypeBadge } from "../../../components/ui/TypeBadge";
 import { MoveManager } from "./MoveManager";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal";
+import { ItemSprite } from "../../../components/ui/ItemSprite/ItemSprite";
+import { ITEMS } from "../../../lib/items";
+import { unequipItem } from "../../../engine/heldItems.engine";
 import { clsx } from "clsx";
 
 interface Props {
@@ -19,6 +22,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
   const { run, setRun } = useGame();
   const [expanded, setExpanded] = useState(false);
   const [showReleaseConfirm, setShowReleaseConfirm] = useState(false);
+  const [showUnequipPopover, setShowUnequipPopover] = useState(false);
 
   const handleSwitch = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -43,7 +47,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
       // But let's just remove it from the team for now
       return {
         ...prev,
-        team: prev.team.filter(p => p.uid !== pokemon.uid)
+        team: prev.team.filter((p) => p.uid !== pokemon.uid),
       };
     });
     setShowReleaseConfirm(false);
@@ -54,7 +58,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
       className={clsx(
         "border-2 transition-colors",
         isActive ? "bg-surface-alt border-brand" : "bg-surface border-border",
-        pokemon.currentHP === 0 && "opacity-60 grayscale-[0.5]"
+        pokemon.currentHP === 0 && "opacity-60 grayscale-[0.5]",
       )}
     >
       <div
@@ -155,6 +159,64 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
           </div>
 
           <MoveManager pokemon={pokemon} />
+
+          {/* Held Item */}
+          <div className="flex items-center gap-2 border-t border-border pt-2 relative">
+            <span className="font-display text-[0.5rem] text-muted tracking-wider">
+              OBJETO:
+            </span>
+            {pokemon.heldItem && ITEMS[pokemon.heldItem] ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowUnequipPopover(!showUnequipPopover);
+                }}
+                className="flex items-center gap-1.5 bg-surface border border-border px-2 py-1 hover:border-brand transition-colors"
+              >
+                <ItemSprite item={ITEMS[pokemon.heldItem]} size={16} />
+                <span className="font-body text-[0.6rem] text-foreground">
+                  {ITEMS[pokemon.heldItem].name}
+                </span>
+              </button>
+            ) : (
+              <span className="font-body text-[0.55rem] text-muted italic">
+                Sin objeto equipado
+              </span>
+            )}
+            {showUnequipPopover && pokemon.heldItem && (
+              <div className="absolute left-0 bottom-full mb-1 bg-surface-dark border-2 border-border p-2 shadow-pixel z-10">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const { success, newPokemon, newInventory } = unequipItem(
+                      pokemon,
+                      run.items,
+                    );
+                    if (success) {
+                      setRun((prev) => ({
+                        ...prev,
+                        items: newInventory,
+                        team: prev.team.map((p) =>
+                          p.uid === pokemon.uid ? newPokemon : p,
+                        ),
+                        currentBattle:
+                          prev.currentBattle?.playerPokemon?.uid === pokemon.uid
+                            ? {
+                                ...prev.currentBattle,
+                                playerPokemon: newPokemon,
+                              }
+                            : prev.currentBattle,
+                      }));
+                    }
+                    setShowUnequipPopover(false);
+                  }}
+                  className="font-display text-[0.5rem] text-danger hover:text-white hover:bg-danger/50 px-3 py-1 border border-danger transition-colors tracking-wider"
+                >
+                  DESEQUIPAR
+                </button>
+              </div>
+            )}
+          </div>
 
           {run.isManualBattle &&
             run.currentBattle?.phase === "active" &&

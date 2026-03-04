@@ -133,7 +133,6 @@ export interface RunState {
 
   items: Record<string, number>;
   expMultiplier: number; // Cumulative from "Cartas"
-  hasExpShare: boolean;
   hasMegaBracelet: boolean;
 
   speedMultiplier: 0 | 1 | 2 | 4 | "SKIP";
@@ -156,4 +155,6 @@ export interface RunState {
   itemUsage: Record<string, number>; // slug -> count
 
   pendingLootSelection: string[] | null;
+  pendingZoneTransition: boolean;
+  pinnedItems: string[]; // slug
 }

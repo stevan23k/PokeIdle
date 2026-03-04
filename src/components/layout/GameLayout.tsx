@@ -15,6 +15,8 @@ import { ManualBattleHUD } from "../../features/run/components/ManualBattleHUD";
 import { Menu } from "lucide-react";
 import { EventToast } from "../../components/ui/EventToast";
 import { LootSelectionModal } from "../../features/run/components/LootSelectionModal";
+import { BagModal } from "../../features/run/components/BagModal";
+import { ZoneTransitionModal } from "../../features/run/components/ZoneTransitionModal";
 
 import { TrainingSelector } from "../../features/training/components/TrainingSelector";
 import { TrainingLayout } from "../../features/training/components/TrainingLayout";
@@ -25,6 +27,7 @@ export function GameLayout() {
   const {
     run,
     setRun,
+    resetRun,
     training,
     setTraining,
     meta,
@@ -40,6 +43,7 @@ export function GameLayout() {
     | "gacha"
     | "stats"
   >("main");
+  const [isBagOpen, setIsBagOpen] = React.useState(false);
 
   // Synchronize component state with game context
   React.useEffect(() => {
@@ -94,12 +98,7 @@ export function GameLayout() {
           </div>
           <button
             onClick={() => {
-              setRun((prev) => ({
-                ...prev,
-                isActive: false,
-                currentBattle: null,
-                team: [],
-              }));
+              resetRun();
               setCurrentScreen("main");
             }}
             className="mt-8 px-6 py-4 bg-brand border-4 border-brand-deep font-display text-white text-[0.6rem] tracking-widest hover:bg-brand-dark transition-colors hover:translate-x-1 hover:translate-y-1 shadow-[4px_4px_0_rgba(0,0,0,0.8)] hover:shadow-none"
@@ -142,12 +141,7 @@ export function GameLayout() {
           </div>
           <button
             onClick={() => {
-              setRun((prev) => ({
-                ...prev,
-                isActive: false,
-                currentBattle: null,
-                team: [],
-              }));
+              resetRun();
               setCurrentScreen("main");
             }}
             className="mt-8 px-6 py-4 bg-accent border-4 border-[#B8A038] font-display text-black text-[0.6rem] tracking-widest hover:bg-white transition-colors hover:translate-x-1 hover:translate-y-1 shadow-[4px_4px_0_rgba(0,0,0,0.8)] hover:shadow-none"
@@ -187,7 +181,7 @@ export function GameLayout() {
         <StarterSelector />
         <button
           onClick={() => setCurrentScreen("main")}
-          className="fixed top-4 left-4 z-[100] bg-surface-dark border-2 border-border p-2 font-display text-[0.6rem] text-muted hover:text-white transition-colors"
+          className="fixed top-4 left-4 z-100 bg-surface-dark border-2 border-border p-2 font-display text-[0.6rem] text-muted hover:text-white transition-colors"
         >
           &lt; VOLVER
         </button>
@@ -201,7 +195,7 @@ export function GameLayout() {
         <TrainingSelector />
         <button
           onClick={() => setCurrentScreen("main")}
-          className="fixed top-4 left-4 z-[100] bg-surface-dark border-2 border-border p-2 font-display text-[0.6rem] text-muted hover:text-white transition-colors"
+          className="fixed top-4 left-4 z-100 bg-surface-dark border-2 border-border p-2 font-display text-[0.6rem] text-muted hover:text-white transition-colors"
         >
           &lt; VOLVER
         </button>
@@ -214,69 +208,88 @@ export function GameLayout() {
   }
 
   return (
-    <div className="flex flex-col h-screen min-h-screen max-h-screen bg-surface overflow-hidden">
-      <PauseMenu onReturnToMenu={() => setCurrentScreen("main")} />
-      {/* HEADER */}
-      <header className="flex-none bg-surface-dark border-b-2 border-border p-2 z-10 sticky top-0 flex items-center justify-between shadow-pixel">
-        <h1 className="font-display text-text-heading text-foreground w-64 shrink-0 drop-shadow-sm">
-          POKÉ<span className="text-brand">IDLE</span>
-        </h1>
-        <div className="flex justify-center flex-1">
-          <SpeedControl
-            speed={run.speedMultiplier}
-            onChange={(s: any) => setRun((p) => ({ ...p, speedMultiplier: s }))}
-          />
-        </div>
-        <div className="w-64 shrink-0 flex justify-end">
-          <button
-            onClick={() => setRun((p) => ({ ...p, isPaused: true }))}
-            className="flex items-center justify-center p-2 bg-surface-alt border-2 border-border cursor-pointer hover:bg-surface-light hover:text-accent transition-colors"
-            title="Pausar Juego"
-          >
-            <Menu size={16} />
-          </button>
-        </div>
-      </header>
-
-      <div className="h-screen max-h-screen bg-black text-foreground flex flex-col md:flex-row overflow-hidden max-w-[1600px] mx-auto xl:border-x-4 border-border relative">
-        <LootSelectionModal />
-
-        {/* Modals & Overlays */}
-        <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
-          {notifications.map((notif) => (
-            <EventToast
-              key={notif.id}
-              notification={notif}
-              onDismiss={() => removeNotification(notif.id)}
+    <>
+      <div className="flex flex-col h-screen min-h-screen max-h-screen bg-surface overflow-hidden">
+        <PauseMenu onReturnToMenu={() => setCurrentScreen("main")} />
+        {/* HEADER */}
+        <header className="flex-none bg-surface-dark border-b-2 border-border p-2 z-10 sticky top-0 flex items-center justify-between shadow-pixel">
+          <h1 className="font-display text-text-heading text-foreground w-64 shrink-0 drop-shadow-sm">
+            POKÉ<span className="text-brand">IDLE</span>
+          </h1>
+          <div className="flex justify-center flex-1">
+            <SpeedControl
+              speed={run.speedMultiplier}
+              onChange={(s: any) =>
+                setRun((p) => ({ ...p, speedMultiplier: s }))
+              }
             />
-          ))}
-        </div>
+          </div>
+          <div className="w-64 shrink-0 flex justify-end gap-2">
+            <button
+              onClick={() => setIsBagOpen(true)}
+              className="flex items-center justify-center bg-surface-alt border-2 border-border cursor-pointer hover:bg-surface-light hover:border-brand transition-colors p-1"
+              title="Abrir Mochila"
+            >
+              <img
+                src="/sprites/Bag.png"
+                alt="Bag"
+                className="w-6 h-6 object-contain render-pixelated"
+              />
+            </button>
 
-        {/* Left Panel */}
-        <div className="flex-1 md:w-[320px] md:max-w-[320px] border-r border-border bg-surface flex flex-col overflow-y-auto hidden md:flex">
-          <RegionMap />
-          <TeamRoster />
-        </div>
+            <button
+              onClick={() => setRun((p) => ({ ...p, isPaused: true }))}
+              className="flex items-center justify-center p-2 bg-surface-alt border-2 border-border cursor-pointer hover:bg-surface-light hover:text-accent transition-colors"
+              title="Pausar Juego"
+            >
+              <Menu size={16} />
+            </button>
+          </div>
+        </header>
 
-        {/* Center Panel */}
-        <div className="flex-[1.5] flex flex-col min-w-[400px]">
-          <BattleView />
-          {run.isManualBattle ? <ManualBattleHUD /> : <BattleLog />}
-        </div>
+        <div className="h-screen max-h-screen bg-black text-foreground flex flex-col md:flex-row overflow-hidden max-w-[1600px] mx-auto xl:border-x-4 border-border relative">
+          <LootSelectionModal />
 
-        {/* Right Panel */}
-        <div className="flex-1 md:w-[320px] md:max-w-[320px] border-l border-border bg-surface flex flex-col overflow-y-auto hidden md:flex">
-          {run.isManualBattle && <BattleLog />}
-          <ZoneView />
-          <ItemBag />
-          <CaptureLog />
-        </div>
+          {/* Modals & Overlays */}
+          <div className="absolute top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+            {notifications.map((notif) => (
+              <EventToast
+                key={notif.id}
+                notification={notif}
+                onDismiss={() => removeNotification(notif.id)}
+              />
+            ))}
+          </div>
 
-        {/* Mobile Disclaimer */}
-        <div className="md:hidden p-4 text-center font-display text-[0.45rem] bg-surface text-brand border-t-2 border-brand/50 tracking-widest flex items-center justify-center">
-          SE RECOMIENDA PANTALLA ANCHA O ROTAR DISPOSITIVO
+          {/* Left Panel */}
+          <div className="flex-1 md:w-[320px] md:max-w-[320px] border-r border-border bg-surface overflow-y-auto hidden md:flex flex-col">
+            <RegionMap />
+            <TeamRoster />
+          </div>
+
+          {/* Center Panel */}
+          <div className="flex-[1.5] flex flex-col min-w-[400px]">
+            <BattleView />
+            {run.isManualBattle && <ManualBattleHUD />}
+          </div>
+
+          {/* Right Panel */}
+          <div className="flex-1 md:w-[320px] md:max-w-[320px] border-l border-border bg-surface overflow-y-auto hidden md:flex flex-col">
+            <ZoneView />
+            <ItemBag />
+            <BattleLog />
+          </div>
+
+          {/* Mobile Disclaimer */}
+          <div className="md:hidden p-4 text-center font-display text-[0.45rem] bg-surface text-brand border-t-2 border-brand/50 tracking-widest flex items-center justify-center">
+            SE RECOMIENDA PANTALLA ANCHA O ROTAR DISPOSITIVO
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* OVERLAYS ROOT */}
+      {isBagOpen && <BagModal onClose={() => setIsBagOpen(false)} />}
+      <ZoneTransitionModal />
+    </>
   );
 }

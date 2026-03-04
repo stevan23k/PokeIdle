@@ -8,7 +8,7 @@ interface Props {
 }
 
 export function PauseMenu({ onReturnToMenu }: Props) {
-  const { run, setRun, setMeta } = useGame();
+  const { run, setRun, setMeta, resetRun, saveGame } = useGame();
   const [showConfirm, setShowConfirm] = useState(false);
 
   if (!run.isActive) return null;
@@ -21,18 +21,7 @@ export function PauseMenu({ onReturnToMenu }: Props) {
   };
 
   const handleRestart = () => {
-    setRun((prev) => ({
-      ...prev,
-      currentBattle: null,
-      battleLog: [
-        ...prev.battleLog,
-        {
-          id: generateUid(),
-          text: "El jugador ha reiniciado la partida...",
-          type: "danger" as any,
-        },
-      ],
-    }));
+    // Save to history before resetting
     setMeta((m) => ({
       ...m,
       totalRuns: m.totalRuns + 1,
@@ -55,8 +44,16 @@ export function PauseMenu({ onReturnToMenu }: Props) {
         ...m.runHistory,
       ],
     }));
-    // To trigger the actual end we can just set teamwork to 0 or isActive to false
-    setRun((p) => ({ ...p, isActive: false }));
+
+    resetRun();
+
+    if (onReturnToMenu) {
+      onReturnToMenu();
+    }
+  };
+
+  const handleExit = () => {
+    saveGame();
     if (onReturnToMenu) {
       onReturnToMenu();
     }
@@ -109,15 +106,11 @@ export function PauseMenu({ onReturnToMenu }: Props) {
                   </div>
                   <div className="flex justify-between">
                     <span>DEBILITADOS:</span>{" "}
-                    <span className="text-foreground text-danger">
-                      {run.totalFainted}
-                    </span>
+                    <span className="text-danger">{run.totalFainted}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>POKÉDÓLARES:</span>{" "}
-                    <span className="text-foreground text-accent">
-                      {run.money}
-                    </span>
+                    <span className="text-accent">{run.money}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>MAX NIVEL:</span>{" "}
@@ -136,8 +129,15 @@ export function PauseMenu({ onReturnToMenu }: Props) {
               </button>
 
               <button
+                onClick={handleExit}
+                className="w-full bg-surface border-2 border-border p-3 font-display text-xs text-muted hover:text-white transition-colors uppercase cursor-pointer"
+              >
+                Guardar y Salir
+              </button>
+
+              <button
                 onClick={() => setShowConfirm(true)}
-                className="w-full bg-surface-alt border-2 border-danger p-3 font-display text-xs text-danger hover:bg-danger hover:text-white transition-colors uppercase mt-4 cursor-pointer"
+                className="w-full bg-surface-alt border-2 border-danger p-3 font-display text-[0.6rem] text-danger hover:bg-danger hover:text-white transition-colors uppercase mt-4 cursor-pointer"
               >
                 Rendirse y Reiniciar
               </button>

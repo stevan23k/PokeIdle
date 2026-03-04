@@ -40,7 +40,6 @@ export function LootSelectionModal() {
         };
 
         // Special Flags
-        if (itemId === "exp-share") nextState.hasExpShare = true;
         if (itemId === "mega-bracelet") nextState.hasMegaBracelet = true;
 
         nextState.battleLog = [

@@ -221,11 +221,12 @@ export function StarterSelector() {
         maxWinStreak: 0,
         itemUsage: {},
         expMultiplier: 1.0,
-        hasExpShare: false,
         hasMegaBracelet: false,
         isPaused: false,
         isManualBattle: false,
         pendingLootSelection: null,
+        pendingZoneTransition: false,
+        pinnedItems: [],
       });
     } catch (e) {
       console.error("Error starting run:", e);

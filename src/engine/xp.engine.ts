@@ -15,29 +15,28 @@ export function calculateXPGain(
 }
 
 /**
- * Distributes XP to all team members if XP Share is active
+ * Distributes XP to all team members based on the amount of exp-shares in inventory
  */
 export function distributeTeamXP(
   team: ActivePokemon[],
   activePokemonUid: string,
   totalXPGained: number,
-  hasExpShare: boolean,
-): ActivePokemon[] {
-  if (!hasExpShare) return team;
+  expShareCount: number,
+): { updatedTeam: ActivePokemon[]; sharedXP: number } {
+  if (expShareCount <= 0) return { updatedTeam: team, sharedXP: 0 };
 
-  const sharedXP = Math.floor(totalXPGained * 0.2);
-  if (sharedXP <= 0) return team;
+  const validExpShareCount = Math.min(expShareCount, 5); // Max 5 items (100%)
+  const sharePercentage = 0.2 * validExpShareCount;
+  const sharedXP = Math.floor(totalXPGained * sharePercentage);
 
-  return team.map((p) => {
+  if (sharedXP <= 0) return { updatedTeam: team, sharedXP: 0 };
+
+  const updatedTeam = team.map((p) => {
     if (p.uid === activePokemonUid || p.currentHP <= 0) return p;
-
-    let leveledP = { ...p, xp: p.xp + sharedXP };
-    // We don't handle multi-level up here for simplicity of return,
-    // it will be caught in the next loop or tick if needed,
-    // but the engine usually handles the active one.
-    // For now, let's just add the XP.
-    return leveledP;
+    return { ...p, xp: p.xp + sharedXP };
   });
+
+  return { updatedTeam, sharedXP };
 }
 
 export function xpToNextLevel(level: number): number {
