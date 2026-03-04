@@ -84,12 +84,20 @@ export function GameTutorialModal({ onClose }: GameTutorialModalProps) {
       <div className="bg-surface-dark border-4 border-border w-full max-w-xl shadow-2xl relative animate-in fade-in zoom-in duration-200 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="bg-surface-alt border-b-4 border-border p-4 flex justify-between items-center sm:px-8">
-          <h2 className="font-display text-sm md:text-base text-brand tracking-[0.2em] uppercase">
-            Guía de Entrenador
-          </h2>
-          <span className="font-display text-[0.6rem] text-muted">
-            {currentStep + 1} / {steps.length}
-          </span>
+          <div className="flex flex-col">
+            <h2 className="font-display text-sm md:text-base text-brand tracking-[0.2em] uppercase">
+              Guía de Entrenador
+            </h2>
+            <span className="font-display text-[0.5rem] text-muted uppercase tracking-widest">
+              Paso {currentStep + 1} de {steps.length}
+            </span>
+          </div>
+          <button
+            onClick={() => onClose(hideForever)}
+            className="font-display text-[0.6rem] text-muted hover:text-brand transition-colors border-2 border-border px-2 py-1 hover:border-brand"
+          >
+            SALTAR
+          </button>
         </div>
 
         {/* Content */}

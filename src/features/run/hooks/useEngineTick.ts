@@ -307,13 +307,18 @@ export function useEngineTick() {
       };
 
       if (bState.playerPokemon.currentHP === 0) {
-        const nextP = getNextActivePokemon(nextState.team);
-        if (nextP) {
-          pushLog(`¡Adelante ${nextP.name}!`, "normal");
-          bState.playerPokemon = nextP;
-          nextState.currentBattle = bState;
-          nextState.battleLog = logs.slice(-40);
+        if (!nextState.isManualBattle) {
+          const nextP = getNextActivePokemon(nextState.team);
+          if (nextP) {
+            pushLog(`¡Adelante ${nextP.name}!`, "normal");
+            bState.playerPokemon = nextP;
+          }
+        } else {
+          // In manual battle, we show a selection modal
+          bState.pendingManualSwitch = true;
         }
+        nextState.currentBattle = bState;
+        nextState.battleLog = logs.slice(-40);
         return nextState;
       }
 
@@ -353,8 +358,9 @@ export function useEngineTick() {
       const eMove = selectEnemyMove(bState.enemyPokemon, bState.playerPokemon);
 
       if (!pMove && !usedManualTurn) {
-        // En auto-battle, si no hay movimientos con PP, intentar cambiar.
+        // En auto-battle, si no hay movimientos con PP, esperar a que el usuario cambie.
         if (!nextState.isManualBattle) {
+          /* Desactivado: Cambio automático por falta de PP
           const nextP = getNextActivePokemon(
             nextState.team.filter((p) => p.uid !== bState.playerPokemon.uid),
           );
@@ -370,8 +376,14 @@ export function useEngineTick() {
               `${bState.playerPokemon.name} no tiene más movimientos útiles y no hay reemplazos.`,
               "danger",
             );
-            // Pokémon struggles or does nothing, for now, just skip turn
           }
+          */
+          pushLog(
+            `${bState.playerPokemon.name} no tiene movimientos útiles. ¡Cambia de Pokémon!`,
+            "danger",
+          );
+          nextState.battleLog = logs.slice(-40);
+          return nextState;
         } else {
           pushLog(
             `${bState.playerPokemon.name} no puede atacar. Cambia de Pokémon.`,
@@ -388,7 +400,7 @@ export function useEngineTick() {
       // Determine turn order
       const order = determineAttackOrder(
         bState.playerPokemon,
-        pMove!,
+        pMove,
         bState.enemyPokemon,
         eMove,
       );

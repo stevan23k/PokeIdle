@@ -13,7 +13,10 @@ import {
   ArrowLeft,
   ArrowRight,
   X,
+  Plus,
+  Minus,
 } from "lucide-react";
+import { ItemSprite } from "../../../components/ui/ItemSprite/ItemSprite";
 
 export function ZoneTransitionModal() {
   const { run, setRun, setMeta, notify } = useGame();
@@ -22,6 +25,7 @@ export function ZoneTransitionModal() {
     (run as any)._skipRewardsScreen ? "menu" : "rewards",
   );
   const [shopFilter, setShopFilter] = useState<ItemCategory | "All">("All");
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
 
   const availableShopItems = useMemo(() => {
     const gameStateContext = {
@@ -142,22 +146,28 @@ export function ZoneTransitionModal() {
     });
   };
 
-  const handleBuy = (itemId: string, price: number) => {
-    if (run.money >= price) {
+  const handleBuy = (itemId: string, price: number, quantity: number) => {
+    const totalCost = price * quantity;
+    if (run.money >= totalCost) {
       setRun((prev) => ({
         ...prev,
-        money: prev.money - price,
+        money: prev.money - totalCost,
         items: {
           ...prev.items,
-          [itemId]: (prev.items[itemId] || 0) + 1,
+          [itemId]: (prev.items[itemId] || 0) + quantity,
         },
       }));
+
+      const itemName = ITEMS[itemId].name;
       notify({
-        message: `Compraste ${ITEMS[itemId].name}`,
+        message: `Compraste ${quantity}x ${itemName}`,
         type: "badge",
         icon: "💰",
         duration: 3000,
       });
+
+      // Reset quantity for this item after purchase
+      setQuantities((prev) => ({ ...prev, [itemId]: 1 }));
     } else {
       notify({
         message: `No tienes suficientes Poké-Dólares.`,
@@ -375,7 +385,28 @@ export function ZoneTransitionModal() {
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {filteredItems.map((item) => {
-                  const canAfford = run.money >= (item.shopPrice || 99999);
+                  const qty = quantities[item.id] || 1;
+                  const itemPrice = item.shopPrice || 99999;
+                  const totalCost = itemPrice * qty;
+                  const canAfford = run.money >= totalCost;
+                  const maxAffordable = Math.floor(run.money / itemPrice);
+
+                  const updateQty = (delta: number) => {
+                    setQuantities((prev) => ({
+                      ...prev,
+                      [item.id]: Math.max(1, (prev[item.id] || 1) + delta),
+                    }));
+                  };
+
+                  const setMax = () => {
+                    if (maxAffordable > 0) {
+                      setQuantities((prev) => ({
+                        ...prev,
+                        [item.id]: maxAffordable,
+                      }));
+                    }
+                  };
+
                   return (
                     <div
                       key={item.id}
@@ -383,41 +414,65 @@ export function ZoneTransitionModal() {
                     >
                       <div className="flex items-start gap-3 mb-2">
                         <div className="w-12 h-12 bg-black/40 border-2 border-border/50 flex items-center justify-center shrink-0">
-                          <img
-                            src={`sprites/items/${item.id}.png`}
-                            alt={item.name}
-                            className="w-8 h-8 object-contain pixelated"
-                          />
+                          <ItemSprite item={item} className="w-8 h-8" />
                         </div>
                         <div className="flex flex-col flex-1 min-w-0">
                           <span className="font-display text-[0.65rem] truncate text-white">
                             {item.name}
                           </span>
-                          <span className="font-display text-[0.5rem] text-muted">
+                          <span className="font-display text-[0.55rem] text-muted">
                             {item.category.toUpperCase()}
-                          </span>
-                          <span
-                            className="font-body text-[0.6rem] text-muted-foreground line-clamp-2 mt-1 leading-tight w-full"
-                            title={item.description}
-                          >
-                            {item.description}
                           </span>
                         </div>
                       </div>
 
+                      <div
+                        className="font-body text-[0.6rem] text-muted-foreground line-clamp-2 mb-3 leading-tight h-8"
+                        title={item.description}
+                      >
+                        {item.description}
+                      </div>
+
+                      {/* Quantity Selector */}
+                      <div className="flex items-center justify-between gap-1 mb-2 bg-black/20 p-1 border border-border/30">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => updateQty(-1)}
+                            disabled={qty <= 1}
+                            className="p-1 hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <Minus size={10} className="text-white" />
+                          </button>
+                          <span className="font-display text-[0.65rem] w-6 text-center text-accent">
+                            {qty}
+                          </span>
+                          <button
+                            onClick={() => updateQty(1)}
+                            className="p-1 hover:bg-white/10 transition-colors"
+                          >
+                            <Plus size={10} className="text-white" />
+                          </button>
+                        </div>
+                        <button
+                          onClick={setMax}
+                          className="font-display text-[0.5rem] px-2 py-1 bg-surface-alt border border-border hover:bg-brand/20 text-muted hover:text-white transition-all uppercase"
+                        >
+                          Máx
+                        </button>
+                      </div>
+
                       <button
-                        onClick={() =>
-                          handleBuy(item.id, item.shopPrice || 99999)
-                        }
+                        onClick={() => handleBuy(item.id, itemPrice, qty)}
                         disabled={!canAfford}
                         className={clsx(
-                          "w-full py-1.5 font-display text-[0.6rem] mt-2 border-2 transition-colors flex items-center justify-center gap-1",
+                          "w-full py-1.5 font-display text-[0.6rem] border-2 transition-colors flex items-center justify-center gap-1",
                           canAfford
                             ? "bg-brand border-brand-dark text-white hover:bg-brand-dark active:translate-y-px"
                             : "bg-surface-dark border-border/50 text-muted cursor-not-allowed",
                         )}
                       >
-                        ₽ {item.shopPrice} - {canAfford ? "COMPRAR" : "POBRES"}
+                        ₽ {totalCost} -{" "}
+                        {canAfford ? "COMPRAR" : "SALDO INSUFICIENTE"}
                       </button>
                     </div>
                   );

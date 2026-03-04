@@ -170,6 +170,17 @@ export function ZoneView() {
                 {run.isManualBattle ? "ON" : "OFF"}
               </button>
             </div>
+            <div className="flex items-center justify-between group">
+              <span className="font-display text-[0.55rem] text-muted tracking-widest uppercase">
+                Auto Recompensa
+              </span>
+              <button
+                onClick={() => setRun((p) => ({ ...p, autoLoot: !p.autoLoot }))}
+                className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.autoLoot ? "bg-success/20 text-success border-success" : "bg-surface-dark text-muted border-border hover:border-muted"}`}
+              >
+                {run.autoLoot ? "ON" : "OFF"}
+              </button>
+            </div>
           </div>
         </div>
       </div>

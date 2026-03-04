@@ -12,7 +12,7 @@ export function LootSelectionModal() {
   const options = isTraining
     ? training.pendingLootSelection
     : run.pendingLootSelection;
-  const isManual = isTraining || run.isManualBattle;
+  const isAuto = !isTraining && !run.isManualBattle && run.autoLoot;
 
   const handleSelect = (itemId: string) => {
     const item = ITEMS[itemId];
@@ -57,14 +57,14 @@ export function LootSelectionModal() {
   };
 
   useEffect(() => {
-    if (options && options.length > 0 && !isManual && !run.isPaused) {
+    if (options && options.length > 0 && isAuto && !run.isPaused) {
       const timer = setTimeout(() => {
         const randomItem = options[Math.floor(Math.random() * options.length)];
         handleSelect(randomItem);
-      }, 2000);
+      }, 6000);
       return () => clearTimeout(timer);
     }
-  }, [options, isManual, run.isPaused]);
+  }, [options, isAuto, run.isPaused]);
 
   if (!options || options.length === 0) return null;
 
@@ -87,15 +87,15 @@ export function LootSelectionModal() {
         ¡ELIGE TU RECOMPENSA!
       </h2>
 
-      {!isManual && (
+      {isAuto && (
         <p className="font-body text-[0.55rem] text-muted mb-4 animate-pulse">
-          Selección automática en 2 segundos...
+          Selección automática en 6 segundos...
         </p>
       )}
 
-      {isManual && (
+      {!isAuto && (
         <p className="font-body text-[0.55rem] text-brand mb-4">
-          Modo Manual: Elige tu recompensa.
+          Modo Manual / Auto-Recompensa OFF: Elige tu recompensa.
         </p>
       )}
 

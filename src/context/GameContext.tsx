@@ -55,6 +55,7 @@ export const defaultRun: RunState = {
   autoHealThreshold: 0.3,
   isPaused: false,
   isManualBattle: false,
+  autoLoot: true,
   currentBattle: null,
   battleLog: [],
   totalBattlesWon: 0,
@@ -171,6 +172,7 @@ function runMigrationsMeta(loaded: any) {
     }
   }
   if (loaded.pokeCoins === undefined) loaded.pokeCoins = 0;
+  if (loaded.autoLoot === undefined) loaded.autoLoot = true;
   loaded.totalTimePlayed = loaded.totalTimePlayed ?? 0;
   loaded.highestLevelReached = loaded.highestLevelReached ?? 0;
   loaded.mostCapturedPokemonId = loaded.mostCapturedPokemonId ?? null;

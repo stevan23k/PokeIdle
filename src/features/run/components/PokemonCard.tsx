@@ -22,23 +22,55 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
   const { run, setRun } = useGame();
   const [expanded, setExpanded] = useState(false);
   const [showReleaseConfirm, setShowReleaseConfirm] = useState(false);
+  const [showSwitchConfirm, setShowSwitchConfirm] = useState(false);
   const [showUnequipPopover, setShowUnequipPopover] = useState(false);
 
-  const handleSwitch = (e: React.MouseEvent) => {
+  const handleSwitchRequest = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (
       pokemon.currentHP > 0 &&
-      run.isManualBattle &&
-      run.currentBattle?.phase === "active"
+      run.currentBattle?.phase === "active" &&
+      !isActive
     ) {
-      setRun((prev) => ({
+      setShowSwitchConfirm(true);
+    }
+  };
+
+  const confirmSwitch = () => {
+    setRun((prev) => {
+      if (!prev.currentBattle) return prev;
+
+      // If manual battle, use the queue system
+      if (prev.isManualBattle) {
+        return {
+          ...prev,
+          currentBattle: {
+            ...prev.currentBattle,
+            manualActionQueue: { type: "switch", id: pokemon.uid },
+          },
+        };
+      }
+
+      // If auto battle, perform the switch immediately
+      const newBattleLog = [
+        ...prev.battleLog,
+        {
+          id: Date.now().toString(),
+          text: `¡Adelante ${pokemon.name}!`,
+          type: "normal" as const,
+        },
+      ].slice(-40);
+
+      return {
         ...prev,
         currentBattle: {
-          ...prev.currentBattle!,
-          manualActionQueue: { type: "switch", id: pokemon.uid },
+          ...prev.currentBattle,
+          playerPokemon: pokemon,
         },
-      }));
-    }
+        battleLog: newBattleLog,
+      };
+    });
+    setShowSwitchConfirm(false);
   };
 
   const handleRelease = () => {
@@ -218,12 +250,11 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
             )}
           </div>
 
-          {run.isManualBattle &&
-            run.currentBattle?.phase === "active" &&
+          {run.currentBattle?.phase === "active" &&
             !isActive &&
             pokemon.currentHP > 0 && (
               <button
-                onClick={handleSwitch}
+                onClick={handleSwitchRequest}
                 className="mt-1 w-full py-1.5 bg-brand border border-brand-deep text-[0.6rem] text-white hover:bg-brand-dark transition-colors font-display tracking-wider uppercase flex items-center justify-center gap-2"
               >
                 <span className="animate-pulse">▶</span> CAMBIAR A{" "}
@@ -265,6 +296,16 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
         confirmText="Liberar"
         cancelText="Cancelar"
         onConfirm={handleRelease}
+      />
+
+      <ConfirmModal
+        isOpen={showSwitchConfirm}
+        onClose={() => setShowSwitchConfirm(false)}
+        title={`¿Cambiar a ${pokemon.name}?`}
+        message={`¿Estás seguro de que quieres enviar a ${pokemon.name} al combate?`}
+        confirmText="Cambiar"
+        cancelText="Cancelar"
+        onConfirm={confirmSwitch}
       />
     </div>
   );

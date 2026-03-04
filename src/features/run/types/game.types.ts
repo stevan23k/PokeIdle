@@ -111,6 +111,8 @@ export interface BattleState {
   isBossBattle?: boolean;
   bossMaxBars?: number; // default 1
   bossCurrentBar?: number; // 1-indexed
+
+  pendingManualSwitch?: boolean;
 }
 
 export interface RunState {
@@ -142,6 +144,7 @@ export interface RunState {
 
   isPaused: boolean;
   isManualBattle: boolean;
+  autoLoot: boolean;
 
   currentBattle: BattleState | null;
   battleLog: BattleLogEntry[];

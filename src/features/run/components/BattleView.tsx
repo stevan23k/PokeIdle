@@ -6,6 +6,7 @@ import { XPBar } from "../../../components/ui/XPBar";
 import { TypeBadge } from "../../../components/ui/TypeBadge";
 import { BattleBackground } from "../../../components/ui/BattleBackground";
 import { REGIONS } from "../../../lib/regions";
+import { SwitchPokemonModal } from "./SwitchPokemonModal";
 import { clsx } from "clsx";
 
 export interface BattleViewProps {
@@ -13,7 +14,7 @@ export interface BattleViewProps {
 }
 
 export function BattleView({ onMoveClick }: BattleViewProps) {
-  const { run, training } = useGame();
+  const { run, setRun, training } = useGame();
 
   const isTraining = training.isActive;
   const battle = isTraining
@@ -244,6 +245,35 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
           </span>
         )}
       </div>
+
+      {/* Manual Switch Modal on Faint */}
+      {run.isManualBattle &&
+        battle?.pendingManualSwitch &&
+        battle.phase === "active" && (
+          <SwitchPokemonModal
+            onSelect={(pokemon) => {
+              setRun((prev) => {
+                if (!prev.currentBattle) return prev;
+                return {
+                  ...prev,
+                  currentBattle: {
+                    ...prev.currentBattle,
+                    playerPokemon: pokemon,
+                    pendingManualSwitch: false,
+                  },
+                  battleLog: [
+                    ...prev.battleLog,
+                    {
+                      id: Date.now().toString(),
+                      text: `¡Adelante ${pokemon.name}!`,
+                      type: "normal" as const,
+                    },
+                  ].slice(-40),
+                };
+              });
+            }}
+          />
+        )}
     </div>
   );
 }

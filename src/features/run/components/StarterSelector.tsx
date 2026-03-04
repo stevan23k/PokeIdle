@@ -7,7 +7,7 @@ import {
 import { PixelSprite } from "../../../components/ui/PixelSprite";
 import { calculateStats, NATURES } from "../../../engine/stats.engine";
 import { clsx } from "clsx";
-import { Play } from "lucide-react";
+import { Play, Sparkles } from "lucide-react";
 import { StartConfigModal } from "./StartConfigModal";
 
 const STAT_LABELS = ["HP", "ATK", "DEF", "SPE", "SPD", "SPA"];
@@ -110,6 +110,7 @@ export function StarterSelector() {
   const [selectedGen, setSelectedGen] = useState<number>(1);
   const [selectedStarterName, setSelectedStarterName] = useState("");
   const [selectedNature, setSelectedNature] = useState<string>("hardy");
+  const [useShiny, setUseShiny] = useState(false);
   const [previewStats, setPreviewStats] = useState<any>(null);
   const [validIds, setValidIds] = useState<number[]>([]);
   const [configModalOpen, setConfigModalOpen] = useState(false);
@@ -147,7 +148,7 @@ export function StarterSelector() {
       return;
     }
     let isCancelled = false;
-    getPokemonData(selectedId, 5)
+    getPokemonData(selectedId, 5, useShiny)
       .then((p) => {
         if (isCancelled) return;
         const unlockedData = meta.unlockedStarters.find(
@@ -170,7 +171,7 @@ export function StarterSelector() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedId, selectedNature, meta.unlockedStarters]);
+  }, [selectedId, selectedNature, meta.unlockedStarters, useShiny]);
 
   const handleStart = async (starterId: number) => {
     setPendingStarterId(starterId);
@@ -186,7 +187,7 @@ export function StarterSelector() {
     setLoading(true);
     setConfigModalOpen(false);
     try {
-      const pokemon = await getPokemonData(pendingStarterId, 5);
+      const pokemon = await getPokemonData(pendingStarterId, 5, useShiny);
 
       const unlockedData = meta.unlockedStarters.find(
         (s) => s.id === pendingStarterId,
@@ -320,6 +321,7 @@ export function StarterSelector() {
                               setSelectedNature(
                                 unlockedData.unlockedNatures[0] || "hardy",
                               );
+                              setUseShiny(false);
                             }
                           }}
                           className={clsx(
@@ -344,6 +346,12 @@ export function StarterSelector() {
                                 "brightness-0 opacity-40 grayscale",
                             )}
                           />
+
+                          {unlockedData?.isShiny && (
+                            <div className="absolute top-1 right-1 text-accent drop-shadow-sm pointer-events-none">
+                              <Sparkles size={10} fill="currentColor" />
+                            </div>
+                          )}
 
                           <div className="absolute bottom-full mb-2 px-2 py-1 bg-black/95 border border-border opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-none whitespace-nowrap">
                             <span className="font-display text-[0.55rem] text-white text-center block tracking-widest capitalize">
@@ -423,6 +431,38 @@ export function StarterSelector() {
                 POTENCIAL GENÉTICO (NV. 5)
               </h3>
 
+              <div className="flex flex-col items-center gap-2 mb-4">
+                <div className="relative p-4 bg-surface-dark border-2 border-border shadow-inner group transition-colors">
+                  <PixelSprite
+                    pokemonId={selectedId}
+                    variant="front"
+                    shiny={useShiny}
+                    size={80}
+                  />
+                  {useShiny && (
+                    <Sparkles
+                      className="absolute top-2 right-2 text-accent animate-pulse"
+                      size={14}
+                      fill="currentColor"
+                    />
+                  )}
+                </div>
+                {selectedStarterData.isShiny && (
+                  <button
+                    onClick={() => setUseShiny(!useShiny)}
+                    className={clsx(
+                      "flex items-center gap-2 px-3 py-1.5 border-2 font-display text-[0.5rem] tracking-widest transition-all uppercase",
+                      useShiny
+                        ? "bg-brand border-brand text-white shadow-pixel"
+                        : "bg-surface border-border text-muted hover:text-white",
+                    )}
+                  >
+                    <Sparkles size={10} fill={useShiny ? "white" : "none"} />
+                    {useShiny ? "Apariencia: Shiny" : "Apariencia: Normal"}
+                  </button>
+                )}
+              </div>
+
               <RadarChart
                 stats={previewStats || selectedStarterData.maxIvs || {}}
                 isIv={!previewStats}
@@ -447,7 +487,7 @@ export function StarterSelector() {
                         >
                           <span className="text-muted">{lbl}</span>
                           <span className="text-white">
-                            {previewStats[keys[i]]}
+                            {previewStats[keys[i]] ?? 0}
                           </span>
                         </div>
                       );

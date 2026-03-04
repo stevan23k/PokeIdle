@@ -67,7 +67,7 @@ export function calculateDamage(
       getStatMultiplier(attacker.statModifiers.atk) *
       atkMult;
     def =
-      defender.stats.defense * 
+      defender.stats.defense *
       getStatMultiplier(defender.statModifiers.def) *
       defMult;
   } else if (move.category === "special") {
@@ -75,8 +75,8 @@ export function calculateDamage(
       attacker.stats.spAtk *
       getStatMultiplier(attacker.statModifiers.spa) *
       spaMult;
-    def = 
-      defender.stats.spDef * 
+    def =
+      defender.stats.spDef *
       getStatMultiplier(defender.statModifiers.spd) *
       spdMult;
   }
@@ -167,13 +167,16 @@ export function chooseBestMove(
 
 export function determineAttackOrder(
   pPokemon: ActivePokemon,
-  pMove: ActiveMove,
+  pMove: ActiveMove | null | undefined,
   ePokemon: ActivePokemon,
-  eMove: ActiveMove,
+  eMove: ActiveMove | null | undefined,
 ): "player-first" | "enemy-first" {
-  // 1. Move Priority
-  if (pMove.priority > eMove.priority) return "player-first";
-  if (eMove.priority > pMove.priority) return "enemy-first";
+  // 1. Move Priority (Switching/Items have priority 6 usually)
+  const pPriority = pMove ? pMove.priority : 6;
+  const ePriority = eMove ? eMove.priority : 6;
+
+  if (pPriority > ePriority) return "player-first";
+  if (ePriority > pPriority) return "enemy-first";
 
   // 2. Speed Stat
   const pSpeed =
