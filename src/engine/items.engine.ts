@@ -134,6 +134,8 @@ export async function useItemOnPokemon(
         spDef: "spd",
         speed: "spe",
         crit: "crit",
+        acc: "acc",
+        eva: "eva",
       };
 
       const modKey = map[stat];

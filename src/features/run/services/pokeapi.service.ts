@@ -14,15 +14,24 @@ import {
 
 const API_BASE = "https://pokeapi.co/api/v2";
 
-function mapAilment(ailmentName: string): import("../types/game.types").StatusCondition | null {
+function mapAilment(
+  ailmentName: string,
+): import("../types/game.types").StatusCondition | null {
   switch (ailmentName) {
-    case "paralysis": return "PAR";
-    case "burn": return "BRN";
-    case "poison": return "PSN";
-    case "toxic": return "TOX";
-    case "sleep": return "SLP";
-    case "freeze": return "FRZ";
-    default: return null;
+    case "paralysis":
+      return "PAR";
+    case "burn":
+      return "BRN";
+    case "poison":
+      return "PSN";
+    case "toxic":
+      return "TOX";
+    case "sleep":
+      return "SLP";
+    case "freeze":
+      return "FRZ";
+    default:
+      return null;
   }
 }
 
@@ -109,16 +118,16 @@ export async function getPokemonData(
       if (md.power && md.power > 0) {
         const spanText =
           md.names.find((n: any) => n.language.name === "es")?.name || md.name;
-          
+
         let statusEffect = undefined;
         if (md.meta && md.meta.ailment && md.meta.ailment.name !== "none") {
-           const condition = mapAilment(md.meta.ailment.name);
-           if (condition) {
-             statusEffect = {
-               condition,
-               chance: md.meta.ailment_chance || 100
-             };
-           }
+          const condition = mapAilment(md.meta.ailment.name);
+          if (condition) {
+            statusEffect = {
+              condition,
+              chance: md.meta.ailment_chance || 100,
+            };
+          }
         }
 
         activeMoves.push({
@@ -180,7 +189,16 @@ export async function getPokemonData(
     types,
     moves: activeMoves,
     status: null,
-    statModifiers: { atk: 0, def: 0, spa: 0, spd: 0, spe: 0, acc: 0, eva: 0 },
+    statModifiers: {
+      atk: 0,
+      def: 0,
+      spa: 0,
+      spd: 0,
+      spe: 0,
+      acc: 0,
+      eva: 0,
+      crit: 0,
+    },
     heldItem: null,
     isShiny: shiny,
     caughtAt: "Zona desconocida",
@@ -261,16 +279,16 @@ export async function learnMovesOnLevelUp(
 
     const moveName =
       md.names.find((n: any) => n.language.name === "es")?.name ?? md.name;
-      
+
     let statusEffect = undefined;
     if (md.meta && md.meta.ailment && md.meta.ailment.name !== "none") {
-       const condition = mapAilment(md.meta.ailment.name);
-       if (condition) {
-         statusEffect = {
-           condition,
-           chance: md.meta.ailment_chance || 100
-         };
-       }
+      const condition = mapAilment(md.meta.ailment.name);
+      if (condition) {
+        statusEffect = {
+          condition,
+          chance: md.meta.ailment_chance || 100,
+        };
+      }
     }
 
     const newMove: import("../types/game.types").ActiveMove = {

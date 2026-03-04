@@ -28,7 +28,11 @@ export type ItemEffect =
       targetPokemonId?: number;
       method?: "stone" | "trade" | "item";
     }
-  | { type: "stat_boost"; stat: keyof PokemonStats | "crit"; amount: number }
+  | {
+      type: "stat_boost";
+      stat: keyof PokemonStats | "crit" | "acc" | "eva";
+      amount: number;
+    }
   | { type: "xp_boost"; multiplier: number }
   | { type: "mega_evo"; stoneId: string }
   | { type: "pp_restore"; amount: number | "full" }
@@ -750,7 +754,7 @@ export const ITEMS: Record<string, Item> = {
     spriteSlug: "x-accuracy",
     description: "Sube la Precisión en combate.",
     category: "battle",
-    effect: { type: "stat_boost", stat: "attack", amount: 1.3 },
+    effect: { type: "stat_boost", stat: "acc", amount: 1 },
     buyable: true,
     shopPrice: 950,
   },
