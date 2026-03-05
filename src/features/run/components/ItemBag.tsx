@@ -178,7 +178,7 @@ export function ItemBag() {
                       <span className="font-display text-[0.5rem] tracking-wider truncate text-foreground">
                         {item.name}
                       </span>
-                      <span className="font-body text-[0.55rem] font-bold text-muted">
+                      <span className="font-body text-[0.55rem] font-bold text-white">
                         x{qty}
                       </span>
                     </div>
@@ -189,7 +189,7 @@ export function ItemBag() {
                       variant="ghost"
                       size="sm"
                       onClick={(e) => unpinItem(id, e)}
-                      className="p-1 px-1.5 text-muted hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                      className="p-1 px-1.5 text-white hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
                       title="Desanclar"
                     >
                       <StarOff size={12} />
@@ -234,7 +234,7 @@ export function ItemBag() {
           cancelText="Cancelar"
           message={
             <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto px-1 pt-1 -mx-2">
-              <span className="text-[0.6rem] font-display text-muted uppercase tracking-widest mb-1 pl-1">
+              <span className="text-[0.6rem] font-display text-white uppercase tracking-widest mb-1 pl-1">
                 Selecciona al objetivo:
               </span>
               {run.team.map((p) => (
@@ -263,7 +263,7 @@ export function ItemBag() {
                       <span className="font-display text-[0.55rem] tracking-wider text-left max-w-[120px] truncate">
                         {p.name}
                       </span>
-                      <span className="font-body text-xs text-muted font-bold">
+                      <span className="font-body text-xs text-white font-bold">
                         Nv.{p.level}
                       </span>
                     </div>

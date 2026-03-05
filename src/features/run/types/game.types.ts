@@ -148,6 +148,9 @@ export interface BattleState {
   bossCurrentBar?: number; // 1-indexed
 
   pendingManualSwitch?: boolean;
+  playerCurrentMove?: ActiveMove | null;
+  enemyCurrentMove?: ActiveMove | null;
+  usedManualTurn?: boolean;
 }
 
 export interface MoveLearnData {

@@ -481,7 +481,7 @@ export function GameLayout() {
                     ([id, qty]) =>
                       (qty as number) > 0 && ITEMS[id]?.category === "ball",
                   ).length === 0 && (
-                    <span className="font-body text-[0.6rem] text-muted italic uppercase tracking-tighter">
+                    <span className="font-body text-[0.6rem] text-white opacity-80 italic uppercase tracking-tighter">
                       Sin Poké Balls disponibles
                     </span>
                   )}

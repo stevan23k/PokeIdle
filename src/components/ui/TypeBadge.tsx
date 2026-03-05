@@ -42,8 +42,8 @@ export function TypeBadge({
   return (
     <div
       className={clsx(
-        "inline-flex items-center justify-center rounded px-2 py-0.5 text-white font-bold uppercase shadow-sm",
-        size === "sm" ? "text-[10px]" : "text-xs",
+        "inline-flex items-center justify-center rounded px-4 py-1 text-white font-bold uppercase shadow-sm",
+        size === "sm" ? "text-[11px] min-w-14" : "text-sm min-w-18",
         className
       )}
       style={{
@@ -56,7 +56,7 @@ export function TypeBadge({
         <img
           src={icon}
           alt=""
-          className={size === "sm" ? "w-3 h-3" : "w-4 h-4"}
+          className={size === "sm" ? "w-3.5 h-3.5" : "w-4.5 h-4.5"}
           style={{ imageRendering: "pixelated" }}
         />
       )}

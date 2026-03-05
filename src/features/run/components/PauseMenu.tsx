@@ -64,88 +64,99 @@ export function PauseMenu({ onReturnToMenu }: Props) {
   return (
     <>
       {run.isPaused && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <Card className="max-w-sm w-full relative pt-8">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-surface px-4 py-1 border-2 border-border">
-              <h2 className="font-display text-accent-blue text-sm uppercase drop-shadow-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+          <Card className="max-w-2xl w-full relative pt-12 pb-8 px-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] border-4 border-border">
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-surface-dark px-10 py-2 border-4 border-border shadow-pixel">
+              <h2 className="font-display text-accent text-xl tracking-[0.3em] uppercase drop-shadow-[0_0_8px_rgba(255,215,0,0.4)]">
                 PAUSA
               </h2>
             </div>
 
-            <div className="flex flex-col gap-3 mt-2">
-              <Card variant="alt" noPadding className="p-3 mb-2">
-                <h3 className="font-display text-[0.6rem] text-brand tracking-widest uppercase mb-3 flex items-center gap-2">
-                  🏃 RUN ACTUAL
+            <div className="flex flex-col gap-6 mt-4">
+              <Card variant="alt" noPadding className="p-6 bg-surface-dark/50 border-2 border-border/50">
+                <h3 className="font-display text-xs text-brand tracking-[0.2em] uppercase mb-6 flex items-center gap-3 border-b border-border/30 pb-3">
+                  <span className="text-lg">🏃</span> RESUMEN DE LA AVENTURA
                 </h3>
-                <div className="grid grid-cols-2 gap-y-2 gap-x-4 font-body text-[0.65rem] text-muted leading-none">
-                  <div className="flex justify-between">
-                    <span>TIEMPO:</span>{" "}
-                    <span className="text-foreground">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12 font-body text-xs text-white uppercase tracking-wider">
+                  <div className="flex justify-between items-center border-b border-border/10 pb-1">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">TIEMPO DE JUEGO:</span>
+                    <span className="font-display text-[0.6rem] text-accent">
                       {formatDuration(Date.now() - run.startedAt)}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>ZONA:</span>{" "}
-                    <span className="text-foreground">
-                      {currentZone?.name || "???"} ({run.currentZoneProgress}%)
+                  <div className="flex justify-between items-center border-b border-border/10 pb-1">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">ZONA ACTUAL:</span>
+                    <span className="font-display text-[0.6rem] text-white">
+                      {currentZone?.name || "???"}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>MEDALLAS:</span>{" "}
-                    <span className="text-foreground">
+                  <div className="flex justify-between items-center border-b border-border/10 pb-1">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">MEDALLAS:</span>
+                    <span className="font-display text-[0.6rem] text-accent">
                       {run.gymsBadges.length}/8
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>CAPTURAS:</span>{" "}
-                    <span className="text-foreground">{run.totalCaptured}</span>
+                  <div className="flex justify-between items-center border-b border-border/10 pb-1">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">POKÉDÓLARES:</span>
+                    <span className="font-display text-[0.6rem] text-success">
+                      ${run.money}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>VICTORIAS:</span>{" "}
-                    <span className="text-foreground">
+                  <div className="flex justify-between items-center border-b border-border/10 pb-1">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">POKÉMON CAPTURADOS:</span>
+                    <span className="font-display text-[0.6rem] text-white">
+                      {run.totalCaptured}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-border/10 pb-1">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">BATALLAS GANADAS:</span>
+                    <span className="font-display text-[0.6rem] text-white">
                       {run.totalBattlesWon}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>DEBILITADOS:</span>{" "}
-                    <span className="text-danger">{run.totalFainted}</span>
+                  <div className="flex justify-between items-center border-b border-border/10 pb-1">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">POKÉMON DEBILITADOS:</span>
+                    <span className="font-display text-[0.6rem] text-danger">
+                      {run.totalFainted}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>POKÉDÓLARES:</span>{" "}
-                    <span className="text-accent">{run.money}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>MAX NIVEL:</span>{" "}
-                    <span className="text-foreground">
+                  <div className="flex justify-between items-center border-b border-border/10 pb-1">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">NIVEL MÁXIMO:</span>
+                    <span className="font-display text-[0.6rem] text-white">
                       {Math.max(...run.team.map((p) => p.level), 0)}
                     </span>
                   </div>
                 </div>
               </Card>
 
-              <Button
-                variant="primary"
-                onClick={togglePause}
-                className="w-full text-foreground"
-              >
-                Reanudar Aventura
-              </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button
+                  variant="primary"
+                  onClick={togglePause}
+                  className="py-6 text-sm font-display tracking-widest shadow-pixel hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                >
+                  REANUDAR AVENTURA
+                </Button>
 
-              <Button
-                variant="secondary"
-                onClick={handleExit}
-                className="w-full text-muted"
-              >
-                Guardar y Salir
-              </Button>
+                <Button
+                  variant="secondary"
+                  onClick={handleExit}
+                  className="py-6 text-sm font-display tracking-widest shadow-pixel hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                >
+                  GUARDAR Y SALIR
+                </Button>
+              </div>
 
-              <Button
-                variant="danger"
-                onClick={() => setShowConfirm(true)}
-                className="w-full mt-4"
-              >
-                Rendirse y Reiniciar
-              </Button>
+              <div className="mt-4 pt-4 border-t-2 border-border/30">
+                <Button
+                  variant="danger"
+                  onClick={() => setShowConfirm(true)}
+                  className="w-full py-4 text-[0.6rem] font-display tracking-widest opacity-80 hover:opacity-100 transition-opacity"
+                >
+                  RENDIRSE Y REINICIAR RUN
+                </Button>
+              </div>
             </div>
           </Card>
         </div>
