@@ -46,14 +46,14 @@ export function MainMenu({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-color-surface flex flex-col items-center justify-center p-4 crt-screen"
+      className="fixed h-screen inset-0 z-50 bg-color-surface flex flex-col items-center align-center justify-center p-4 crt-screen"
       style={{ backgroundColor: "var(--color-surface)" }}
     >
       <div className="w-full max-w-lg z-10 flex flex-col items-center relative">
         <h1 className="font-display text-4xl sm:text-5xl md:text-6xl text-center text-brand mb-2 drop-shadow-[6px_6px_0_rgba(0,0,0,0.8)] animate-pulse">
           Poké<span className="text-white">Idle</span>
         </h1>
-        <h2 className="font-display text-xs sm:text-sm text-center text-accent mb-16 tracking-[0.5em] opacity-90 drop-shadow-[0_0_8px_rgba(255,215,0,0.4)]">
+        <h2 className="font-display text-2xl sm:text-sm text-center text-accent mb-16 tracking-[0.5em] opacity-90 drop-shadow-[0_0_8px_rgba(255,215,0,0.4)]">
           ROGUELIKE TRAINER
         </h2>
 
@@ -106,13 +106,13 @@ export function MainMenu({
             className="w-full flex items-center justify-between group p-3"
           >
             <div className="flex flex-col items-start translate-x-0 group-hover:translate-x-1 transition-transform truncate text-left">
-              <span className="font-display text-[0.6rem] text-accent tracking-widest uppercase mb-1">
+              <span className="text-subtitle text-[0.6rem] text-accent tracking-widest uppercase mb-1">
                 HISTORIAL
               </span>
-              <span className="font-display text-xs text-white uppercase flex items-center gap-2">
-                ESTADÍSTICAS GLOBALES
+              <span className="text-value text-[0.2rem] uppercase flex items-center gap-2">
+                ESTADÍSTICAS
               </span>
-              <span className="font-body text-[0.55rem] text-muted italic lowercase mt-1 text-wrap">
+              <span className="text-body text-label text-muted italic lowercase mt-1 text-wrap">
                 Ver tus logros y progreso
               </span>
             </div>
@@ -127,7 +127,7 @@ export function MainMenu({
             <img
               src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/384.gif"
               alt="Gacha Preview"
-              className="w-16 h-16 pixelated absolute -top-12 animate-bounce drop-shadow-lg"
+              className="w-20 h-20 pixelated absolute -top-16 animate-bounce drop-shadow-lg"
             />
             <Button
               onClick={onOpenGacha}
