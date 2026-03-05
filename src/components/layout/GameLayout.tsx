@@ -375,17 +375,7 @@ export function GameLayout() {
   }
 
   if (currentScreen === "training-select") {
-    return (
-      <div className="relative h-screen bg-surface-dark">
-        <TrainingSelector />
-        <button
-          onClick={() => setCurrentScreen("main")}
-          className="fixed top-4 left-4 z-100 bg-surface-dark border-2 border-border p-2 font-display text-[0.6rem] text-muted hover:text-white transition-colors"
-        >
-          &lt; VOLVER
-        </button>
-      </div>
-    );
+    return <TrainingSelector onBack={() => setCurrentScreen("main")} />;
   }
 
   if (currentScreen === "training") {
@@ -481,10 +471,10 @@ export function GameLayout() {
                     ([id, qty]) =>
                       (qty as number) > 0 && ITEMS[id]?.category === "ball",
                   ).length === 0 && (
-                    <span className="font-body text-[0.6rem] text-white opacity-80 italic uppercase tracking-tighter">
-                      Sin Poké Balls disponibles
-                    </span>
-                  )}
+                      <span className="font-body text-[0.6rem] text-muted italic uppercase tracking-tighter">
+                        Sin Poké Balls disponibles
+                      </span>
+                    )}
                 </div>
               </div>
             </div>

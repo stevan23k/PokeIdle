@@ -10,7 +10,11 @@ import { clsx } from "clsx";
 import { Sword, Loader2 } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
 
-export function TrainingSelector() {
+interface Props {
+  onBack: () => void;
+}
+
+export function TrainingSelector({ onBack }: Props) {
   const { setTraining, meta } = useGame();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -73,15 +77,23 @@ export function TrainingSelector() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-surface-dark/95 crt-screen p-4 md:p-8 animate-in fade-in zoom-in duration-300">
-      <div className="max-w-4xl mx-auto w-full flex flex-col gap-6">
-        <header className="text-center border-b-4 border-border pb-6 flex flex-col gap-2">
-          <h1 className="font-display text-2xl text-brand drop-shadow-[0_0_8px_rgba(204,0,0,0.5)] tracking-widest">
-            ENTRENAMIENTO INFINITO
-          </h1>
-          <p className="font-body text-[0.6rem] text-muted tracking-widest uppercase">
-            Selecciona un Pokémon desbloqueado para entrenar
-          </p>
+    <div className="flex cursor-default flex-col h-screen justify-center items-center bg-surface-dark/95 crt-screen p-4 md:p-8 animate-in fade-in zoom-in duration-300">
+      <div className="max-w-6xl mx-auto w-full flex flex-col gap-6">
+        <header className="relative border-b-4 border-border pb-6 flex flex-row gap-40">
+          <button
+            onClick={onBack}
+            className="left-0 top-0 px-4 py-2 bg-transparent border-4 border-border text-[#ffffff80] font-display text-[0.6rem] tracking-widest uppercase hover:text-white hover:border-white transition-all active:scale-95 pixel-shadow"
+          >
+            &lt; VOLVER
+          </button>
+          <div className="text-center">
+            <h1 className="font-display text-title text-2xl text-brand drop-shadow-[0_0_8px_rgba(204,0,0,0.5)] tracking-widest">
+              ENTRENAMIENTO INFINITO
+            </h1>
+            <p className="font-body text-subtitle tracking-widest uppercase">
+              Selecciona un Pokémon desbloqueado para entrenar
+            </p>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -89,10 +101,10 @@ export function TrainingSelector() {
           <div className="lg:col-span-2 bg-surface border-4 border-border p-4 pixel-shadow h-[400px] overflow-y-auto custom-scrollbar">
             {allStarters.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-8 opacity-50">
-                <p className="font-display text-xs text-muted mb-2">
+                <p className="font-display text-subtitle mb-2">
                   NO HAY POKÉMON DESBLOQUEADOS
                 </p>
-                <p className="font-body text-[0.5rem] text-muted uppercase">
+                <p className="font-body text-subtitle uppercase">
                   Juega runs normales para desbloquear nuevos iniciales
                 </p>
               </div>
@@ -112,7 +124,7 @@ export function TrainingSelector() {
                     <PixelSprite
                       pokemonId={s.id}
                       variant="front"
-                      size={48}
+                      size={64}
                       shiny={false}
                       alt={s.name}
                       className={clsx(
@@ -120,10 +132,10 @@ export function TrainingSelector() {
                         selectedId === s.id && "scale-110",
                       )}
                     />
-                    <span className="font-display text-[0.55rem] text-white truncate w-full text-center">
+                    <span className="font-display text-[0.8rem] text-white truncate w-full text-center">
                       {s.name}
                     </span>
-                    <span className="font-display text-[0.45rem] text-muted uppercase tracking-tighter">
+                    <span className="font-display font-semibold text-subtitle text-[0.45rem] text-muted uppercase tracking-tighter">
                       Tier {getPokemonTier(s.id)}
                     </span>
                   </button>
@@ -149,12 +161,12 @@ export function TrainingSelector() {
                   <h2 className="font-display text-lg text-white mb-1">
                     {selectedStarter.name}
                   </h2>
-                  <div className="px-3 py-1 bg-brand text-white font-display text-[0.5rem] tracking-widest mb-4">
+                  <div className="px-3 text-subtitle py-1 bg-brand text-white font-display text-[0.5rem] tracking-widest mb-4">
                     TIER {getPokemonTier(selectedStarter.id)}
                   </div>
 
                   <div className="w-full space-y-2">
-                    <p className="font-body text-[0.5rem] text-muted uppercase border-b border-border pb-1">
+                    <p className="font-body text-[1rem] uppercase border-b border-border pb-1">
                       Potencial Máximo
                     </p>
                     <div className="grid grid-cols-2 gap-2">
@@ -164,10 +176,10 @@ export function TrainingSelector() {
                             key={key}
                             className="flex justify-between items-center bg-surface-dark/50 px-2 py-1 border border-border/30"
                           >
-                            <span className="font-display text-[0.4rem] text-muted uppercase">
+                            <span className="font-display text-[0.8rem] text-muted uppercase">
                               {key.substring(0, 3)}
                             </span>
-                            <span className="font-display text-[0.5rem] text-brand">
+                            <span className="font-display text-[0.8rem] text-brand">
                               {val}
                             </span>
                           </div>
@@ -198,7 +210,7 @@ export function TrainingSelector() {
               </div>
             ) : (
               <div className="bg-surface/50 border-4 border-border border-dashed p-12 flex flex-col items-center justify-center opacity-60 text-center">
-                <span className="font-display text-[0.6rem] text-muted tracking-widest">
+                <span className="text-subtitle text-white tracking-widest">
                   SELECCIONA UN <br /> POKÉMON PARA <br /> ENTRENAR
                 </span>
                 <div className="w-12 h-12 border-4 border-border/30 mt-4 rotate-45" />
@@ -207,14 +219,14 @@ export function TrainingSelector() {
 
             <div className="bg-surface-dark border-4 border-border p-4">
               <div className="flex justify-between items-center mb-2">
-                <span className="font-display text-[0.55rem] text-muted">
+                <span className="font-display text-subtitle text-white">
                   MIS POKÉCOINS
                 </span>
-                <span className="font-display text-xs text-brand">
+                <span className=" font-display text-subtitle text-brand">
                   💰 {meta.pokeCoins}
                 </span>
               </div>
-              <p className="font-body text-[0.45rem] text-muted text-center leading-relaxed">
+              <p className="mt-5 font-body text-subtitle text-white text-center leading-relaxed">
                 Entrena a tus Pokémon favoritos para ganar monedas y desbloquear
                 recompensas.
               </p>

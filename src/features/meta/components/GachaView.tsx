@@ -361,21 +361,21 @@ export function GachaView({ onBack }: Props) {
   const canAfford10 = meta.pokeCoins >= costX10;
 
   return (
-    <div className="fixed inset-0 z-60 bg-color-surface flex flex-col crt-screen overflow-hidden">
+    <div className="fixed inset-0 z-60 bg-color-surface flex flex-col crt-screen overflow-hidden px-20">
       {/* Header */}
-      <div className="flex-none p-4 flex items-center justify-between border-b-2 border-border shadow-pixel">
+      <div className="flex-none mb-60 p-4 flex items-center justify-around border-b-2 border-border shadow-pixel">
         <div className="flex items-center gap-4">
           <button
             onClick={onBack}
-            className="p-2 hover:bg-surface-light text-muted hover:text-white transition-colors"
+            className="p-2 hover:bg-surface-light text-muted hover:text-white items-center justify-center transition-colors duration-75"
           >
-            <X size={20} />
+            <X size={32} />
           </button>
-          <h2 className="font-display text-lg tracking-widest text-brand">
+          <h2 className="font-display text-title text-lg tracking-widest text-brand">
             INVOCACIÓN POKÉMON
           </h2>
         </div>
-        <div className="flex items-center gap-2 bg-surface-dark border-2 border-border px-3 py-1">
+        <div className="flex items-center gap-2 bg-surface-dark border-2 border-border px-3">
           <Coins size={14} className="text-accent" />
           <span className="font-display text-sm">{meta.pokeCoins}</span>
         </div>
@@ -388,11 +388,10 @@ export function GachaView({ onBack }: Props) {
             <button
               key={banner.id}
               onClick={() => setSelectedBanner(banner)}
-              className={`relative overflow-hidden group border-4 transition-all ${
-                selectedBanner.id === banner.id
-                  ? "border-brand scale-105 shadow-pixel"
-                  : "border-border opacity-60 hover:opacity-100"
-              }`}
+              className={`relative overflow-hidden group border-4 transition-all ${selectedBanner.id === banner.id
+                ? "border-brand scale-105 shadow-pixel"
+                : "border-border opacity-60 hover:opacity-100"
+                }`}
             >
               <div
                 className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity"
@@ -414,7 +413,7 @@ export function GachaView({ onBack }: Props) {
                   />
                 )}
                 <div className="flex flex-col items-center">
-                  <span className="font-display text-[0.45rem] text-accent tracking-[0.15em] mb-0.5">
+                  <span className="font-display text-[0.7rem] text-accent tracking-[0.15em] mb-0.5">
                     {banner.isShinyBanner ? "BANNER SHINY" : "BANNER DESTACADO"}
                   </span>
                   <span className="font-display text-[0.6rem] text-center leading-tight">
@@ -435,8 +434,8 @@ export function GachaView({ onBack }: Props) {
         {!selectedBanner.isShinyBanner && (
           <div className="flex items-center gap-2 mb-4 bg-surface-dark border-2 border-border px-4 py-2">
             <Zap size={14} className="text-accent" />
-            <span className="font-display text-[0.6rem] text-muted">
-              GARANTÍA EN <span className="text-accent">{pullsUntilPity}</span>{" "}
+            <span className="font-display text-[0.6rem] text-subtitle">
+              GARANTÍA EN <span className="text-subtitle">{pullsUntilPity}</span>{" "}
               TIRADAS
             </span>
             <div className="ml-2 w-24 h-2 bg-surface border border-border overflow-hidden">
@@ -455,11 +454,10 @@ export function GachaView({ onBack }: Props) {
           <button
             onClick={() => handlePull(1)}
             disabled={isPulling || !canAfford1}
-            className={`relative py-5 px-10 border-4 font-display text-sm tracking-[0.2em] transition-all ${
-              canAfford1 && !isPulling
-                ? "bg-brand border-brand-dark text-white hover:scale-105 active:scale-95 shadow-pixel"
-                : "bg-surface-dark border-border text-muted cursor-not-allowed"
-            }`}
+            className={`relative py-5 px-10 border-4 font-display text-sm tracking-[0.2em] transition-all ${canAfford1 && !isPulling
+              ? "bg-brand border-brand-dark text-white hover:scale-105 active:scale-95 shadow-pixel"
+              : "bg-surface-dark border-border text-muted cursor-not-allowed"
+              }`}
           >
             {isPulling ? "INVOCANDO..." : `INVOCAR ×1 (${GACHA_COST} 💰)`}
           </button>
@@ -467,11 +465,10 @@ export function GachaView({ onBack }: Props) {
           <button
             onClick={() => handlePull(10)}
             disabled={isPulling || !canAfford10}
-            className={`relative py-5 px-10 border-4 font-display text-sm tracking-[0.2em] transition-all ${
-              canAfford10 && !isPulling
-                ? "bg-linear-to-r from-brand to-purple-600 border-brand-dark text-white hover:scale-105 active:scale-95 shadow-pixel"
-                : "bg-surface-dark border-border text-muted cursor-not-allowed"
-            }`}
+            className={`relative py-5 px-10 border-4 font-display text-sm tracking-[0.2em] transition-all ${canAfford10 && !isPulling
+              ? "bg-linear-to-r from-brand to-purple-600 border-brand-dark text-white hover:scale-105 active:scale-95 shadow-pixel"
+              : "bg-surface-dark border-border text-muted cursor-not-allowed"
+              }`}
           >
             <div className="flex flex-col items-center">
               <span>
@@ -487,7 +484,7 @@ export function GachaView({ onBack }: Props) {
         </div>
 
         {/* Rate Info */}
-        <div className="text-[0.5rem] font-display text-muted italic text-center max-w-md leading-relaxed mb-4">
+        <div className="text-[0.7rem] font-display italic text-center max-w-md leading-relaxed mb-4">
           {selectedBanner.isShinyBanner ? (
             <>
               * Legendarios disponibles (
@@ -532,49 +529,48 @@ export function GachaView({ onBack }: Props) {
                 {pullResults.map((r, i) => (
                   <div
                     key={i}
-                    className={`bg-surface-dark border-2 p-3 flex flex-col items-center gap-2 transition-all ${
-                      r.isLegendary
-                        ? "border-accent shadow-[0_0_15px_rgba(255,215,0,0.4)]"
-                        : r.isShiny
-                          ? "border-brand shadow-[0_0_10px_rgba(204,0,0,0.3)]"
-                          : "border-border"
-                    }`}
+                    className={`bg-surface-dark border-2 p-3 flex flex-col items-center gap-2 transition-all ${r.isLegendary
+                      ? "border-accent shadow-[0_0_15px_rgba(255,215,0,0.4)]"
+                      : r.isShiny
+                        ? "border-brand shadow-[0_0_10px_rgba(204,0,0,0.3)]"
+                        : "border-border"
+                      }`}
                   >
                     <div className="relative">
                       <GachaSprite
                         pokemonId={r.pokemonId}
                         shiny={r.isShiny}
-                        size={64}
+                        size={84}
                       />
                       {r.isShiny && (
                         <Sparkles
-                          size={10}
+                          size={12}
                           className="absolute top-0 right-0 text-accent animate-ping"
                         />
                       )}
                       {r.isLegendary && (
                         <Star
-                          size={10}
-                          className="absolute top-0 left-0 text-accent"
+                          size={12}
+                          className="absolute top-0 right-0 text-accent"
                         />
                       )}
                     </div>
-                    <span className="font-display text-[0.55rem] text-center capitalize truncate w-full">
+                    <span className="font-display text-[0.7rem] text-center capitalize truncate w-full">
                       {r.name}
                     </span>
-                    <div className="flex gap-1 flex-wrap justify-center">
+                    <div className="flex gap-1 flex-wrap justify-center text-[0.5rem]">
                       {r.isNew && (
-                        <span className="bg-accent text-black font-display text-[0.35rem] px-1">
+                        <span className="bg-accent text-black font-display px-1">
                           NUEVO
                         </span>
                       )}
                       {r.isLegendary && (
-                        <span className="bg-purple-600 text-white font-display text-[0.35rem] px-1">
+                        <span className="bg-purple-600 text-white font-display px-1">
                           {r.isFeatured ? "DEST." : "LEGEN."}
                         </span>
                       )}
                       {r.isShiny && (
-                        <span className="bg-brand text-white font-display text-[0.35rem] px-1">
+                        <span className="bg-brand text-white font-display text-[0.7rem] px-1">
                           SHINY
                         </span>
                       )}
@@ -584,7 +580,7 @@ export function GachaView({ onBack }: Props) {
               </div>
               <button
                 onClick={() => setPullResults([])}
-                className="w-full max-w-xs py-3 bg-brand text-white font-display text-xs tracking-widest hover:bg-brand-dark transition-all mt-2"
+                className="w-full max-w-xs py-3 bg-brand text-white font-display text-[0.7rem] tracking-widest hover:bg-brand-dark transition-all mt-2"
               >
                 CONFIRMAR
               </button>
@@ -606,11 +602,10 @@ function SinglePullCard({
 }) {
   return (
     <div
-      className={`w-full max-w-md border-4 p-8 flex flex-col items-center gap-6 animate-in zoom-in-90 duration-300 ${
-        result.isLegendary
-          ? "bg-surface-dark border-accent shadow-[0_0_100px_rgba(255,215,0,0.4)]"
-          : "bg-surface-dark border-brand shadow-[0_0_100px_rgba(255,215,0,0.2)]"
-      }`}
+      className={`w-full max-w-md border-4 p-8 flex flex-col items-center gap-6 animate-in zoom-in-90 duration-300 ${result.isLegendary
+        ? "bg-surface-dark border-accent shadow-[0_0_100px_rgba(255,215,0,0.4)]"
+        : "bg-surface-dark border-brand shadow-[0_0_100px_rgba(255,215,0,0.2)]"
+        }`}
     >
       <div className="relative">
         <div
