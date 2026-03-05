@@ -8,6 +8,7 @@ import { BattleBackground } from "../../../components/ui/BattleBackground";
 import { REGIONS } from "../../../lib/regions";
 import { SwitchPokemonModal } from "./SwitchPokemonModal";
 import { clsx } from "clsx";
+import { useBattleAnimation } from "../hooks/useBattleAnimation";
 
 export interface BattleViewProps {
   onMoveClick?: (moveId: number) => void;
@@ -40,6 +41,36 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
     battle?.playerPokemon ||
     (isTraining ? training.pokemon : run.isActive ? run.team[0] : null);
   const enemyPokemon = battle?.enemyPokemon;
+
+  const { animState, playerRef, enemyRef } = useBattleAnimation(
+    battle,
+    () => {
+      if (isTraining) {
+        setRun(undefined as any); // Should use training setTraining, assuming it's available or implemented similarly
+        // To strictly match contexts, we should ideally have a method here.
+        // Let's assume the state machine will process apply_damage next tick if we just transition standard state.
+        // For simplicity we will update the turnState in the battle object.
+        const setTrain = (training as any).setTraining;
+        if (setTrain) {
+          setTrain((prev: any) => ({
+             ...prev,
+             currentBattle: prev.currentBattle ? {
+               ...prev.currentBattle,
+               turnState: "apply_damage"
+             } : null
+          }));
+        }
+      } else {
+        setRun((prev: any) => ({
+           ...prev,
+           currentBattle: prev.currentBattle ? {
+             ...prev.currentBattle,
+             turnState: "apply_damage"
+           } : null
+        }));
+      }
+    }
+  );
 
   if (!playerPokemon && !enemyPokemon && !run.isActive && !training.isActive)
     return null;
@@ -101,7 +132,10 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-surface-dark crt-screen relative overflow-hidden border-2 border-border border-b-0 min-h-[300px] z-0">
+    <div className={clsx(
+      "flex-1 flex flex-col bg-surface-dark crt-screen relative overflow-hidden border-2 border-border border-b-0 min-h-[300px] z-0",
+      animState.isScreenShaking && "anim-screen-shake"
+    )}>
       {/* Background Sprite Sheet */}
       <BattleBackground backgroundId={bgId} className="absolute inset-0 z-0" />
 
@@ -194,12 +228,26 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
             {/* Sprite Container */}
             <div
+              ref={enemyRef}
+              key={enemyPokemon.uid}
               className={clsx(
-                "w-40 h-40 sm:w-56 sm:h-56 flex items-end justify-center relative mt-2 shrink-0",
-                ENEMY_SPRITE_POSITION[bgId] || "translate-y-[60px] -translate-x-[20px]"
+                "w-40 h-40 sm:w-56 sm:h-56 flex items-end justify-center relative mt-2 shrink-0 transition-transform",
+                run.isManualBattle && !animState.isEnemyAttacking && !animState.isEnemyDefending && "animate-slide-in-enemy",
+                ENEMY_SPRITE_POSITION[bgId] || "translate-y-[60px] -translate-x-[20px]",
+                animState.isEnemyAttacking && "anim-lunge-left",
+                animState.isEnemyDefending && "anim-shake",
+                animState.isEnemyFainting && "anim-faint-drop"
               )}
             >
-              <div className="absolute bottom-2 w-32 sm:w-48 h-10 rounded-[100%] bg-black/50 blur-[3px] -z-10"></div>
+              {/* Elemental Overlay GIF */}
+              {animState.activeEnemyOverlay && (
+                <img 
+                  src={animState.activeEnemyOverlay} 
+                  alt="effect" 
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none z-30 scale-150 drop-shadow-lg"
+                />
+              )}
+              <div className="absolute bottom-2 w-32 sm:w-48 h-10 rounded-[100%] bg-black/50 blur-xs -z-10"></div>
               <PixelSprite
                 pokemonId={enemyPokemon.pokemonId}
                 variant="front"
@@ -223,7 +271,23 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
         {playerPokemon && (
           <div className="flex flex-col items-center relative">
             {/* Sprite Container */}
-            <div className="w-48 h-48 sm:w-64 sm:h-64 flex items-end justify-center relative mb-2 shrink-0">
+            <div 
+              ref={playerRef}
+              className={clsx(
+                "w-48 h-48 sm:w-64 sm:h-64 flex items-end justify-center relative mb-2 shrink-0 transition-transform",
+                animState.isPlayerAttacking && "anim-lunge-right",
+                animState.isPlayerDefending && "anim-shake",
+                animState.isPlayerFainting && "anim-faint-drop"
+             )}
+            >
+              {/* Elemental Overlay GIF */}
+              {animState.activePlayerOverlay && (
+                <img 
+                  src={animState.activePlayerOverlay} 
+                  alt="effect" 
+                  className="absolute inset-0 w-full h-full object-contain pointer-events-none z-30 scale-150 drop-shadow-lg"
+                />
+              )}
               <div className="absolute bottom-6 w-40 sm:w-56 h-12 rounded-[100%] bg-black/50 blur-[4px] -z-10"></div>
               <PixelSprite
                 pokemonId={playerPokemon.pokemonId}

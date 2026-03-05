@@ -127,6 +127,21 @@ export interface BattleState {
     target?: string;
   } | null;
 
+  turnState?: "idle" | "turn_start" | "animating" | "apply_damage";
+  turnQueue?: ("p" | "e")[];
+  pendingAnimation?: {
+    actor: "p" | "e";
+    target: "p" | "e";
+    moveType: string;
+    moveCategory: "physical" | "special" | "status";
+    damage: number;
+    isCrit: boolean;
+    effectiveness: number;
+    statusApplied: StatusCondition | null;
+    statChanges: { stat: string; amount: number; target: "p" | "e" }[];
+    hpTrigger: boolean; // Focus band or similar
+  } | null;
+
   // Boss features
   isBossBattle?: boolean;
   bossMaxBars?: number; // default 1
