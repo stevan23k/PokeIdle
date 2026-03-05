@@ -372,11 +372,14 @@ export function useEngineTick() {
               nextP.uid !== bState.playerPokemon.uid
             ) {
               pushLog(`¡Adelante ${nextP.name}!`, "normal");
-              bState.playerPokemon = nextP;
+                bState.playerPokemon = nextP;
+                usedManualTurn = true;
+              }
+            } else if (bState.manualActionQueue?.type === "item") {
+              // Item ya fue aplicado en ItemBag — solo consumir el turno
               usedManualTurn = true;
             }
-          }
-          bState.manualActionQueue = undefined;
+            bState.manualActionQueue = undefined;
         }
 
         if (!pMove && !usedManualTurn) {
@@ -712,6 +715,16 @@ export function useEngineTick() {
            pushLog(`¡${bState.enemyPokemon.name} enemigo se ha debilitado!`, "faint");
            nextState.totalBattlesWon += 1;
            nextState.zoneBattlesWon += 1;
+
+           // --- ZONE PROGRESSION ---
+           if (bState.isBossBattle) {
+             const region = REGIONS[nextState.currentRegion];
+             if (nextState.currentZoneIndex + 1 < region.zones.length) {
+               nextState.currentZoneIndex += 1;
+               nextState.zoneBattlesWon = 0;
+               nextState.pendingZoneTransition = true;
+             }
+           }
            
            // Calculate XP
            const baseXP = bState.enemyPokemon.baseStats.hp;
@@ -999,6 +1012,9 @@ export function useEngineTick() {
               null,
               255, // default rate
               bState.isBossBattle,
+              nextState.totalCaptured, // caughtCount
+              false, // isDarkGrass (default false)
+              1.0 // oPowerMultiplier (default 1.0)
             );
             pushLog(catchAttempt.log, "normal");
             if (catchAttempt.success) {
@@ -1009,6 +1025,19 @@ export function useEngineTick() {
           if (caught) {
             pushLog(`¡${bState.enemyPokemon.name} fue atrapado!`, "capture");
             nextState.totalCaptured += 1;
+
+            // --- ZONE PROGRESSION (on capture) ---
+            if (bState.isBossBattle) {
+              const region = REGIONS[nextState.currentRegion];
+              if (nextState.currentZoneIndex + 1 < region.zones.length) {
+                nextState.currentZoneIndex += 1;
+                nextState.zoneBattlesWon = 0;
+                nextState.pendingZoneTransition = true;
+              }
+            } else {
+              // Also increment zone progress on wild catch to stay consistent with kills
+              nextState.zoneBattlesWon += 1;
+            }
 
             bState.enemyPokemon = {
               ...bState.enemyPokemon,

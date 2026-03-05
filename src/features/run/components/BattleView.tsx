@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useGame } from "../../../context/GameContext";
 import { PixelSprite } from "../../../components/ui/PixelSprite";
 import { HPBar } from "../../../components/ui/HPBar";
@@ -9,6 +9,7 @@ import { REGIONS } from "../../../lib/regions";
 import { SwitchPokemonModal } from "./SwitchPokemonModal";
 import { clsx } from "clsx";
 import { useBattleAnimation } from "../hooks/useBattleAnimation";
+import { PokeballCaptureAnimation } from "./PokeballCaptureAnimation";
 
 export interface BattleViewProps {
   onMoveClick?: (moveId: number) => void;
@@ -74,6 +75,30 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
     battle,
     onResolveAnimation
   );
+
+  // --- Pokeball capture animation state ---
+  const [captureAnim, setCaptureAnim] = useState<{
+    active: boolean;
+    captured: boolean | null;
+  }>({ active: false, captured: null });
+  const [enemyHidden, setEnemyHidden] = useState(false);
+
+  // Sync capture animation state from battle.pendingCaptureAnim
+  useEffect(() => {
+    const pca = battle?.pendingCaptureAnim;
+    if (!pca) {
+      setCaptureAnim({ active: false, captured: null });
+      setEnemyHidden(false);
+      return;
+    }
+    if (pca.captured === null) {
+      // Throw started — show animation, result pending
+      setCaptureAnim({ active: true, captured: null });
+    } else {
+      // Result arrived — update captured flag
+      setCaptureAnim((prev) => ({ ...prev, captured: pca.captured }));
+    }
+  }, [battle?.pendingCaptureAnim]);
 
   if (!playerPokemon && !enemyPokemon && !run.isActive && !training.isActive)
     return null;
@@ -258,13 +283,30 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                   variant="front"
                   shiny={enemyPokemon.isShiny}
                   size={160}
-                  showScanlines={true}
+                  showScanlines={false}
                   alt={enemyPokemon.name}
                   className={clsx(
                     "w-32 h-32 sm:w-48 sm:h-48 drop-shadow-lg",
                     enemyPokemon.currentHP === 0 &&
                       "opacity-0 translate-y-8 transition-all duration-500",
+                    enemyHidden && "opacity-0 transition-opacity duration-300",
                   )}
+                />
+                {/* Pokeball capture animation */}
+                <PokeballCaptureAnimation
+                  isActive={captureAnim.active}
+                  captured={captureAnim.captured}
+                  ballId={battle?.pendingCaptureAnim?.ballId}
+                  onHideEnemy={() => setEnemyHidden(true)}
+                  onShowEnemy={() => setEnemyHidden(false)}
+                  onComplete={() => {
+                    setCaptureAnim({ active: false, captured: null });
+                    setEnemyHidden(false);
+                    setRun((prev: any) => prev.currentBattle ? {
+                      ...prev,
+                      currentBattle: { ...prev.currentBattle, pendingCaptureAnim: null }
+                    } : prev);
+                  }}
                 />
               </div>
             </div>
@@ -348,7 +390,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                   variant="back"
                   shiny={playerPokemon.isShiny}
                   size={192}
-                  showScanlines={true}
+                  showScanlines={false}
                   alt={playerPokemon.name}
                   className={clsx(
                     "w-40 h-40 sm:w-56 sm:h-56 drop-shadow-xl",

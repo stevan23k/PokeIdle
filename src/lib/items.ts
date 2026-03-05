@@ -2932,10 +2932,10 @@ export const ITEMS: Record<string, Item> = {
     shopPrice: null,
     condition: (state) => hasMegaEvolutionCandidate(state),
   },
-  "cable-link": {
-    id: "cable-link",
-    name: "Cable Link",
-    spriteSlug: "link-cable",
+  "linking-cord": {
+    id: "linking-cord",
+    name: "Cordón de Enlace",
+    spriteSlug: "linking-cord",
     description: "Evoluciona a Pokémon que requieren intercambio.",
     category: "evo",
     effect: { type: "evolve", method: "trade" },
