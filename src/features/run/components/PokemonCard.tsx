@@ -126,7 +126,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
             >
               {pokemon.name}
             </h3>
-            <span className="text-muted text-[0.65rem] font-body">
+            <span className="text-white text-[0.65rem] font-body">
               Nv.{pokemon.level}
             </span>
           </div>
@@ -164,7 +164,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[0.65rem] font-body text-muted">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[0.65rem] font-body text-white">
             <div className="flex justify-between">
               <span>PS</span>
               <span className="text-foreground">{pokemon.stats.hp}</span>
@@ -195,7 +195,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
 
           {/* Held Item */}
           <div className="flex items-center gap-2 border-t border-border pt-2 relative">
-            <span className="font-display text-[0.5rem] text-muted tracking-wider">
+            <span className="font-display text-[0.5rem] text-white tracking-wider">
               OBJETO:
             </span>
             {pokemon.heldItem && ITEMS[pokemon.heldItem] ? (
@@ -214,7 +214,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
                 </span>
               </Button>
             ) : (
-              <span className="font-body text-[0.55rem] text-muted italic">
+              <span className="font-body text-[0.55rem] text-white italic">
                 Sin objeto equipado
               </span>
             )}

@@ -41,6 +41,8 @@ import {
 export function useEngineTick() {
   const { run, setRun, setMeta, notify } = useGame();
   const fetchingRef = useRef(false);
+  const turnStateRef = useRef<string>("idle");
+  const processedAnimRef = useRef<string | null>(null);
 
   const tick = async () => {
     if (
@@ -197,38 +199,37 @@ export function useEngineTick() {
           let activePlayer = getNextActivePokemon(run.team);
           if (!activePlayer) return;
 
-          setRun((prev) => ({
-            ...prev,
-            currentZoneProgress: 0,
-            currentBattle: {
-              type: "wild", // Always wild to allow capture UI
-              phase: "active",
-              turnState: "idle",
-              playerPokemon: activePlayer!,
-              enemyPokemon: enemy,
-              turnCount: 0,
-              isBossBattle: isBoss,
-              activeMechanic: activeMechanic,
-              bossMaxBars: isBoss
-                ? run.gymsBadges.length === 0
-                  ? 1
-                  : run.gymsBadges.length < 4
-                    ? 2
-                    : 3
-                : 1,
-              bossCurrentBar: 1,
-            },
-            battleLog: [
-              ...prev.battleLog,
-              {
-                id: generateUid(),
-                text: isBoss
-                  ? `¡EL BOSS ${enemy.name} TE DESAFÍA!`
-                  : `¡Un salvaje ${enemy.name} ha aparecido!`,
-                type: isBoss ? "danger" : ("normal" as any),
+          setRun((prev) => {
+            // Safety check: if a battle was already spawned by another tick, don't overwrite it
+            if (prev.currentBattle) return prev;
+            
+            return {
+              ...prev,
+              currentZoneProgress: 0,
+              currentBattle: {
+                type: "wild",
+                phase: "active",
+                turnState: "idle",
+                playerPokemon: activePlayer!,
+                enemyPokemon: enemy,
+                turnCount: 0,
+                isBossBattle: isBoss,
+                activeMechanic: activeMechanic,
+                bossMaxBars: 1,
+                bossCurrentBar: 1,
               },
-            ].slice(-40),
-          }));
+              battleLog: [
+                ...prev.battleLog,
+                {
+                  id: generateUid(),
+                  text: isBoss
+                    ? `¡EL BOSS ${enemy.name} TE DESAFÍA!`
+                    : `¡Un salvaje ${enemy.name} ha aparecido!`,
+                  type: isBoss ? "danger" : ("normal" as any),
+                },
+              ].slice(-40),
+            };
+          });
         } catch (e) {
           console.error("Failed to spawn encounter", e);
         } finally {
@@ -311,8 +312,16 @@ export function useEngineTick() {
     // --- ACTIVE BATTLE ---
     // We do functional state update to ensure latest state
     setRun((state) => {
+      // Guard against stale state reads during animation
+      if (turnStateRef.current === "animating" && state.currentBattle?.turnState === "animating") {
+        return state;
+      }
+      
       const currentBattle = state.currentBattle;
-      if (!currentBattle) return state;
+      if (!currentBattle) {
+        turnStateRef.current = "idle";
+        return state;
+      }
 
       let nextState = { ...state };
       let bState = { ...currentBattle };
@@ -363,11 +372,14 @@ export function useEngineTick() {
               nextP.uid !== bState.playerPokemon.uid
             ) {
               pushLog(`¡Adelante ${nextP.name}!`, "normal");
-              bState.playerPokemon = nextP;
+                bState.playerPokemon = nextP;
+                usedManualTurn = true;
+              }
+            } else if (bState.manualActionQueue?.type === "item") {
+              // Item ya fue aplicado en ItemBag — solo consumir el turno
               usedManualTurn = true;
             }
-          }
-          bState.manualActionQueue = undefined;
+            bState.manualActionQueue = undefined;
         }
 
         if (!pMove && !usedManualTurn) {
@@ -412,18 +424,20 @@ export function useEngineTick() {
         );
         bState.turnQueue = order === "player-first" ? ["p", "e"] : ["e", "p"];
         
-        // Store the chosen moves temporarily on the state so we don't have to recalculate them
-        (bState as any)._pMove = pMove;
-        (bState as any)._eMove = eMove;
-        (bState as any)._usedManualTurn = usedManualTurn;
+        // Store the chosen moves properly on the state
+        bState.playerCurrentMove = pMove;
+        bState.enemyCurrentMove = eMove;
+        bState.usedManualTurn = usedManualTurn;
         
         bState.turnState = "turn_start";
+        turnStateRef.current = "turn_start";
         nextState.currentBattle = bState;
         nextState.battleLog = logs.slice(-40);
         return nextState;
       }
       
       if (bState.turnState === "animating") {
+        turnStateRef.current = "animating";
         return state; // Wait for UI to resolve animation
       }
       
@@ -458,170 +472,351 @@ export function useEngineTick() {
         }
       }
 
-      // We are in turn_start or apply_damage, and need to process the next actor in the queue
-      const currentActor = (bState.turnQueue || [])[0]; // "p" or "e"
+      if (bState.turnState === "turn_start") {
+        // We are in turn_start, and need to process the next actor in the queue
+        const currentActor = (bState.turnQueue || [])[0]; // "p" or "e"
 
-      if (currentActor) {
-        // --- ACTION CALCULATE PHASE ---
-        const isPlayer = currentActor === "p";
-        const attacker = isPlayer ? bState.playerPokemon : bState.enemyPokemon;
-        const defender = isPlayer ? bState.enemyPokemon : bState.playerPokemon;
-        const move = isPlayer ? (bState as any)._pMove : (bState as any)._eMove;
-        const usedManual = isPlayer ? (bState as any)._usedManualTurn : false;
-        
-        // If the player used a manual switch or item and didn't select a move, skip attack calc
-        if (isPlayer && usedManual && !move) {
-           (bState.turnQueue || []).shift(); // Remove "p"
-           nextState.currentBattle = bState;
-           nextState.battleLog = logs.slice(-40);
-           return nextState; // Loop will continue on next tick for enemy
-        }
+        if (currentActor) {
+          // --- ACTION CALCULATE PHASE ---
+          const isPlayer = currentActor === "p";
+          const attacker = isPlayer ? bState.playerPokemon : bState.enemyPokemon;
+          const defender = isPlayer ? bState.enemyPokemon : bState.playerPokemon;
+          const move = isPlayer ? bState.playerCurrentMove : bState.enemyCurrentMove;
+          const usedManual = isPlayer ? bState.usedManualTurn : false;
+          
+          let resolvedMove = move;
+          if (isPlayer && !resolvedMove) {
+            // Fallback: re-select best move in case playerCurrentMove was lost between ticks
+            resolvedMove = chooseBestMove(
+              bState.playerPokemon,
+              bState.enemyPokemon,
+              bState.activeMechanic
+            );
+            if (resolvedMove) {
+              bState.playerCurrentMove = resolvedMove;
+            }
+          }
 
-        if (move && attacker.currentHP > 0 && defender.currentHP > 0) {
-           let canAttack = true;
-
-           // Esporas en el Aire mechanic
-           if (
-             bState.activeMechanic === "esporas_aire" &&
-             !attacker.status
-           ) {
-             const isImmune = attacker.types.some((t: string) =>
-               ["poison", "steel"].includes(t.toLowerCase()),
-             );
-             const moveType = move?.type.toLowerCase();
-             const clearsSpores =
-               moveType === "fire" ||
-               moveType === "ice" ||
-               moveType === "poison";
-             if (!isImmune && !clearsSpores && Math.random() < 0.1) {
-               attacker.status = "SLP";
-               pushLog(
-                 `¡Las Esporas en el Aire durmieron a ${attacker.name}!`,
-                 isPlayer ? "danger" : "normal",
-               );
-             }
-           }
-
-           // Status checks
-           if (attacker.status === "SLP") {
-             if (Math.random() < 0.3) {
-               attacker.status = null;
-               pushLog(`¡${attacker.name} se despertó!`, isPlayer ? "normal" : "danger");
+          // If the player used a manual switch or item and didn't select a move, skip attack calc
+          if (isPlayer && usedManual && !resolvedMove) {
+             (bState.turnQueue || []).shift(); // Remove "p"
+             if (bState.turnQueue && bState.turnQueue.length > 0) {
+               bState.turnState = "turn_start";
+               turnStateRef.current = "turn_start";
              } else {
-               pushLog(
-                 `¡${attacker.name} está profundamente dormido!`,
-                 "normal",
-               );
-               canAttack = false;
+               bState.turnState = "idle";
+               turnStateRef.current = "idle";
              }
-           } else if (attacker.status === "FRZ") {
-             if (Math.random() < 0.2) {
-               attacker.status = null;
-               pushLog(`¡${attacker.name} se descongeló!`, isPlayer ? "normal" : "danger");
-             } else {
-               pushLog(
-                 `¡${attacker.name} está congelado!`,
-                 "normal",
-               );
-               canAttack = false;
-             }
-           } else if (attacker.status === "PAR") {
-             if (Math.random() < 0.25) {
-               pushLog(
-                 `¡${attacker.name} está paralizado y no puede moverse!`,
-                 isPlayer ? "danger" : "normal",
-               );
-               canAttack = false;
-             }
-           }
+             nextState.currentBattle = bState;
+             nextState.battleLog = logs.slice(-40);
+             return nextState; // Loop will continue on next tick for enemy
+          }
 
-           if (canAttack) {
-             let {
-               damage,
-               isCrit,
-               effectiveness,
-             } = calculateDamage(
-               attacker,
-               defender,
-               move,
-               bState.activeMechanic,
-             );
+          if (resolvedMove && attacker.currentHP > 0 && defender.currentHP > 0) {
+             let canAttack = true;
 
-             // Calculate Status Effect from Move
-             let statusEffectToApply = null;
+             // Esporas en el Aire mechanic
              if (
-               move.statusEffect &&
-               !defender.status &&
-               defender.currentHP - damage > 0
+               bState.activeMechanic === "esporas_aire" &&
+               !attacker.status
              ) {
-               if (Math.random() * 100 < move.statusEffect.chance) {
-                 statusEffectToApply = move.statusEffect.condition;
-               }
-             }
-
-             // Campo Electrificado mechanic
-             if (
-               bState.activeMechanic === "campo_electrificado" &&
-               move.category === "physical" &&
-               !defender.status &&
-               defender.currentHP - damage > 0
-             ) {
-               if (Math.random() < 0.15 && !statusEffectToApply) {
-                 statusEffectToApply = "PAR";
-               }
-             }
-             
-             // Prepare the animation state block
-             bState.pendingAnimation = {
-               actor: isPlayer ? "p" : "e",
-               target: isPlayer ? "e" : "p",
-               moveType: move.type,
-               moveCategory: move.category,
-               damage: damage,
-               isCrit: isCrit,
-               effectiveness: effectiveness,
-               statusApplied: statusEffectToApply as any,
-               statChanges: [], // Can implement stat changes later if needed
-               hpTrigger: false,
-             };
-             
-             // Pre-deduct PP
-             if (isPlayer) {
-               const pMoveIdx = attacker.moves.findIndex(
-                 (m: any) => m.moveId === move.moveId,
+               const isImmune = attacker.types.some((t: string) =>
+                 ["poison", "steel"].includes(t.toLowerCase()),
                );
-               if (pMoveIdx >= 0) {
-                 attacker.moves[pMoveIdx].currentPP = Math.max(
-                   0,
-                   attacker.moves[pMoveIdx].currentPP - 1,
+               const moveType = resolvedMove?.type.toLowerCase();
+               const clearsSpores =
+                 moveType === "fire" ||
+                 moveType === "ice" ||
+                 moveType === "poison";
+               if (!isImmune && !clearsSpores && Math.random() < 0.1) {
+                 attacker.status = "SLP";
+                 pushLog(
+                   `¡Las Esporas en el Aire durmieron a ${attacker.name}!`,
+                   isPlayer ? "danger" : "normal",
                  );
                }
              }
 
-             // Transition to animating, the actual damage will be applied via resolveAnimation by the UI
-             bState.turnState = "animating";
-             nextState.currentBattle = bState;
-             nextState.battleLog = logs.slice(-40);
-             return nextState; 
+             // Status checks
+             if (attacker.status === "SLP") {
+               if (Math.random() < 0.3) {
+                 attacker.status = null;
+                 pushLog(`¡${attacker.name} se despertó!`, isPlayer ? "normal" : "danger");
+               } else {
+                 pushLog(
+                   `¡${attacker.name} está profundamente dormido!`,
+                   "normal",
+                 );
+                 canAttack = false;
+               }
+             } else if (attacker.status === "FRZ") {
+               if (Math.random() < 0.2) {
+                 attacker.status = null;
+                 pushLog(`¡${attacker.name} se descongeló!`, isPlayer ? "normal" : "danger");
+               } else {
+                 pushLog(
+                   `¡${attacker.name} está congelado!`,
+                   "normal",
+                 );
+                 canAttack = false;
+               }
+             } else if (attacker.status === "PAR") {
+               if (Math.random() < 0.25) {
+                 pushLog(
+                   `¡${attacker.name} está paralizado y no puede moverse!`,
+                   isPlayer ? "danger" : "normal",
+                 );
+                 canAttack = false;
+               }
+             }
+
+             if (canAttack) {
+               let {
+                 damage,
+                 isCrit,
+                 effectiveness,
+               } = calculateDamage(
+                 attacker,
+                 defender,
+                 resolvedMove,
+                 bState.activeMechanic,
+               );
+
+               // Calculate Status Effect from Move
+               let statusEffectToApply = null;
+               if (
+                 resolvedMove.statusEffect &&
+                 !defender.status &&
+                 defender.currentHP - damage > 0
+               ) {
+                 if (Math.random() * 100 < resolvedMove.statusEffect.chance) {
+                   statusEffectToApply = resolvedMove.statusEffect.condition;
+                 }
+               }
+
+               // Campo Electrificado mechanic
+               if (
+                 bState.activeMechanic === "campo_electrificado" &&
+                 resolvedMove.category === "physical" &&
+                 !defender.status &&
+                 defender.currentHP - damage > 0
+               ) {
+                 if (Math.random() < 0.15 && !statusEffectToApply) {
+                   statusEffectToApply = "PAR";
+                 }
+               }
+               
+               // Prepare the animation state block
+               bState.pendingAnimation = {
+                 actor: isPlayer ? "p" : "e",
+                 target: isPlayer ? "e" : "p",
+                 moveType: resolvedMove.type,
+                 moveCategory: resolvedMove.category,
+                 damage: damage,
+                 isCrit: isCrit,
+                 effectiveness: effectiveness,
+                 statusApplied: statusEffectToApply as any,
+                 statChanges: [], // Can implement stat changes later if needed
+                 hpTrigger: false,
+               };
+               
+               // Pre-deduct PP
+               if (isPlayer) {
+                 const pMoveIdx = attacker.moves.findIndex(
+                   (m: any) => m.moveId === resolvedMove.moveId,
+                 );
+                 if (pMoveIdx >= 0) {
+                   attacker.moves[pMoveIdx].currentPP = Math.max(
+                     0,
+                     attacker.moves[pMoveIdx].currentPP - 1,
+                   );
+                 }
+               }
+
+              // Transition to animating, the actual damage will be applied via resolveAnimation by the UI
+              bState.turnState = "animating";
+              turnStateRef.current = "animating";
+              nextState.currentBattle = bState;
+              nextState.battleLog = logs.slice(-40);
+              return nextState; 
+            }
+          }
+          
+          // If they couldn't attack, or no move, just remove from queue and proceed
+          bState.turnQueue = bState.turnQueue ? bState.turnQueue.slice(1) : [];
+          
+          if (!resolvedMove && isPlayer) {
+            pushLog(`¡${bState.playerPokemon.name} no pudo ejecutar su acción!`, "normal");
+          }
+
+          if (bState.turnQueue && bState.turnQueue.length > 0) {
+            bState.turnState = "turn_start";
+            turnStateRef.current = "turn_start";
+          } else {
+            bState.turnState = "idle";
+            turnStateRef.current = "idle";
+          }
+          
+          nextState.currentBattle = bState;
+          nextState.battleLog = logs.slice(-40);
+          return nextState; 
+        }
+      }
+
+      if (bState.turnState === "apply_damage") {
+        const anim = bState.pendingAnimation;
+
+        // Build a stable ID for this apply_damage to prevent duplicate processing
+        const animId = anim
+          ? `${anim.actor}-${anim.moveType}-${anim.damage}-${bState.turnCount}`
+          : `no-anim-${bState.turnCount}`;
+        if (processedAnimRef.current === animId) return state; // Already processed
+        processedAnimRef.current = animId;
+
+        if (anim) {
+          const isPlayer = anim.actor === "p";
+          const attacker = isPlayer ? bState.playerPokemon : bState.enemyPokemon;
+          const defender = isPlayer ? bState.enemyPokemon : bState.playerPokemon;
+          const move = isPlayer ? bState.playerCurrentMove : bState.enemyCurrentMove;
+
+          // Apply damage
+          const { nextHP, focusBandTriggered } = applyDamage(defender, anim.damage);
+          
+          if (isPlayer) {
+            bState.enemyPokemon = { ...bState.enemyPokemon, currentHP: nextHP };
+          } else {
+            bState.playerPokemon = { ...bState.playerPokemon, currentHP: nextHP };
+          }
+
+          // Apply status if any
+          if (anim.statusApplied && !defender.status) {
+            defender.status = anim.statusApplied;
+            pushLog(`¡${defender.name} ahora está ${anim.statusApplied}!`, isPlayer ? "normal" : "danger");
+          }
+
+          // Logs
+          if (move) {
+            pushLog(`${attacker.name} usó ${move.moveName} causando ${anim.damage} de daño!`, isPlayer ? "attack" : "normal");
+          }
+          if (anim.effectiveness > 1.5) pushLog("¡Es súper efectivo!", "super");
+          if (anim.effectiveness < 0.7 && anim.effectiveness > 0) pushLog("No es muy efectivo...", "not-very");
+          if (anim.effectiveness === 0) pushLog(`No afecta a ${defender.name}...`, "normal");
+          if (anim.isCrit) pushLog("¡Un golpe crítico!", "crit");
+          if (focusBandTriggered) pushLog(`¡${defender.name} resistió el golpe con su Cinta Focus!`, "normal");
+
+          bState.pendingAnimation = null;
+        }
+
+        // Shift queue and determine next turnState
+        bState.turnQueue = bState.turnQueue ? bState.turnQueue.slice(1) : [];
+        
+        // --- CHECK FOR DEFEAT/VICTORY ---
+        if (bState.enemyPokemon.currentHP === 0) {
+           pushLog(`¡${bState.enemyPokemon.name} enemigo se ha debilitado!`, "faint");
+           nextState.totalBattlesWon += 1;
+           nextState.zoneBattlesWon += 1;
+
+           // --- ZONE PROGRESSION ---
+           if (bState.isBossBattle) {
+             const region = REGIONS[nextState.currentRegion];
+             if (nextState.currentZoneIndex + 1 < region.zones.length) {
+               nextState.currentZoneIndex += 1;
+               nextState.zoneBattlesWon = 0;
+               nextState.pendingZoneTransition = true;
+             }
+           }
+           
+           // Calculate XP
+           const baseXP = bState.enemyPokemon.baseStats.hp;
+           const xpGain = calculateXPGain(
+             bState.enemyPokemon.level, 
+             baseXP, 
+             bState.type === "trainer" || bState.type === "gym" || bState.type === "elite",
+             nextState.expMultiplier
+           );
+           
+           const expShareCount = nextState.items["exp-share"] || 0;
+           const { updatedTeam } = distributeTeamXP(
+             nextState.team, 
+             bState.playerPokemon.uid,
+             xpGain,
+             expShareCount
+           );
+           
+           let currentActive = updatedTeam.find(p => p.uid === bState.playerPokemon.uid);
+           if (currentActive) {
+             currentActive.xp += xpGain;
+             pushLog(`¡${currentActive.name} ganó ${xpGain} PV!`, "level");
+             
+             while (currentActive.xp >= xpToNextLevel(currentActive.level)) {
+                const leveled = levelUpPokemon(currentActive);
+                pushLog(`¡${currentActive.name} subió al nivel ${leveled.level}!`, "level");
+                currentActive = leveled;
+             }
+           }
+
+           nextState.team = updatedTeam.map(p => p.uid === currentActive?.uid ? currentActive : p);
+
+           // Generate Loot
+           nextState.pendingLootSelection = generateLootOptions([], {
+             team: nextState.team,
+             pc: nextState.pc
+           });
+
+           // End Battle
+           processedAnimRef.current = null;
+           nextState.currentBattle = null;
+           nextState.battleLog = logs.slice(-40);
+           return nextState;
+        }
+
+        if (bState.playerPokemon.currentHP === 0) {
+           pushLog(`¡${bState.playerPokemon.name} se ha debilitado!`, "faint");
+           nextState.totalFainted += 1;
+           // If manual, we wait for switch. If auto, the next tick will handle it.
+           if (!nextState.isManualBattle) {
+              const nextP = getNextActivePokemon(nextState.team);
+              if (nextP) {
+                pushLog(`¡Adelante ${nextP.name}!`, "normal");
+                bState.playerPokemon = nextP;
+                bState.turnState = "idle"; // Reset turn after a faint
+                turnStateRef.current = "idle";
+                bState.turnQueue = [];
+              }
+           } else {
+              bState.pendingManualSwitch = true;
+              bState.turnState = "idle";
+              turnStateRef.current = "idle";
+              processedAnimRef.current = null;
+              bState.turnQueue = [];
            }
         }
-        
-        // If they couldn't attack, or no move, just remove from queue and proceed
-        if (bState.turnQueue) bState.turnQueue.shift();
+
+        if (bState.turnQueue && bState.turnQueue.length > 0) {
+          bState.turnState = "turn_start";
+          turnStateRef.current = "turn_start";
+          processedAnimRef.current = null; // Reset so next actor's apply_damage can run
+        } else {
+          bState.turnState = "idle";
+          turnStateRef.current = "idle";
+          processedAnimRef.current = null;
+        }
+
         nextState.currentBattle = bState;
         nextState.battleLog = logs.slice(-40);
-        return nextState; 
+        return nextState;
       }
       
       // If we reach here, turnQueue is empty, meaning both actors have finished their turn actions
       // We process end of turn effects, then reset to idle
       
       bState.turnState = "idle";
+      turnStateRef.current = "idle";
       
-      // Cleanup temporary turn state vars
-      delete (bState as any)._pMove;
-      delete (bState as any)._eMove;
-      delete (bState as any)._usedManualTurn;
+      // Cleanup turn state vars
+      bState.playerCurrentMove = undefined;
+      bState.enemyCurrentMove = undefined;
+      bState.usedManualTurn = undefined;
 
       // --- END OF TURN EFFECTS (Burn/Poison) ---
 
@@ -817,6 +1012,9 @@ export function useEngineTick() {
               null,
               255, // default rate
               bState.isBossBattle,
+              nextState.totalCaptured, // caughtCount
+              false, // isDarkGrass (default false)
+              1.0 // oPowerMultiplier (default 1.0)
             );
             pushLog(catchAttempt.log, "normal");
             if (catchAttempt.success) {
@@ -827,6 +1025,19 @@ export function useEngineTick() {
           if (caught) {
             pushLog(`¡${bState.enemyPokemon.name} fue atrapado!`, "capture");
             nextState.totalCaptured += 1;
+
+            // --- ZONE PROGRESSION (on capture) ---
+            if (bState.isBossBattle) {
+              const region = REGIONS[nextState.currentRegion];
+              if (nextState.currentZoneIndex + 1 < region.zones.length) {
+                nextState.currentZoneIndex += 1;
+                nextState.zoneBattlesWon = 0;
+                nextState.pendingZoneTransition = true;
+              }
+            } else {
+              // Also increment zone progress on wild catch to stay consistent with kills
+              nextState.zoneBattlesWon += 1;
+            }
 
             bState.enemyPokemon = {
               ...bState.enemyPokemon,

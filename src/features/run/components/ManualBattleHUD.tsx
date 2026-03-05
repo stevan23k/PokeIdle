@@ -2,8 +2,10 @@ import React from "react";
 import { useGame } from "../../../context/GameContext";
 import { ITEMS } from "../../../lib/items";
 import type { ActiveMove } from "../types/game.types";
+import { clsx } from "clsx";
 import { MoveCategoryBadge } from "../../../components/ui/MoveCategoryBadge";
 import { Button } from "../../../components/ui/Button";
+import { TypeBadge } from "../../../components/ui/TypeBadge";
 
 const TYPE_COLORS: Record<string, string> = {
   normal: "#A8A878",
@@ -40,7 +42,7 @@ export function ManualBattleHUD() {
   if (!battle || !pokemon || battle.phase !== "active") {
     return (
       <div className="h-44 border-2 border-border bg-surface-dark crt-screen relative flex items-center justify-center p-3 overflow-hidden">
-        <span className="font-display text-[0.6rem] text-muted tracking-widest uppercase animate-pulse">
+        <span className="font-display text-[0.6rem] text-white tracking-widest uppercase animate-pulse">
           Esperando Combate...
         </span>
       </div>
@@ -48,6 +50,11 @@ export function ManualBattleHUD() {
   }
 
   const hasQueuedAction = !!battle.manualActionQueue;
+
+  const isPlayerTurn = 
+    battle.turnState === "idle" && 
+    !hasQueuedAction &&
+    (!battle.turnQueue || battle.turnQueue.length === 0);
 
   const handleMoveSelect = (moveId: string) => {
     if (isTraining) {
@@ -78,9 +85,9 @@ export function ManualBattleHUD() {
   return (
     <div className="h-44 border-2 border-border bg-surface-dark crt-screen relative flex flex-col overflow-hidden">
       <div className="bg-surface border-b border-border px-2 py-1.5 z-10 sticky top-0 flex items-center justify-between">
-        <span className="font-display text-[0.55rem] text-accent-blue tracking-widest uppercase drop-shadow-sm">
-          {hasQueuedAction
-            ? "ACCION EN COLA..."
+        <span className="font-display text-[0.55rem] text-white tracking-widest uppercase drop-shadow-sm">
+          {!isPlayerTurn
+            ? "ESPERANDO..."
             : "¿QUÉ DEBE HACER " + battle.playerPokemon.name + "?"}
         </span>
       </div>
@@ -90,9 +97,18 @@ export function ManualBattleHUD() {
           <Button
             key={move.moveId}
             variant="secondary"
-            disabled={hasQueuedAction || move.currentPP === 0}
-            onClick={() => handleMoveSelect(String(move.moveId))}
-            className="group relative flex-col items-stretch! justify-start! p-2 gap-1 h-full"
+            disabled={!isPlayerTurn}
+            onClick={() => {
+              if (move.currentPP === 0) {
+                return;
+              }
+              handleMoveSelect(String(move.moveId));
+            }}
+            className={clsx(
+              "group relative flex-col items-stretch! justify-start! p-2 gap-1 h-full",
+              !isPlayerTurn && "opacity-40 cursor-not-allowed",
+              move.currentPP === 0 && isPlayerTurn && "opacity-50 grayscale cursor-not-allowed hover:animate-[shake_0.4s_ease-in-out]"
+            )}
             style={{
               backgroundColor:
                 move.currentPP > 0
@@ -105,14 +121,12 @@ export function ManualBattleHUD() {
               <span className="font-display text-[0.65rem] uppercase text-foreground truncate max-w-[70%] text-left">
                 {move.moveName}
               </span>
-              <span className="font-body text-[0.55rem] text-muted shrink-0">
+              <span className="font-body text-[0.55rem] text-white shrink-0">
                 {move.currentPP}/{move.maxPP}
               </span>
             </div>
-            <div className="flex gap-1 items-center w-full mt-auto">
-              <span className="text-[0.45rem] bg-surface-dark px-1.5 py-0.5 pixel-border uppercase font-body text-muted group-hover:text-foreground transition-colors">
-                {move.type}
-              </span>
+            <div className="flex gap-2 items-center w-full mt-auto">
+              <TypeBadge type={move.type} showLabel={false} size="sm" />
               <MoveCategoryBadge category={move.category} size="xs" />
             </div>
           </Button>

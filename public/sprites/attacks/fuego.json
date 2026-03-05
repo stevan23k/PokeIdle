@@ -1,0 +1,18 @@
+{
+  "name": "Sprite-0001",
+  "imagePath": "Sprite-0001.png",
+  "frameWidth": 384,
+  "frameHeight": 64,
+  "totalFrames": 1,
+  "uniform": true,
+  "sheetWidth": 384,
+  "sheetHeight": 64,
+  "frames": [
+    {
+      "x": 0,
+      "y": 0,
+      "w": 384,
+      "h": 64
+    }
+  ]
+}

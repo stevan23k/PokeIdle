@@ -30,7 +30,7 @@ export function TeamRoster() {
           </span>
         </button>
 
-        <span className="font-body text-muted text-xs font-bold shrink-0 ml-auto hidden sm:block">
+        <span className="font-body text-white text-xs font-bold shrink-0 ml-auto hidden sm:block">
           {run.team.length}/6
         </span>
       </div>
@@ -50,14 +50,14 @@ export function TeamRoster() {
 
         {run.team.length < 6 && run.team.length > 0 && (
           <div className="mt-2 p-2 border border-dashed border-border/40 rounded-sm">
-            <p className="font-body text-[0.6rem] text-muted italic text-center leading-tight">
+            <p className="font-body text-[0.6rem] text-white italic text-center leading-tight">
               Captura Pokémon en batalla para completar tu equipo
             </p>
           </div>
         )}
 
         {run.team.length === 0 && (
-          <div className="text-center p-6 border-2 border-dashed border-border text-muted font-body text-xs bg-surface-alt">
+          <div className="text-center p-6 border-2 border-dashed border-border text-white font-body text-xs bg-surface-alt">
             No tienes Pokémon en tu equipo.
           </div>
         )}

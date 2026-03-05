@@ -18,6 +18,7 @@ export function ItemSprite({
   className = "",
 }: ItemSpriteProps) {
   const [hasError, setHasError] = useState(false);
+  const [fallbackSrc, setFallbackSrc] = useState<string | null>(null);
 
   // Use the spriteSlug from the item definition
   const spriteUrl = itemSpriteUrl(item.spriteSlug);
@@ -25,18 +26,22 @@ export function ItemSprite({
   if (hasError) {
     return (
       <div
-        className={`flex items-center justify-center bg-surface-light/50 rounded-md border border-white/10 ${className}`}
+        className={`flex items-center justify-center bg-surface-light/50 rounded-md border border-white/10 overflow-hidden ${className}`}
         style={{ width: size, height: size }}
         title={item.name}
       >
-        <span style={{ fontSize: size * 0.6 }}>📦</span>
+        <img 
+          src="/sprites/items/0.png" 
+          alt="Item fallback" 
+          className="w-full h-full object-contain image-rendering-pixelated opacity-50"
+        />
       </div>
     );
   }
 
   return (
     <img
-      src={spriteUrl}
+      src={fallbackSrc || spriteUrl}
       alt={item.name}
       title={item.name}
       className={`object-contain ${className}`}

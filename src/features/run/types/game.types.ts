@@ -147,7 +147,11 @@ export interface BattleState {
   bossMaxBars?: number; // default 1
   bossCurrentBar?: number; // 1-indexed
 
+  pendingCaptureAnim?: { ballId: string; captured: boolean | null } | null;
   pendingManualSwitch?: boolean;
+  playerCurrentMove?: ActiveMove | null;
+  enemyCurrentMove?: ActiveMove | null;
+  usedManualTurn?: boolean;
 }
 
 export interface MoveLearnData {

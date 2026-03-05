@@ -31,20 +31,20 @@ export function MoveCategoryBadge({
   return (
     <div
       className={clsx(
-        "inline-flex items-center justify-center rounded px-1.5 py-0.5 text-white font-bold uppercase shadow-sm border border-white/20",
-        size === "xs"
-          ? "text-[8px] leading-none px-1 py-0"
-          : size === "sm"
-            ? "text-[10px]"
-            : "text-xs",
+        "inline-flex items-center justify-center pixel-border shadow-sm overflow-hidden bg-surface-dark transition-all group-hover:scale-110",
+        size === "xs" ? "w-16 h-5" : size === "sm" ? "w-20 h-6" : "w-24 h-7",
         className,
       )}
-      style={{
-        backgroundColor: color,
-        textShadow: "0px 1px 2px rgba(0,0,0,0.5)",
-      }}
     >
-      {label}
+      <img
+        src={`/sprites/categories/${cat}.png`}
+        alt={label}
+        className="w-full h-full object-contain image-rendering-pixelated"
+        onError={(e) => {
+          (e.target as HTMLImageElement).parentElement!.style.backgroundColor = color;
+          (e.target as HTMLImageElement).replaceWith(label);
+        }}
+      />
     </div>
   );
 }

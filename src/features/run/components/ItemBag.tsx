@@ -91,11 +91,30 @@ export function ItemBag() {
       }
     }
 
+    // Consumir turno en combate manual para objetos de curación o combate
+    if (
+      run.isManualBattle &&
+      run.currentBattle &&
+      (itemDef.category === "heal" || itemDef.category === "battle")
+    ) {
+      setRun((prev) =>
+        prev.currentBattle
+          ? {
+              ...prev,
+              currentBattle: {
+                ...prev.currentBattle,
+                manualActionQueue: { type: "item", id: useTargetModal! },
+              },
+            }
+          : prev,
+      );
+    }
+
     setUseTargetModal(null);
   };
 
   const handleThrowBall = (itemId: string) => {
-    if (!run.currentBattle || run.currentBattle.type !== "wild" || run.currentBattle.isBossBattle) {
+    if (!run.currentBattle || run.currentBattle.type !== "wild") {
       setRun((prev) => ({
         ...prev,
         battleLog: [
@@ -108,35 +127,58 @@ export function ItemBag() {
     const ballDef = ITEMS[itemId];
     if (!ballDef) return;
 
-    setRun(prev => {
-      let nextState = { ...prev };
-      let bState = { ...nextState.currentBattle! };
-      
-      nextState.items = { ...nextState.items, [itemId]: (nextState.items[itemId] || 0) - 1 };
-      
-      const catchAttempt = calculateCaptureChance(
-        bState.enemyPokemon,
-        ballDef,
-        bState.enemyPokemon.status,
-        255,
-        bState.isBossBattle
-      );
-
-      const newLog: any[] = [
-        ...nextState.battleLog,
-        { id: Date.now().toString(), text: `Lanzaste ${ballDef.name}...`, type: "capture" },
-        { id: Date.now().toString() + "1", text: catchAttempt.log, type: "normal" }
-      ];
-
-      if (catchAttempt.success) {
-        bState.phase = "caught";
-        nextState.totalCaptured += 1;
-      }
-      
-      nextState.battleLog = newLog.slice(-40);
-      nextState.currentBattle = bState;
-      return nextState;
+    // Step 1: deduct item and start animation (result unknown yet)
+    setRun((prev) => {
+      if (!prev.currentBattle) return prev;
+      return {
+        ...prev,
+        items: { ...prev.items, [itemId]: (prev.items[itemId] || 0) - 1 },
+        currentBattle: {
+          ...prev.currentBattle,
+          pendingCaptureAnim: { ballId: itemId, captured: null },
+        },
+        battleLog: [
+          ...prev.battleLog,
+          { id: Date.now().toString(), text: `Lanzaste ${ballDef.name}...`, type: "capture" as const },
+        ].slice(-40),
+      };
     });
+
+    // Step 2: calculate result after a delay (matches animation throw duration ~800ms)
+    setTimeout(() => {
+      setRun((prev) => {
+        if (!prev.currentBattle) return prev;
+        const bState = { ...prev.currentBattle };
+        const catchAttempt = calculateCaptureChance(
+          bState.enemyPokemon,
+          ballDef,
+          bState.enemyPokemon.status,
+          255,
+          bState.isBossBattle,
+          prev.totalCaptured,
+          false, // isDarkGrass
+          1.0 // oPower
+        );
+        const caught = catchAttempt.success;
+        return {
+          ...prev,
+          totalCaptured: caught ? prev.totalCaptured + 1 : prev.totalCaptured,
+          currentBattle: {
+            ...bState,
+            phase: caught ? "caught" : bState.phase,
+            pendingCaptureAnim: { ballId: itemId, captured: caught },
+            // NEW: Consume turn on failure in manual battle
+            manualActionQueue: (!caught && prev.isManualBattle) 
+              ? { type: "item", id: itemId } 
+              : bState.manualActionQueue,
+          },
+          battleLog: [
+            ...prev.battleLog,
+            { id: Date.now().toString(), text: catchAttempt.log, type: "normal" as const },
+          ].slice(-40),
+        };
+      });
+    }, 800);
   };
 
   const unpinItem = (itemId: string, e: React.MouseEvent) => {
@@ -178,7 +220,7 @@ export function ItemBag() {
                       <span className="font-display text-[0.5rem] tracking-wider truncate text-foreground">
                         {item.name}
                       </span>
-                      <span className="font-body text-[0.55rem] font-bold text-muted">
+                      <span className="font-body text-[0.55rem] font-bold text-white">
                         x{qty}
                       </span>
                     </div>
@@ -189,7 +231,7 @@ export function ItemBag() {
                       variant="ghost"
                       size="sm"
                       onClick={(e) => unpinItem(id, e)}
-                      className="p-1 px-1.5 text-muted hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
+                      className="p-1 px-1.5 text-white hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
                       title="Desanclar"
                     >
                       <StarOff size={12} />
@@ -234,7 +276,7 @@ export function ItemBag() {
           cancelText="Cancelar"
           message={
             <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto px-1 pt-1 -mx-2">
-              <span className="text-[0.6rem] font-display text-muted uppercase tracking-widest mb-1 pl-1">
+              <span className="text-[0.6rem] font-display text-white uppercase tracking-widest mb-1 pl-1">
                 Selecciona al objetivo:
               </span>
               {run.team.map((p) => (
@@ -263,7 +305,7 @@ export function ItemBag() {
                       <span className="font-display text-[0.55rem] tracking-wider text-left max-w-[120px] truncate">
                         {p.name}
                       </span>
-                      <span className="font-body text-xs text-muted font-bold">
+                      <span className="font-body text-xs text-white font-bold">
                         Nv.{p.level}
                       </span>
                     </div>

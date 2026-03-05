@@ -29,7 +29,7 @@ export function GameTutorialModal({ onClose }: GameTutorialModalProps) {
     {
       title: "Exploración y Mapa",
       description:
-        "Haz clic en el icono del mapa para viajar entre rutas y ciudades. Cada zona tiene diferentes Pokémon y niveles de dificultad.",
+        "Haz clic en el icono del mapa para saber que pokemones hay en la zona, saber niveles de dificultad y loot disponible.",
       icon: <MapIcon size={48} />,
       color: "text-brand",
     },
