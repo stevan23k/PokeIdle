@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useGame } from "../../../context/GameContext";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal";
+import { Button } from "../../../components/ui/Button";
 
 interface Props {
   onStartNew: () => void;
@@ -58,22 +59,26 @@ export function MainMenu({
 
         <div className="flex flex-col gap-4 w-full max-w-xs">
           {run.isActive && (
-            <button
+            <Button
               onClick={onContinue}
-              className="w-full py-4 bg-accent border-4 border-[#B8A038] text-black font-display text-sm tracking-widest uppercase hover:bg-white hover:-translate-y-1 hover:shadow-pixel transition-all pixel-shadow"
+              variant="secondary"
+              size="lg"
+              className="w-full text-accent"
             >
               CONTINUAR PARTIDA
-            </button>
+            </Button>
           )}
 
-          <button
+          <Button
             onClick={handleStartNewClick}
-            className="w-full py-4 bg-brand border-4 border-brand-dark text-white font-display text-sm tracking-widest uppercase hover:bg-brand-dark hover:-translate-y-1 hover:shadow-pixel transition-all pixel-shadow"
+            variant="primary"
+            size="lg"
+            className="w-full"
           >
             NUEVA PARTIDA
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => {
               if (training.isActive) {
                 setShowTrainingConfirm(true);
@@ -81,36 +86,40 @@ export function MainMenu({
                 onStartTraining();
               }
             }}
-            className="w-full py-4 bg-surface border-4 border-border text-white font-display text-sm tracking-widest uppercase hover:bg-surface-light hover:-translate-y-1 hover:shadow-pixel transition-all pixel-shadow flex flex-col items-center justify-center gap-1 group"
+            variant="secondary"
+            size="lg"
+            className="w-full flex-col gap-1 py-4"
           >
             <span className="group-hover:text-brand transition-colors">
               ENTRENAMIENTO INFINITO ⚔️
             </span>
-            <span className="text-[0.6rem] text-accent opacity-80 group-hover:opacity-100 transition-opacity">
+            <span className="text-[0.6rem] text-accent opacity-80 group-hover:opacity-100 transition-opacity whitespace-normal text-center">
               💰 {meta.pokeCoins} POKÉCOINS
             </span>
-          </button>
+          </Button>
 
           {/* Statistics Button */}
-          <button
+          <Button
             onClick={onOpenStats}
-            className="flex items-center justify-between p-4 bg-surface-dark border-4 border-accent hover:border-white group transition-all pixel-shadow"
+            variant="secondary"
+            size="md"
+            className="w-full flex items-center justify-between group p-3"
           >
-            <div className="flex flex-col items-start translate-x-0 group-hover:translate-x-1 transition-transform">
+            <div className="flex flex-col items-start translate-x-0 group-hover:translate-x-1 transition-transform truncate text-left">
               <span className="font-display text-[0.6rem] text-accent tracking-widest uppercase mb-1">
                 HISTORIAL
               </span>
               <span className="font-display text-xs text-white uppercase flex items-center gap-2">
                 ESTADÍSTICAS GLOBALES
               </span>
-              <span className="font-body text-[0.55rem] text-muted italic lowercase mt-1">
+              <span className="font-body text-[0.55rem] text-muted italic lowercase mt-1 text-wrap">
                 Ver tus logros y progreso
               </span>
             </div>
-            <div className="w-10 h-10 flex items-center justify-center border-2 border-accent group-hover:bg-accent group-hover:text-black transition-colors">
+            <div className="w-10 h-10 shrink-0 flex items-center justify-center border-2 border-accent group-hover:bg-accent group-hover:text-black transition-colors ml-2">
               📊
             </div>
-          </button>
+          </Button>
 
           <div className="border-t border-border my-2 opacity-50"></div>
 
@@ -120,12 +129,14 @@ export function MainMenu({
               alt="Gacha Preview"
               className="w-16 h-16 pixelated absolute -top-12 animate-bounce drop-shadow-lg"
             />
-            <button
+            <Button
               onClick={onOpenGacha}
-              className="w-full py-4 bg-surface-alt border-4 border-accent text-accent font-display text-sm tracking-widest uppercase hover:bg-white hover:text-black hover:-translate-y-1 transition-all pixel-shadow flex flex-col items-center justify-center gap-1"
+              variant="secondary"
+              size="lg"
+              className="w-full text-accent"
             >
               INVOCACIÓN LEGENDARIA
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -31,16 +31,17 @@
     --font-body: "IBM Plex Mono", monospace;
     --font-ui: "Inter", sans-serif;
 
-    --text-display: 1.5rem;
-    --text-heading: 1rem;
+    --text-display: 2rem;
+    --text-heading: 1.25rem;
     --text-body: 0.8125rem;
     --text-small: 0.6875rem;
     --text-xs: 0.5625rem;
 
     --radius-card: 0px;
     --radius-button: 0px;
-    --shadow-pixel: 4px 4px 0px rgba(0, 0, 0, 0.8);
-    --shadow-pixel-sm: 2px 2px 0px rgba(0, 0, 0, 0.8);
+    --shadow-pixel: 4px 4px 0px rgba(0, 0, 0, 1);
+    --shadow-pixel-sm: 2px 2px 0px rgba(0, 0, 0, 1);
+    --shadow-pixel-active: 0px 0px 0px rgba(0, 0, 0, 1);
     --shadow-glow-red: 0 0 20px rgba(204, 0, 0, 0.3);
     --shadow-glow-gold: 0 0 20px rgba(255, 215, 0, 0.2);
   }
@@ -56,10 +57,10 @@
 
 @layer utilities {
   .text-display {
-    @apply font-display text-[1.5rem] leading-snug;
+    @apply font-display text-[2rem] leading-snug;
   }
   .text-heading {
-    @apply font-display text-[1rem] leading-snug;
+    @apply font-display text-[1.25rem] leading-snug;
   }
   .text-body {
     @apply font-body text-[0.8125rem] leading-relaxed;
@@ -93,6 +94,10 @@
 
   .pixel-shadow-sm {
     box-shadow: var(--shadow-pixel-sm);
+  }
+
+  .pixel-shadow-active {
+    box-shadow: var(--shadow-pixel-active);
   }
 
   .pixelate {

@@ -11,6 +11,7 @@ import { ItemSprite } from "../../../components/ui/ItemSprite/ItemSprite";
 import { ITEMS } from "../../../lib/items";
 import { unequipItem } from "../../../engine/heldItems.engine";
 import { clsx } from "clsx";
+import { Button } from "../../../components/ui/Button";
 
 interface Props {
   pokemon: ActivePokemon;
@@ -198,26 +199,30 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
               OBJETO:
             </span>
             {pokemon.heldItem && ITEMS[pokemon.heldItem] ? (
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowUnequipPopover(!showUnequipPopover);
                 }}
-                className="flex items-center gap-1.5 bg-surface border border-border px-2 py-1 hover:border-brand transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1"
               >
                 <ItemSprite item={ITEMS[pokemon.heldItem]} size={16} />
                 <span className="font-body text-[0.6rem] text-foreground">
                   {ITEMS[pokemon.heldItem].name}
                 </span>
-              </button>
+              </Button>
             ) : (
               <span className="font-body text-[0.55rem] text-muted italic">
                 Sin objeto equipado
               </span>
             )}
             {showUnequipPopover && pokemon.heldItem && (
-              <div className="absolute left-0 bottom-full mb-1 bg-surface-dark border-2 border-border p-2 shadow-pixel z-10">
-                <button
+              <div className="absolute left-0 bottom-full mb-1 bg-surface-dark border-2 border-border p-2 shadow-pixel z-10 flex flex-col gap-1">
+                <Button
+                  variant="danger"
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     const { success, newPokemon, newInventory } = unequipItem(
@@ -242,10 +247,10 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
                     }
                     setShowUnequipPopover(false);
                   }}
-                  className="font-display text-[0.5rem] text-danger hover:text-white hover:bg-danger/50 px-3 py-1 border border-danger transition-colors tracking-wider"
+                  className="w-full tracking-wider"
                 >
                   DESEQUIPAR
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -253,37 +258,43 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
           {run.currentBattle?.phase === "active" &&
             !isActive &&
             pokemon.currentHP > 0 && (
-              <button
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={handleSwitchRequest}
-                className="mt-1 w-full py-1.5 bg-brand border border-brand-deep text-[0.6rem] text-white hover:bg-brand-dark transition-colors font-display tracking-wider uppercase flex items-center justify-center gap-2"
+                className="mt-1 w-full gap-2"
               >
                 <span className="animate-pulse">▶</span> CAMBIAR A{" "}
                 {pokemon.name} <span className="animate-pulse">◀</span>
-              </button>
+              </Button>
             )}
 
           {onMoveToPC && (
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 onMoveToPC();
               }}
-              className="mt-1 w-full py-1.5 bg-surface border border-border text-[0.6rem] text-muted hover:text-white hover:border-muted transition-colors font-display tracking-wider uppercase"
+              className="mt-1 w-full"
             >
               Mover al PC
-            </button>
+            </Button>
           )}
 
           {!isActive && (
-            <button
+            <Button
+              variant="danger"
+              size="sm"
               onClick={(e) => {
                 e.stopPropagation();
                 setShowReleaseConfirm(true);
               }}
-              className="mt-1 w-full py-1.5 bg-danger/20 border border-danger text-[0.6rem] text-danger hover:bg-danger hover:text-white transition-colors font-display tracking-wider uppercase"
+              className="mt-1 w-full"
             >
               Liberar
-            </button>
+            </Button>
           )}
         </div>
       )}

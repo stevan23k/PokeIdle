@@ -1,6 +1,8 @@
 import React from "react";
 import { createPortal } from "react-dom";
-import { MousePointer2, Cpu, X } from "lucide-react";
+import { MousePointer2, Cpu, X, Play } from "lucide-react";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
 
 interface StartConfigModalProps {
   onSelect: (config: {
@@ -33,7 +35,7 @@ export function StartConfigModal({
       }}
       className="crt-screen"
     >
-      <div className="bg-surface-dark border-4 border-border w-full max-w-2xl p-6 md:p-10 shadow-2xl relative animate-in fade-in zoom-in duration-200">
+      <Card className="w-full max-w-2xl relative animate-in fade-in zoom-in duration-200">
         <button
           onClick={onCancel}
           className="absolute -top-4 -right-4 w-10 h-10 bg-danger border-4 border-black text-white flex items-center justify-center hover:bg-red-500 hover:-translate-y-1 transition-transform z-10 shadow-pixel"
@@ -127,14 +129,15 @@ export function StartConfigModal({
             "Podrás cambiar el estilo de juego en cualquier momento usando los
             interruptores del menú de zona."
           </p>
-          <button
+          <Button
+            variant="ghost"
             onClick={onCancel}
-            className="font-display text-[0.7rem] text-muted hover:text-white transition-colors uppercase tracking-[0.3em] flex items-center gap-2 group"
+            className="text-muted hover:text-danger uppercase tracking-[0.3em] flex items-center gap-2"
           >
-            <X size={14} className="group-hover:text-danger" /> CANCELAR
-          </button>
+            <X size={14} /> CANCELAR
+          </Button>
         </div>
-      </div>
+      </Card>
     </div>,
     document.body,
   );

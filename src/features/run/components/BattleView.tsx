@@ -169,7 +169,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                 <HPBar
                   currentHP={enemyPokemon.currentHP}
                   maxHP={enemyPokemon.maxHP}
-                  showText={false}
+                  showText={true}
                   barColor={
                     battle.isBossBattle && battle.bossCurrentBar === 1
                       ? "bg-orange-500"
@@ -180,7 +180,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
             </div>
 
             {/* Sprite Container */}
-            <div className="w-40 h-40 sm:w-56 sm:h-56 flex items-end justify-center relative mt-2 shrink-0">
+            <div className="w-40 h-40 sm:w-56 sm:h-56 flex items-end justify-center relative mt-2 shrink-0 translate-y-[60px] -translate-x-[40px]">
               <div className="absolute bottom-2 w-32 sm:w-48 h-10 rounded-[100%] bg-black/50 blur-[3px] -z-10"></div>
               <PixelSprite
                 pokemonId={enemyPokemon.pokemonId}

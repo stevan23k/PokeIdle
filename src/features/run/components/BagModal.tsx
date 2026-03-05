@@ -9,6 +9,8 @@ import { useItemOnPokemon } from "../../../engine/items.engine";
 import { equipItem } from "../../../engine/heldItems.engine";
 import { clsx } from "clsx";
 import { X, Search, Star, SortAsc, SortDesc } from "lucide-react";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
 
 interface BagModalProps {
   onClose: () => void;
@@ -174,7 +176,7 @@ export function BagModal({ onClose }: BagModalProps) {
       }}
       className="crt-screen"
     >
-      <div className="bg-surface-dark border-4 border-border w-full max-w-4xl h-[85vh] flex flex-col shadow-2xl relative">
+      <Card className="w-full max-w-4xl h-[85vh] flex flex-col relative" noPadding>
         <button
           onClick={onClose}
           className="absolute -top-4 -right-4 w-10 h-10 bg-danger border-4 border-black text-white flex items-center justify-center hover:bg-red-500 hover:-translate-y-1 transition-transform z-10 shadow-pixel"
@@ -211,7 +213,7 @@ export function BagModal({ onClose }: BagModalProps) {
           <div className="flex-1 flex flex-col min-w-0 bg-surface">
             {/* TOOLBAR */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 border-b border-border bg-surface-dark shrink-0">
-              <div className="relative flex-1 w-full relative">
+              <div className="flex-1 w-full relative">
                 <Search
                   size={14}
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
@@ -225,40 +227,36 @@ export function BagModal({ onClose }: BagModalProps) {
                 />
               </div>
               <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
-                <button
+                <Button
+                  variant={sortBy === "name" ? "primary" : "ghost"}
+                  size="sm"
                   onClick={() => setSortBy("name")}
-                  className={clsx(
-                    "px-3 py-1.5 font-display text-[0.55rem] tracking-widest border transition-colors flex-1 sm:flex-none",
-                    sortBy === "name"
-                      ? "bg-surface-light text-brand border-brand"
-                      : "bg-surface text-muted border-border hover:text-white",
-                  )}
+                  className="flex-1 sm:flex-none tracking-widest px-3"
                 >
                   NOMBRE
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant={sortBy === "qty" ? "primary" : "ghost"}
+                  size="sm"
                   onClick={() => setSortBy("qty")}
-                  className={clsx(
-                    "px-3 py-1.5 font-display text-[0.55rem] tracking-widest border transition-colors flex-1 sm:flex-none",
-                    sortBy === "qty"
-                      ? "bg-surface-light text-brand border-brand"
-                      : "bg-surface text-muted border-border hover:text-white",
-                  )}
+                  className="flex-1 sm:flex-none tracking-widest px-3"
                 >
                   CANTIDAD
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() =>
                     setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
                   }
-                  className="w-8 flex items-center justify-center bg-surface border border-border text-muted hover:text-white transition-colors"
+                  className="w-8 flex items-center justify-center px-0"
                 >
                   {sortOrder === "asc" ? (
                     <SortAsc size={14} />
                   ) : (
                     <SortDesc size={14} />
                   )}
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -316,12 +314,14 @@ export function BagModal({ onClose }: BagModalProps) {
                         {(item.category === "heal" ||
                           item.category === "held" ||
                           item.category === "evo") && (
-                          <button
+                          <Button
+                            variant="primary"
+                            size="sm"
                             onClick={() => setUseTargetModal(id)}
-                            className="mt-2 w-full py-1.5 bg-surface-dark border border-border text-[0.5rem] text-muted font-display uppercase tracking-widest hover:border-brand hover:text-brand transition-colors"
+                            className="mt-2 w-full text-[0.5rem] py-1"
                           >
                             {item.category === "held" ? "EQUIPAR" : "USAR"}
-                          </button>
+                          </Button>
                         )}
                       </div>
                     );
@@ -374,7 +374,7 @@ export function BagModal({ onClose }: BagModalProps) {
                     key={p.uid}
                     onClick={() => handleUseItem(p.uid)}
                     className={clsx(
-                      "flex justify-between items-center p-2 bg-surface border-2 flex-shrink-0 transition-colors",
+                      "flex justify-between items-center p-2 bg-surface border-2 shrink-0 transition-colors",
                       p.currentHP === 0
                         ? "border-danger/30 opacity-70 grayscale-[0.8]"
                         : "border-border hover:border-brand",
@@ -429,7 +429,7 @@ export function BagModal({ onClose }: BagModalProps) {
             }
           />
         )}
-      </div>
+      </Card>
     </div>,
     document.body,
   );

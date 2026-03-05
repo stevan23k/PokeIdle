@@ -53,6 +53,7 @@ export default {
       boxShadow: {
         pixel: 'var(--shadow-pixel)',
         'pixel-sm': 'var(--shadow-pixel-sm)',
+        'pixel-active': 'var(--shadow-pixel-active)',
         'glow-red': 'var(--shadow-glow-red)',
         'glow-gold': 'var(--shadow-glow-gold)',
       },

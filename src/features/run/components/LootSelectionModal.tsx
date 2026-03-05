@@ -4,6 +4,7 @@ import { useGame } from "../../../context/GameContext";
 import { ITEMS } from "../../../lib/items";
 import { generateUid } from "../../../utils/random";
 import { ItemSprite } from "../../../components/ui/ItemSprite";
+import { Card } from "../../../components/ui/Card";
 
 export function LootSelectionModal() {
   const { run, setRun, training, setTraining } = useGame();
@@ -108,10 +109,9 @@ export function LootSelectionModal() {
             <button
               key={`${itemId}-${idx}`}
               onClick={() => handleSelect(itemId)}
-              className="flex-1 flex flex-col items-center justify-center bg-surface-dark border-2 border-border p-3 hover:border-brand hover:-translate-y-1 hover:shadow-[0_0_16px_rgba(var(--brand-rgb),0.6)] transition-all group overflow-hidden"
-              style={{ cursor: "pointer" }}
+              className="flex-1 flex flex-col items-center justify-center bg-surface border-4 border-border p-3 hover:border-brand hover:-translate-y-1 hover:shadow-pixel transition-all group overflow-hidden cursor-pointer"
             >
-              <div className="mb-2 group-hover:scale-110 transition-transform flex items-center justify-center">
+              <div className="mb-2 group-hover:scale-110 transition-transform flex items-center justify-center shadow-inner bg-surface-dark p-2 border-2 border-border group-hover:border-brand">
                 <ItemSprite item={item} size={56} />
               </div>
               <h3 className="font-display text-[0.65rem] text-foreground mb-1 text-center group-hover:text-brand transition-colors leading-tight">

@@ -17,6 +17,8 @@ import {
   Minus,
 } from "lucide-react";
 import { ItemSprite } from "../../../components/ui/ItemSprite/ItemSprite";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
 
 export function ZoneTransitionModal() {
   const { run, setRun, setMeta, notify } = useGame();
@@ -180,7 +182,7 @@ export function ZoneTransitionModal() {
 
   return createPortal(
     <div className="fixed inset-0 z-200 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
-      <div className="w-full max-w-4xl bg-surface border-4 border-border relative flex flex-col max-h-[90vh] shadow-[12px_12px_0_rgba(0,0,0,0.8)]">
+      <Card className="w-full max-w-4xl relative flex flex-col max-h-[90vh] shadow-[12px_12px_0_rgba(0,0,0,0.8)]" noPadding>
         {/* REWARDS STEP */}
         {step === "rewards" && (
           <div className="flex flex-col items-center justify-center p-8 space-y-8 animate-in fade-in zoom-in duration-300">
@@ -223,12 +225,14 @@ export function ZoneTransitionModal() {
               </div>
             </div>
 
-            <button
+            <Button
+              variant="primary"
+              size="lg"
               onClick={handleContinueFromRewards}
-              className="mt-8 bg-brand border-4 border-brand-dark px-12 py-3 text-white font-display text-sm tracking-widest flex items-center gap-2 hover:bg-brand-dark transition-colors active:translate-y-1"
+              className="mt-8 px-12 py-3 flex items-center gap-2"
             >
               C O N T I N U A R <ArrowRight size={16} />
-            </button>
+            </Button>
           </div>
         )}
 
@@ -316,12 +320,14 @@ export function ZoneTransitionModal() {
 
             {/* Opcional: Permitir avanzar sin hacer nada */}
             <div className="p-4 text-center">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={finishTransition}
-                className="text-[0.6rem] font-display text-muted hover:text-white underline underline-offset-4 decoration-border hover:decoration-brand opacity-60"
+                className="text-muted hover:text-white underline underline-offset-4 decoration-border hover:decoration-brand opacity-60"
               >
                 Omitir y Avanzar a la siguiente zona
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -344,12 +350,14 @@ export function ZoneTransitionModal() {
                     ₽{run.money}
                   </span>
                 </div>
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setStep("menu")}
-                  className="flex items-center gap-1 font-display text-[0.6rem] text-muted hover:text-white"
+                  className="flex items-center gap-1 text-muted hover:text-white"
                 >
                   <ArrowLeft size={12} /> VOLVER
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -365,18 +373,15 @@ export function ZoneTransitionModal() {
                   held: "EQUIPABLES",
                 };
                 return (
-                  <button
+                  <Button
                     key={cat}
+                    variant={shopFilter === cat ? "primary" : "secondary"}
+                    size="sm"
                     onClick={() => setShopFilter(cat as ItemCategory | "All")}
-                    className={clsx(
-                      "font-display text-[0.55rem] tracking-widest uppercase px-3 py-1.5 transition-colors border",
-                      shopFilter === cat
-                        ? "bg-brand text-white border-brand-dark"
-                        : "bg-surface text-muted border-border hover:bg-surface-alt hover:text-white",
-                    )}
+                    className="tracking-widest px-3"
                   >
                     {labelMap[cat] || cat}
-                  </button>
+                  </Button>
                 );
               })}
             </div>
@@ -408,9 +413,9 @@ export function ZoneTransitionModal() {
                   };
 
                   return (
-                    <div
+                    <Card
                       key={item.id}
-                      className="bg-surface border-2 border-border p-3 flex flex-col justify-between hover:border-brand/50 transition-colors"
+                      className="flex flex-col justify-between hover:border-brand/50 transition-colors p-3"
                     >
                       <div className="flex items-start gap-3 mb-2">
                         <div className="w-12 h-12 bg-black/40 border-2 border-border/50 flex items-center justify-center shrink-0">
@@ -461,20 +466,17 @@ export function ZoneTransitionModal() {
                         </button>
                       </div>
 
-                      <button
+                      <Button
+                        variant={canAfford ? "primary" : "secondary"}
+                        size="sm"
                         onClick={() => handleBuy(item.id, itemPrice, qty)}
                         disabled={!canAfford}
-                        className={clsx(
-                          "w-full py-1.5 font-display text-[0.6rem] border-2 transition-colors flex items-center justify-center gap-1",
-                          canAfford
-                            ? "bg-brand border-brand-dark text-white hover:bg-brand-dark active:translate-y-px"
-                            : "bg-surface-dark border-border/50 text-muted cursor-not-allowed",
-                        )}
+                        className="w-full flex items-center justify-center gap-1 mt-auto"
                       >
                         ₽ {totalCost} -{" "}
                         {canAfford ? "COMPRAR" : "SALDO INSUFICIENTE"}
-                      </button>
-                    </div>
+                      </Button>
+                    </Card>
                   );
                 })}
                 {filteredItems.length === 0 && (
@@ -489,12 +491,14 @@ export function ZoneTransitionModal() {
               <span className="font-display text-[0.55rem] text-muted opacity-80">
                 (Pagas con el saldo obtenido de batallas)
               </span>
-              <button
+              <Button
+                variant="primary"
+                size="md"
                 onClick={finishTransition}
-                className="bg-brand text-white border-2 border-brand-dark px-6 py-2 font-display text-[0.65rem] hover:bg-brand-dark"
+                className="px-6 py-2"
               >
                 CERRAR TIENDA Y AVANZAR
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -506,12 +510,14 @@ export function ZoneTransitionModal() {
               <h2 className="font-display text-xl text-accent drop-shadow-[2px_2px_0_rgba(0,0,0,1)]">
                 ENTRENAMIENTO EXTREMO
               </h2>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setStep("menu")}
-                className="flex items-center gap-1 font-display text-[0.6rem] text-muted hover:text-white"
+                className="flex items-center gap-1 text-muted hover:text-white"
               >
                 <ArrowLeft size={12} /> VOLVER
-              </button>
+              </Button>
             </div>
 
             <div className="px-6 py-4 text-center font-display text-[0.65rem] text-muted">
@@ -550,7 +556,7 @@ export function ZoneTransitionModal() {
             </div>
           </div>
         )}
-      </div>
+      </Card>
     </div>,
     document.body,
   );

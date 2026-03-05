@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useGame } from "../../../context/GameContext";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal";
+import { Button } from "../../../components/ui/Button";
+import { Card } from "../../../components/ui/Card";
 import { generateUid } from "../../../utils/random";
 import { REGIONS } from "../../../lib/regions";
 interface Props {
@@ -63,15 +65,15 @@ export function PauseMenu({ onReturnToMenu }: Props) {
     <>
       {run.isPaused && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-surface border-4 border-border p-6 shadow-pixel max-w-sm w-full relative">
+          <Card className="max-w-sm w-full relative pt-8">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-surface px-4 py-1 border-2 border-border">
-              <h2 className="font-display text-accent-blue text-sm uppercase">
+              <h2 className="font-display text-accent-blue text-sm uppercase drop-shadow-sm">
                 PAUSA
               </h2>
             </div>
 
-            <div className="flex flex-col gap-3 mt-4">
-              <div className="bg-surface-dark border-2 border-border p-3 mb-2">
+            <div className="flex flex-col gap-3 mt-2">
+              <Card variant="alt" noPadding className="p-3 mb-2">
                 <h3 className="font-display text-[0.6rem] text-brand tracking-widest uppercase mb-3 flex items-center gap-2">
                   🏃 RUN ACTUAL
                 </h3>
@@ -119,30 +121,33 @@ export function PauseMenu({ onReturnToMenu }: Props) {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Card>
 
-              <button
+              <Button
+                variant="primary"
                 onClick={togglePause}
-                className="w-full bg-surface-alt border-2 border-border p-3 font-display text-xs text-foreground hover:bg-surface-light hover:text-accent-blue transition-colors uppercase cursor-pointer"
+                className="w-full text-foreground"
               >
                 Reanudar Aventura
-              </button>
+              </Button>
 
-              <button
+              <Button
+                variant="secondary"
                 onClick={handleExit}
-                className="w-full bg-surface border-2 border-border p-3 font-display text-xs text-muted hover:text-white transition-colors uppercase cursor-pointer"
+                className="w-full text-muted"
               >
                 Guardar y Salir
-              </button>
+              </Button>
 
-              <button
+              <Button
+                variant="danger"
                 onClick={() => setShowConfirm(true)}
-                className="w-full bg-surface-alt border-2 border-danger p-3 font-display text-[0.6rem] text-danger hover:bg-danger hover:text-white transition-colors uppercase mt-4 cursor-pointer"
+                className="w-full mt-4"
               >
                 Rendirse y Reiniciar
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 

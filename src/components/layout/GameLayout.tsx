@@ -125,7 +125,7 @@ export function GameLayout() {
           </div>
 
           {/* Inheritance Progression */}
-          {Object.values(run.inheritanceProgress).length > 0 && (
+          {Object.values(run.inheritanceProgress || {}).length > 0 && (
             <div className="mt-6 border-t border-border/30 pt-4 max-h-[150px] overflow-y-auto custom-scrollbar">
               <h3 className="font-display text-[0.6rem] text-accent mb-3 tracking-[0.2em] uppercase">
                 PROGRESO HEREDADO
@@ -252,7 +252,7 @@ export function GameLayout() {
           </div>
 
           {/* Inheritance Progression */}
-          {Object.values(run.inheritanceProgress).length > 0 && (
+          {Object.values(run.inheritanceProgress || {}).length > 0 && (
             <div className="mt-6 border-t border-accent/20 pt-4 max-h-[180px] overflow-y-auto custom-scrollbar">
               <h3 className="font-display text-[0.6rem] text-accent mb-3 tracking-[0.2em] uppercase">
                 PROGRESO HEREDADO
@@ -420,7 +420,7 @@ export function GameLayout() {
           </div>
         </header>
 
-        <div className="h-screen max-h-screen bg-black text-foreground flex flex-col md:flex-row overflow-hidden max-w-[1600px] mx-auto xl:border-x-4 border-border relative">
+        <div className="h-screen max-h-screen bg-black text-foreground flex flex-col md:flex-row overflow-hidden w-full relative">
           <LootSelectionModal />
           <MoveLearningModal />
 

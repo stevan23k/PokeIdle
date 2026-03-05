@@ -3,6 +3,28 @@ import { useGame } from "../../../context/GameContext";
 import { ITEMS } from "../../../lib/items";
 import type { ActiveMove } from "../types/game.types";
 import { MoveCategoryBadge } from "../../../components/ui/MoveCategoryBadge";
+import { Button } from "../../../components/ui/Button";
+
+const TYPE_COLORS: Record<string, string> = {
+  normal: "#A8A878",
+  fire: "#F08030",
+  water: "#6890F0",
+  electric: "#F8D030",
+  grass: "#78C850",
+  ice: "#98D8D8",
+  fighting: "#C03028",
+  poison: "#A040A0",
+  ground: "#E0C068",
+  flying: "#A890F0",
+  psychic: "#F85888",
+  bug: "#A8B820",
+  rock: "#B8A038",
+  ghost: "#705898",
+  dragon: "#7038F8",
+  dark: "#705848",
+  steel: "#B8B8D0",
+  fairy: "#EE99AC",
+};
 
 export function ManualBattleHUD() {
   const { run, setRun, training, setTraining } = useGame();
@@ -65,31 +87,35 @@ export function ManualBattleHUD() {
 
       <div className="flex-1 p-3 grid grid-cols-2 gap-2 overflow-y-auto">
         {battle.playerPokemon.moves.map((move: ActiveMove) => (
-          <button
+          <Button
             key={move.moveId}
+            variant="secondary"
             disabled={hasQueuedAction || move.currentPP === 0}
             onClick={() => handleMoveSelect(String(move.moveId))}
-            className="bg-surface-alt border-2 border-border p-2 hover:border-brand-dark hover:translate-x-px hover:translate-y-px transition-all disabled:opacity-50 disabled:hover:translate-x-0 disabled:hover:translate-y-0 disabled:hover:border-border text-left relative group aspect-3/1"
+            className="group relative flex-col items-stretch! justify-start! p-2 gap-1 h-full"
+            style={{
+              backgroundColor:
+                move.currentPP > 0
+                  ? (TYPE_COLORS[move.type.toLowerCase()] || "#A8A878") + "40"
+                  : undefined,
+            }}
+            isActive={hasQueuedAction && battle.manualActionQueue?.id === String(move.moveId)}
           >
-            <div className="flex justify-between items-center mb-1">
-              <span className="font-display text-[0.55rem] uppercase text-foreground">
+            <div className="flex justify-between items-center w-full">
+              <span className="font-display text-[0.65rem] uppercase text-foreground truncate max-w-[70%] text-left">
                 {move.moveName}
               </span>
-              <span className="font-body text-[0.55rem] text-muted">
+              <span className="font-body text-[0.55rem] text-muted shrink-0">
                 {move.currentPP}/{move.maxPP}
               </span>
             </div>
-            <div className="flex gap-1 items-center">
-              <span className="text-[0.45rem] bg-surface-dark px-1.5 py-0.5 border border-border/50 uppercase font-body text-muted group-hover:text-foreground transition-colors">
+            <div className="flex gap-1 items-center w-full mt-auto">
+              <span className="text-[0.45rem] bg-surface-dark px-1.5 py-0.5 pixel-border uppercase font-body text-muted group-hover:text-foreground transition-colors">
                 {move.type}
               </span>
               <MoveCategoryBadge category={move.category} size="xs" />
             </div>
-            {hasQueuedAction &&
-              battle.manualActionQueue?.id === String(move.moveId) && (
-                <div className="absolute inset-0 border-2 border-brand pointer-events-none"></div>
-              )}
-          </button>
+          </Button>
         ))}
       </div>
     </div>

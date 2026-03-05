@@ -8,6 +8,7 @@ import { equipItem } from "../../../engine/heldItems.engine";
 import { ItemSprite } from "../../../components/ui/ItemSprite";
 import { PixelSprite } from "../../../components/ui/PixelSprite";
 import { StarOff } from "lucide-react";
+import { Button } from "../../../components/ui/Button";
 
 export function ItemBag() {
   const { run, setRun, setMeta } = useGame();
@@ -134,13 +135,15 @@ export function ItemBag() {
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={(e) => unpinItem(id, e)}
-                      className="p-1 px-1.5 bg-surface border border-transparent text-muted hover:text-danger hover:border-danger transition-colors opacity-0 group-hover:opacity-100"
+                      className="p-1 px-1.5 text-muted hover:text-danger hover:bg-danger/10 transition-colors opacity-0 group-hover:opacity-100"
                       title="Desanclar"
                     >
                       <StarOff size={12} />
-                    </button>
+                    </Button>
 
                     {(item.category === "heal" ||
                       item.category === "held" ||
@@ -148,12 +151,14 @@ export function ItemBag() {
                       item.category === "ball" ||
                       item.category === "battle" ||
                       item.category === "berry") && (
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => setUseTargetModal(id)}
-                        className="px-2 py-1.5 bg-surface-dark border border-border text-[0.45rem] text-muted font-display uppercase tracking-widest hover:border-brand hover:text-brand transition-colors"
+                        className="px-2 py-1 text-[0.45rem]"
                       >
                         {item.category === "held" ? "EQUIPAR" : "USAR"}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>

@@ -9,6 +9,7 @@ import { calculateStats, NATURES } from "../../../engine/stats.engine";
 import { clsx } from "clsx";
 import { Play, Sparkles } from "lucide-react";
 import { StartConfigModal } from "./StartConfigModal";
+import { Button } from "../../../components/ui/Button";
 
 const STAT_LABELS = ["HP", "ATK", "DEF", "SPE", "SPD", "SPA"];
 const RadarChart = ({
@@ -254,18 +255,15 @@ export function StarterSelector() {
 
             <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
               {GENERATIONS.map((gen) => (
-                <button
+                <Button
                   key={gen.id}
+                  variant={selectedGen === gen.id ? "primary" : "secondary"}
+                  size="sm"
                   onClick={() => setSelectedGen(gen.id)}
-                  className={clsx(
-                    "font-display text-[0.6rem] px-3 py-1.5 transition-colors border-2",
-                    selectedGen === gen.id
-                      ? "bg-brand border-brand text-white"
-                      : "bg-surface border-border text-muted hover:text-white",
-                  )}
+                  className="px-3"
                 >
                   {gen.name}
-                </button>
+                </Button>
               ))}
             </div>
 
@@ -426,18 +424,15 @@ export function StarterSelector() {
                   )}
                 </div>
                 {selectedStarterData.isShiny && (
-                  <button
+                  <Button
+                    variant={useShiny ? "primary" : "secondary"}
+                    size="sm"
                     onClick={() => setUseShiny(!useShiny)}
-                    className={clsx(
-                      "flex items-center gap-2 px-3 py-1.5 border-2 font-display text-[0.5rem] tracking-widest transition-all uppercase",
-                      useShiny
-                        ? "bg-brand border-brand text-white shadow-pixel"
-                        : "bg-surface border-border text-muted hover:text-white",
-                    )}
+                    className="flex items-center gap-2 uppercase"
                   >
                     <Sparkles size={10} fill={useShiny ? "white" : "none"} />
                     {useShiny ? "Apariencia: Shiny" : "Apariencia: Normal"}
-                  </button>
+                  </Button>
                 )}
               </div>
 
@@ -547,10 +542,12 @@ export function StarterSelector() {
 
               {/* Start button — below the stat chart and nature selector */}
               {selectedId && (
-                <button
+                <Button
+                  variant="primary"
+                  size="lg"
                   onClick={() => handleStart(selectedId)}
                   disabled={loading}
-                  className="mt-4 w-full py-3 bg-brand border-4 border-brand-dark text-white font-display text-[0.65rem] tracking-widest pixel-shadow hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none hover:bg-brand-dark transition-all flex items-center justify-center gap-2"
+                  className="mt-4 w-full flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     "PREPARANDO..."
@@ -559,7 +556,7 @@ export function StarterSelector() {
                       EMPEZAR <Play size={14} fill="currentColor" />
                     </>
                   )}
-                </button>
+                </Button>
               )}
             </div>
           ) : (

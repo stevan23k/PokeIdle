@@ -8,6 +8,7 @@ import {
 } from "../../run/services/pokeapi.service";
 import { clsx } from "clsx";
 import { Sword, Loader2 } from "lucide-react";
+import { Button } from "../../../components/ui/Button";
 
 export function TrainingSelector() {
   const { setTraining, meta } = useGame();
@@ -176,15 +177,12 @@ export function TrainingSelector() {
                   </div>
                 </div>
 
-                <button
+                <Button
+                  variant="primary"
+                  size="lg"
                   onClick={handleStartTraining}
                   disabled={isInitializing}
-                  className={clsx(
-                    "w-full py-4 bg-brand border-4 border-brand-dark text-white font-display text-[0.7rem] tracking-widest pixel-shadow transition-all flex items-center justify-center gap-3",
-                    isInitializing
-                      ? "opacity-70 cursor-wait"
-                      : "hover:translate-x-[2px] hover:translate-y-[2px]",
-                  )}
+                  className="w-full flex items-center justify-center gap-3 mt-4"
                 >
                   {isInitializing ? (
                     <>
@@ -196,7 +194,7 @@ export function TrainingSelector() {
                       EMPEZAR <Sword size={16} fill="currentColor" />
                     </>
                   )}
-                </button>
+                </Button>
               </div>
             ) : (
               <div className="bg-surface/50 border-4 border-border border-dashed p-12 flex flex-col items-center justify-center opacity-60 text-center">
