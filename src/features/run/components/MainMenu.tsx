@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useGame } from "../../../context/GameContext";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal";
 import { Button } from "../../../components/ui/Button";
+import { useAuth } from "../../../context/AuthContext";
 
 interface Props {
   onStartNew: () => void;
@@ -21,6 +22,7 @@ export function MainMenu({
   onOpenStats,
 }: Props) {
   const { run, setRun, training, setTraining, meta } = useGame();
+  const { logout, isGuest } = useAuth();
   const [showConfirm, setShowConfirm] = useState(false);
   const [showTrainingConfirm, setShowTrainingConfirm] = useState(false);
 
@@ -137,6 +139,18 @@ export function MainMenu({
             >
               INVOCACIÓN LEGENDARIA
             </Button>
+          </div>
+
+          <div className="mt-8 flex flex-col items-center gap-2">
+            <span className="font-display text-[0.5rem] text-muted uppercase tracking-[0.2em] opacity-60">
+              {isGuest ? "Sessión: INVITADO" : "Sesión Activada"}
+            </span>
+            <button
+               onClick={() => logout()}
+               className="font-display text-[0.5rem] text-brand hover:text-white transition-colors uppercase underline underline-offset-4"
+            >
+              CERRAR SESIÓN
+            </button>
           </div>
         </div>
       </div>

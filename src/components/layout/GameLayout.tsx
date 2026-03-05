@@ -26,8 +26,11 @@ import { GlobalStatsView } from "../../features/meta/components/GlobalStatsView"
 import { GameTutorialModal } from "../../features/run/components/GameTutorialModal";
 import { MoveLearningModal } from "../../features/run/components/MoveLearningModal";
 import { EvolutionModal } from "../../features/run/components/EvolutionModal";
+import { useAuth } from "../../context/AuthContext";
+import { DebuggerPanel } from "../../features/debug/components/DebuggerPanel";
 
 export function GameLayout() {
+  const { isAdmin } = useAuth();
   const {
     run,
     setRun,
@@ -497,6 +500,7 @@ export function GameLayout() {
       {isBagOpen && <BagModal onClose={() => setIsBagOpen(false)} />}
       <ZoneTransitionModal />
       {showTutorial && <GameTutorialModal onClose={handleCloseTutorial} />}
+      {isAdmin && <DebuggerPanel />}
     </>
   );
 }
