@@ -100,6 +100,20 @@
     box-shadow: var(--shadow-pixel-active);
   }
 
+  .animate-level-up {
+    animation: levelUp 0.8s ease-out;
+  }
+
+  @keyframes slideInEnemy {
+    0% { transform: translateX(-100vw); opacity: 0; }
+    75% { transform: translateX(-100vw); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+  }
+
+  .animate-slide-in-enemy {
+    animation: slideInEnemy 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+
   .pixelate {
     image-rendering: pixelated;
   }
@@ -128,6 +142,83 @@
     z-index: 10;
     pointer-events: none;
   }
+
+  /* Tooltip styles */
+  .tooltip-arrow::before {
+    content: "";
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 6px 6px 0 6px;
+    border-color: rgba(31, 41, 55, 0.95) transparent transparent transparent;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Battle Animations */
+  @keyframes lungeRight {
+    0% { transform: translateX(0); }
+    30% { transform: translateX(-10px); }
+    50% { transform: translateX(40px) scale(1.1); }
+    100% { transform: translateX(0) scale(1); }
+  }
+
+  @keyframes lungeLeft {
+    0% { transform: translateX(0); }
+    30% { transform: translateX(10px); }
+    50% { transform: translateX(-40px) scale(1.1); }
+    100% { transform: translateX(0) scale(1); }
+  }
+
+  @keyframes shake {
+    0% { transform: translateX(0); }
+    20% { transform: translateX(-5px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-5px); }
+    80% { transform: translateX(5px); }
+    100% { transform: translateX(0); }
+  }
+
+  @keyframes flashRed {
+    0% { filter: brightness(1) sepia(0) hue-rotate(0) saturate(1); }
+    50% { filter: brightness(1.2) sepia(1) hue-rotate(-50deg) saturate(5); }
+    100% { filter: brightness(1) sepia(0) hue-rotate(0) saturate(1); }
+  }
+
+  @keyframes flashBlue {
+    0% { filter: brightness(1) sepia(0) hue-rotate(0) saturate(1); }
+    50% { filter: brightness(1.2) sepia(1) hue-rotate(180deg) saturate(5); }
+    100% { filter: brightness(1) sepia(0) hue-rotate(0) saturate(1); }
+  }
+
+  @keyframes faintDrop {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(50px); opacity: 0; }
+  }
+
+  @keyframes screenShake {
+    0% { transform: translate(0, 0) rotate(0deg); }
+    10% { transform: translate(-5px, -5px) rotate(-1deg); }
+    20% { transform: translate(5px, -5px) rotate(1deg); }
+    30% { transform: translate(-5px, 5px) rotate(0deg); }
+    40% { transform: translate(5px, 5px) rotate(1deg); }
+    50% { transform: translate(-5px, -5px) rotate(-1deg); }
+    60% { transform: translate(5px, -5px) rotate(0deg); }
+    70% { transform: translate(-5px, 5px) rotate(-1deg); }
+    80% { transform: translate(5px, 5px) rotate(1deg); }
+    90% { transform: translate(-5px, -5px) rotate(0deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
+  }
+
+  .anim-lunge-right { animation: lungeRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .anim-lunge-left { animation: lungeLeft 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .anim-shake { animation: shake 0.4s ease-in-out; }
+  .anim-flash-red { animation: flashRed 0.5s ease-in-out; }
+  .anim-flash-blue { animation: flashBlue 0.5s ease-in-out; }
+  .anim-faint-drop { animation: faintDrop 0.8s ease-in forwards; }
+  .anim-screen-shake { animation: screenShake 0.4s ease-in-out; }
 }
 
 /* Scrollbar customizations */

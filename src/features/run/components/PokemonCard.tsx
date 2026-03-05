@@ -284,15 +284,17 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
           )}
 
           {!isActive && (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowReleaseConfirm(true);
-              }}
-              className="mt-1 w-full"
-            >
+              <Button
+                variant="danger"
+                size="sm"
+                className="mt-1 w-full tracking-wider"
+                disabled={run.team.length <= 1}
+                title={run.team.length <= 1 ? "No puedes liberar a tu único Pokémon" : "Liberar"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowReleaseConfirm(true);
+                }}
+              >
               Liberar
             </Button>
           )}

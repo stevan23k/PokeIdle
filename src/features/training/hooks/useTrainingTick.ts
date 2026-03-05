@@ -65,6 +65,7 @@ export function useTrainingTick() {
           currentBattle: {
             type: "wild",
             phase: "active",
+            turnState: "idle",
             playerPokemon: prev.pokemon,
             enemyPokemon: enemy,
             turnCount: 0,

@@ -7,6 +7,7 @@ import { PixelSprite } from "../../../components/ui/PixelSprite";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal";
 import { useItemOnPokemon } from "../../../engine/items.engine";
 import { equipItem } from "../../../engine/heldItems.engine";
+import { calculateCaptureChance } from "../../../engine/capture.engine";
 import { clsx } from "clsx";
 import { X, Search, Star, SortAsc, SortDesc } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
@@ -65,6 +66,10 @@ export function BagModal({ onClose }: BagModalProps) {
             [useTargetModal]: (prev.itemUsage[useTargetModal] || 0) + 1,
           },
           team: prev.team.map((p) => (p.uid === pokemon!.uid ? newPokemon : p)),
+          currentBattle:
+            prev.currentBattle?.playerPokemon?.uid === pokemon!.uid
+              ? { ...prev.currentBattle, playerPokemon: newPokemon }
+              : prev.currentBattle,
         }));
         setMeta((prev) => ({
           ...prev,
@@ -112,6 +117,52 @@ export function BagModal({ onClose }: BagModalProps) {
     }
 
     setUseTargetModal(null);
+  };
+
+  const handleThrowBall = (itemId: string) => {
+    if (!run.currentBattle || run.currentBattle.type !== "wild" || run.currentBattle.isBossBattle) {
+      setRun((prev) => ({
+        ...prev,
+        battleLog: [
+          ...prev.battleLog,
+          { id: Date.now().toString(), text: "¡No puedes usar esta Ball aquí!", type: "danger" as const }
+        ].slice(-40)
+      }));
+      return;
+    }
+    const ballDef = ITEMS[itemId];
+    if (!ballDef) return;
+
+    setRun(prev => {
+      let nextState = { ...prev };
+      let bState = { ...nextState.currentBattle! };
+      
+      nextState.items = { ...nextState.items, [itemId]: (nextState.items[itemId] || 0) - 1 };
+      
+      const catchAttempt = calculateCaptureChance(
+        bState.enemyPokemon,
+        ballDef,
+        bState.enemyPokemon.status,
+        255,
+        bState.isBossBattle
+      );
+
+      const newLog: any[] = [
+        ...nextState.battleLog,
+        { id: Date.now().toString(), text: `Lanzaste ${ballDef.name}...`, type: "capture" },
+        { id: Date.now().toString() + "1", text: catchAttempt.log, type: "normal" }
+      ];
+
+      if (catchAttempt.success) {
+        bState.phase = "caught";
+        nextState.totalCaptured += 1;
+      }
+      
+      nextState.battleLog = newLog.slice(-40);
+      nextState.currentBattle = bState;
+      return nextState;
+    });
+    onClose();
   };
 
   const togglePin = (itemId: string) => {
@@ -313,12 +364,19 @@ export function BagModal({ onClose }: BagModalProps) {
 
                         {(item.category === "heal" ||
                           item.category === "held" ||
-                          item.category === "evo") && (
+                          item.category === "evo" ||
+                          item.category === "ball") && (
                           <Button
-                            variant="primary"
+                            variant="secondary"
                             size="sm"
-                            onClick={() => setUseTargetModal(id)}
-                            className="mt-2 w-full text-[0.5rem] py-1"
+                            className="px-3"
+                            onClick={() => {
+                              if (item.category === "ball") {
+                                handleThrowBall(id);
+                              } else {
+                                setUseTargetModal(id);
+                              }
+                            }}
                           >
                             {item.category === "held" ? "EQUIPAR" : "USAR"}
                           </Button>
