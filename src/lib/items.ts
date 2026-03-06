@@ -3285,10 +3285,10 @@ export const ITEMS: Record<string, Item> = {
   "mt-tinieblas": {
     id: "mt-tinieblas",
     name: "MT Tinieblas",
-    spriteSlug: "tm-dark",
-    description: "Enseña Tinieblas. Movimiento físico de tipo Siniestro.",
+    spriteSlug: "tm-ghost",
+    description: "Enseña Tinieblas. Causa daño fijo según el nivel del Pokémon.",
     category: "tm",
-    effect: { type: "teach", moveId: 212, moveName: "Tinieblas" },
+    effect: { type: "teach", moveId: 101, moveName: "Tinieblas" },
     buyable: true,
     lootable: true,
     shopPrice: 1500,

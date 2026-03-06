@@ -12,5 +12,11 @@ export const AUTHORIZED_ADMINS = [
 
 export function isUserAdmin(user: { email?: string; id: string } | null): boolean {
   if (!user) return false;
-  return AUTHORIZED_ADMINS.includes(user.email || "") || AUTHORIZED_ADMINS.includes(user.id);
+  const userEmail = (user.email || "").toLowerCase().trim();
+  const userId = user.id.trim();
+  
+  return AUTHORIZED_ADMINS.some(admin => {
+    const adminLower = admin.toLowerCase().trim();
+    return adminLower === userEmail || adminLower === userId;
+  });
 }

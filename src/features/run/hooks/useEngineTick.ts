@@ -380,6 +380,171 @@ export function useEngineTick() {
         nextState.battleLog = logs.slice(-40);
         return nextState;
       }
+      
+      if (bState.turnState === "apply_capture") {
+        const pca = bState.pendingCaptureAnim;
+        if (!pca || pca.captured === null) return state;
+
+        if (pca.captured) {
+          pushLog(`¡${bState.enemyPokemon.name} fue atrapado!`, "capture");
+          nextState.totalCaptured += 1;
+
+          // --- ZONE PROGRESSION (on capture) ---
+          if (bState.isBossBattle) {
+            const region = REGIONS[nextState.currentRegion];
+            if (nextState.currentZoneIndex + 1 < region.zones.length) {
+              nextState.currentZoneIndex += 1;
+              nextState.zoneBattlesWon = 0;
+              nextState.pendingZoneTransition = true;
+            }
+          } else {
+            nextState.zoneBattlesWon += 1;
+          }
+
+          bState.enemyPokemon = {
+            ...bState.enemyPokemon,
+            caughtAt: currentZone?.name || "Zona Desconocida",
+            currentHP: bState.enemyPokemon.maxHP,
+            status: null,
+            moves: bState.enemyPokemon.moves.map((m: any) => ({
+              ...m,
+              currentPP: m.maxPP,
+            })),
+          };
+
+          const res = optimizeTeam(
+            nextState.team,
+            nextState.pc,
+            bState.enemyPokemon,
+          );
+          nextState.team = res.newTeam;
+          nextState.pc = res.newPC;
+          nextState.currentBattle = null;
+          nextState.pendingLootSelection = generateLootOptions([], {
+            team: nextState.team,
+            pc: nextState.pc,
+          });
+
+          // Genetics update
+          setMeta((m) => {
+            const existing = m.unlockedStarters.find(
+              (s) => s.id === bState.enemyPokemon.pokemonId,
+            );
+
+            if (existing) {
+              let updated = false;
+              const newMaxIvs = { ...existing.maxIvs };
+              const newMaxEvs = { ...existing.maxEvs };
+
+              (["hp", "attack", "defense", "spAtk", "spDef", "speed"] as const).forEach((stat) => {
+                const enemyStat = bState.enemyPokemon.ivs[stat as keyof PokemonStats];
+                if (enemyStat > newMaxIvs[stat as keyof PokemonStats]) {
+                  newMaxIvs[stat as keyof PokemonStats] = enemyStat;
+                  updated = true;
+                }
+                const enemyEvStat = bState.enemyPokemon.evs[stat as keyof PokemonStats];
+                if (enemyEvStat > newMaxEvs[stat as keyof PokemonStats]) {
+                  newMaxEvs[stat as keyof PokemonStats] = enemyEvStat;
+                  updated = true;
+                }
+              });
+
+              const newNatures = new Set(existing.unlockedNatures);
+              if (!newNatures.has(bState.enemyPokemon.nature)) {
+                newNatures.add(bState.enemyPokemon.nature);
+                updated = true;
+              }
+
+              if (!updated) return m;
+
+              const pokemonId = bState.enemyPokemon.pokemonId;
+              const pokemonName = bState.enemyPokemon.name;
+              nextState.inheritanceProgress[pokemonId] = {
+                pokemonId,
+                pokemonName,
+                ivs: Object.fromEntries(
+                  Object.entries(bState.enemyPokemon.ivs).map(([k, v]) => [k, [existing.maxIvs[k as keyof PokemonStats] || 0, v]])
+                ),
+                evs: Object.fromEntries(
+                  Object.entries(bState.enemyPokemon.evs).map(([k, v]) => [k, [existing.maxEvs[k as keyof PokemonStats] || 0, v]])
+                ),
+                newNatures: existing.unlockedNatures.includes(bState.enemyPokemon.nature) ? [] : [bState.enemyPokemon.nature],
+              };
+
+              return {
+                ...m,
+                unlockedStarters: m.unlockedStarters.map((s) =>
+                  s.id === pokemonId
+                    ? {
+                        ...s,
+                        maxIvs: newMaxIvs,
+                        maxEvs: newMaxEvs,
+                        unlockedNatures: Array.from(newNatures),
+                      }
+                    : s,
+                ),
+              };
+            } else {
+              const newUniqueIds = m.capturedUniqueIds.includes(bState.enemyPokemon.pokemonId)
+                ? m.capturedUniqueIds
+                : [...m.capturedUniqueIds, bState.enemyPokemon.pokemonId];
+
+              let shinyUpdate = {};
+              if (bState.enemyPokemon.isShiny) {
+                const shinyInfo = {
+                  id: bState.enemyPokemon.pokemonId,
+                  runId: nextState.runId,
+                  timestamp: Date.now(),
+                };
+                shinyUpdate = {
+                  firstShiny: m.firstShiny || shinyInfo,
+                  lastShiny: shinyInfo,
+                };
+              }
+
+              const pokemonId = bState.enemyPokemon.pokemonId;
+              const pokemonName = bState.enemyPokemon.name;
+
+              nextState.inheritanceProgress[pokemonId] = {
+                pokemonId,
+                pokemonName,
+                ivs: Object.fromEntries(Object.entries(bState.enemyPokemon.ivs).map(([k, v]) => [k, [0, v]])),
+                evs: Object.fromEntries(Object.entries(bState.enemyPokemon.evs).map(([k, v]) => [k, [0, v]])),
+                newNatures: [bState.enemyPokemon.nature],
+              };
+
+              return {
+                ...m,
+                ...shinyUpdate,
+                capturedUniqueIds: newUniqueIds,
+                unlockedStarters: [
+                  ...m.unlockedStarters,
+                  {
+                    id: bState.enemyPokemon.pokemonId,
+                    name: bState.enemyPokemon.name,
+                    maxIvs: bState.enemyPokemon.ivs,
+                    maxEvs: bState.enemyPokemon.evs,
+                    unlockedNatures: [bState.enemyPokemon.nature],
+                  },
+                ].sort((a, b) => a.id - b.id),
+              };
+            }
+          });
+
+          bState.pendingCaptureAnim = null;
+          processedAnimRef.current = null;
+          nextState.currentBattle = null;
+          return nextState;
+        } else {
+          pushLog(`¡${bState.enemyPokemon.name} se liberó!`, "normal");
+          bState.pendingCaptureAnim = null;
+          bState.turnState = "idle";
+          turnStateRef.current = "idle";
+          processedAnimRef.current = null;
+          nextState.currentBattle = bState;
+          return nextState;
+        }
+      }
 
       // For animation state machine:
       // If idle, we determine if a move has been selected.
@@ -1044,7 +1209,8 @@ export function useEngineTick() {
         bState.type === "wild" &&
         nextPlayerHP > 0 &&
         nextEnemyHP > 0 &&
-        nextEnemyHP / bState.enemyPokemon.maxHP < 0.3
+        nextEnemyHP / bState.enemyPokemon.maxHP < 0.3 &&
+        !bState.pendingCaptureAnim // Don't trigger if already animating
       ) {
         const isOwned =
           nextState.team.some(
@@ -1058,237 +1224,31 @@ export function useEngineTick() {
           (!isOwned || bState.isBossBattle) &&
           nextState.items["poke-ball"] > 0
         ) {
-          let caught = false;
-          let attempts = 0;
-          const maxAttempts =
-            nextEnemyHP / bState.enemyPokemon.maxHP <= 0.15 ? 2 : 1;
+          nextState.items["poke-ball"] -= 1;
+          const catchAttempt = calculateCaptureChance(
+            bState.enemyPokemon,
+            ITEMS["poke-ball"],
+            null,
+            255, 
+            bState.isBossBattle || false,
+            nextState.totalCaptured, 
+            false, 
+            1.0 
+          );
 
-          while (
-            attempts < maxAttempts &&
-            nextState.items["poke-ball"] > 0 &&
-            !caught
-          ) {
-            attempts++;
-            nextState.items["poke-ball"] -= 1;
-            pushLog(
-              `Intentando atrapar a ${bState.enemyPokemon.name}...`,
-              "capture",
-            );
-            const catchAttempt = calculateCaptureChance(
-              bState.enemyPokemon,
-              ITEMS["poke-ball"],
-              null,
-              255, // default rate
-              bState.isBossBattle,
-              nextState.totalCaptured, // caughtCount
-              false, // isDarkGrass (default false)
-              1.0 // oPowerMultiplier (default 1.0)
-            );
-            pushLog(catchAttempt.log, "normal");
-            if (catchAttempt.success) {
-              caught = true;
-            }
-          }
+          pushLog(`Auto-captura: lanzando Poké Ball...`, "capture");
+          
+          // Trigger animation
+          bState.pendingCaptureAnim = {
+            ballId: "poke-ball",
+            captured: catchAttempt.success
+          };
+          bState.turnState = "animating";
+          turnStateRef.current = "animating";
 
-          if (caught) {
-            pushLog(`¡${bState.enemyPokemon.name} fue atrapado!`, "capture");
-            nextState.totalCaptured += 1;
-
-            // --- ZONE PROGRESSION (on capture) ---
-            if (bState.isBossBattle) {
-              const region = REGIONS[nextState.currentRegion];
-              if (nextState.currentZoneIndex + 1 < region.zones.length) {
-                nextState.currentZoneIndex += 1;
-                nextState.zoneBattlesWon = 0;
-                nextState.pendingZoneTransition = true;
-              }
-            } else {
-              // Also increment zone progress on wild catch to stay consistent with kills
-              nextState.zoneBattlesWon += 1;
-            }
-
-            bState.enemyPokemon = {
-              ...bState.enemyPokemon,
-              caughtAt: currentZone.name,
-              currentHP: bState.enemyPokemon.maxHP,
-              status: null,
-              moves: bState.enemyPokemon.moves.map((m: any) => ({
-                ...m,
-                currentPP: m.maxPP,
-              })),
-            };
-            const res = optimizeTeam(
-              nextState.team,
-              nextState.pc,
-              bState.enemyPokemon,
-            );
-            nextState.team = res.newTeam;
-            nextState.pc = res.newPC;
-            nextState.currentBattle = null;
-            nextState.pendingLootSelection = generateLootOptions([], {
-              team: nextState.team,
-              pc: nextState.pc,
-            });
-
-            // Unlock or Update Starter Genetics
-            setMeta((m) => {
-              const existing = m.unlockedStarters.find(
-                (s) => s.id === bState.enemyPokemon.pokemonId,
-              );
-
-              if (existing) {
-                let updated = false;
-                const newMaxIvs = { ...existing.maxIvs };
-                const newMaxEvs = { ...existing.maxEvs };
-
-                (
-                  [
-                    "hp",
-                    "attack",
-                    "defense",
-                    "spAtk",
-                    "spDef",
-                    "speed",
-                  ] as const
-                ).forEach((stat) => {
-                  if (bState.enemyPokemon.ivs[stat] > newMaxIvs[stat]) {
-                    newMaxIvs[stat] = bState.enemyPokemon.ivs[stat];
-                    updated = true;
-                  }
-                  if (bState.enemyPokemon.evs[stat] > newMaxEvs[stat]) {
-                    newMaxEvs[stat] = bState.enemyPokemon.evs[stat];
-                    updated = true;
-                  }
-                });
-
-                const newNatures = new Set(existing.unlockedNatures);
-                if (!newNatures.has(bState.enemyPokemon.nature)) {
-                  newNatures.add(bState.enemyPokemon.nature);
-                  updated = true;
-                }
-
-                if (!updated) return m;
-
-                const pokemonId = bState.enemyPokemon.pokemonId;
-                const pokemonName = bState.enemyPokemon.name;
-                const runProgress = nextState.inheritanceProgress[
-                  pokemonId
-                ] || {
-                  pokemonId,
-                  pokemonName,
-                  ivs: {},
-                  evs: {},
-                  newNatures: [],
-                };
-
-                (
-                  [
-                    "hp",
-                    "attack",
-                    "defense",
-                    "spAtk",
-                    "spDef",
-                    "speed",
-                  ] as const
-                ).forEach((stat) => {
-                  if (bState.enemyPokemon.ivs[stat] > existing.maxIvs[stat]) {
-                    runProgress.ivs[stat] = [
-                      existing.maxIvs[stat],
-                      bState.enemyPokemon.ivs[stat],
-                    ];
-                  }
-                  if (bState.enemyPokemon.evs[stat] > existing.maxEvs[stat]) {
-                    runProgress.evs[stat] = [
-                      existing.maxEvs[stat],
-                      bState.enemyPokemon.evs[stat],
-                    ];
-                  }
-                });
-
-                if (
-                  !existing.unlockedNatures.includes(bState.enemyPokemon.nature)
-                ) {
-                  if (
-                    !runProgress.newNatures.includes(bState.enemyPokemon.nature)
-                  ) {
-                    runProgress.newNatures.push(bState.enemyPokemon.nature);
-                  }
-                }
-
-                nextState.inheritanceProgress[pokemonId] = runProgress;
-
-                return {
-                  ...m,
-                  unlockedStarters: m.unlockedStarters.map((s) =>
-                    s.id === existing.id
-                      ? {
-                          ...s,
-                          maxIvs: newMaxIvs,
-                          maxEvs: newMaxEvs,
-                          unlockedNatures: Array.from(newNatures),
-                        }
-                      : s,
-                  ),
-                };
-              } else {
-                const newUniqueIds = m.capturedUniqueIds.includes(
-                  bState.enemyPokemon.pokemonId,
-                )
-                  ? m.capturedUniqueIds
-                  : [...m.capturedUniqueIds, bState.enemyPokemon.pokemonId];
-
-                let shinyUpdate = {};
-                if (bState.enemyPokemon.isShiny) {
-                  const shinyInfo = {
-                    id: bState.enemyPokemon.pokemonId,
-                    runId: nextState.runId,
-                    timestamp: Date.now(),
-                  };
-                  shinyUpdate = {
-                    firstShiny: m.firstShiny || shinyInfo,
-                    lastShiny: shinyInfo,
-                  };
-                }
-
-                const pokemonId = bState.enemyPokemon.pokemonId;
-                const pokemonName = bState.enemyPokemon.name;
-
-                nextState.inheritanceProgress[pokemonId] = {
-                  pokemonId,
-                  pokemonName,
-                  ivs: Object.fromEntries(
-                    Object.entries(bState.enemyPokemon.ivs).map(([k, v]) => [
-                      k,
-                      [0, v],
-                    ]),
-                  ),
-                  evs: Object.fromEntries(
-                    Object.entries(bState.enemyPokemon.evs).map(([k, v]) => [
-                      k,
-                      [0, v],
-                    ]),
-                  ),
-                  newNatures: [bState.enemyPokemon.nature],
-                };
-
-                return {
-                  ...m,
-                  ...shinyUpdate,
-                  capturedUniqueIds: newUniqueIds,
-                  unlockedStarters: [
-                    ...m.unlockedStarters,
-                    {
-                      id: bState.enemyPokemon.pokemonId,
-                      name: bState.enemyPokemon.name,
-                      maxIvs: bState.enemyPokemon.ivs,
-                      maxEvs: bState.enemyPokemon.evs,
-                      unlockedNatures: [bState.enemyPokemon.nature],
-                    },
-                  ].sort((a, b) => a.id - b.id),
-                };
-              }
-            });
-          }
+          nextState.currentBattle = bState;
+          nextState.battleLog = logs.slice(-40);
+          return nextState;
         }
       }
 
@@ -1324,12 +1284,19 @@ export function useEngineTick() {
         if (!p) return prev;
         // If has room, add directly
         if (p.moves.length < 4) {
+          const nextMoves = [...p.moves, newMove];
           return {
             ...prev,
             team: prev.team.map(t => t.uid === pokemonUid
-              ? { ...t, moves: [...t.moves, newMove] }
+              ? { ...t, moves: nextMoves }
               : t
             ),
+            currentBattle: prev.currentBattle?.playerPokemon?.uid === pokemonUid
+              ? {
+                  ...prev.currentBattle,
+                  playerPokemon: { ...prev.currentBattle.playerPokemon, moves: nextMoves }
+                }
+              : prev.currentBattle,
             battleLog: [...prev.battleLog, {
               id: Date.now().toString(),
               text: `¡${p.name} aprendió ${newMove.moveName}!`,

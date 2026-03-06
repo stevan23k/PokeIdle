@@ -60,6 +60,15 @@ export function MoveLearningModal() {
       }
 
       nextState.team[pIndex] = p;
+      
+      // Sync with battle if it's the active pokemon
+      if (nextState.currentBattle?.playerPokemon?.uid === pending.pokemonUid) {
+        nextState.currentBattle = {
+          ...nextState.currentBattle,
+          playerPokemon: p
+        };
+      }
+
       nextState.battleLog = logs.slice(-40);
       return nextState;
     });

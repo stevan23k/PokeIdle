@@ -127,7 +127,7 @@ export interface BattleState {
     target?: string;
   } | null;
 
-  turnState?: "idle" | "turn_start" | "animating" | "apply_damage";
+  turnState?: "idle" | "turn_start" | "animating" | "apply_damage" | "apply_capture";
   turnQueue?: ("p" | "e")[];
   pendingAnimation?: {
     actor: "p" | "e";

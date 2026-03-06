@@ -312,10 +312,16 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                   onComplete={() => {
                     setCaptureAnim({ active: false, captured: null });
                     setEnemyHidden(false);
-                    setRun((prev: any) => prev.currentBattle ? {
-                      ...prev,
-                      currentBattle: { ...prev.currentBattle, pendingCaptureAnim: null }
-                    } : prev);
+                    setRun((prev: any) => {
+                      if (!prev.currentBattle) return prev;
+                      return {
+                        ...prev,
+                        currentBattle: {
+                          ...prev.currentBattle,
+                          turnState: "apply_capture",
+                        },
+                      };
+                    });
                   }}
                 />
               </div>

@@ -106,6 +106,7 @@ export function EvolutionModal() {
                 <PixelSprite
                   pokemonId={run.team.find(p => p.uid === pending.pokemonUid)?.pokemonId || 0}
                   variant="front"
+                  shiny={run.team.find(p => p.uid === pending.pokemonUid)?.isShiny}
                   size={96}
                   showScanlines={false}
                   alt={pending.fromName}
@@ -130,6 +131,7 @@ export function EvolutionModal() {
                 <PixelSprite
                   pokemonId={pending.toId}
                   variant="front"
+                  shiny={run.team.find(p => p.uid === pending.pokemonUid)?.isShiny}
                   size={96}
                   showScanlines={false}
                   alt={pending.toName}

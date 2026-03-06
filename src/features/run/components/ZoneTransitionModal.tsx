@@ -540,6 +540,7 @@ export function ZoneTransitionModal() {
                   <PixelSprite
                     pokemonId={pokemon.pokemonId}
                     variant="front"
+                    shiny={pokemon.isShiny}
                     size={64}
                     showScanlines={false}
                     className="group-hover:scale-110 transition-transform"

@@ -12,6 +12,18 @@ import { StartConfigModal } from "./StartConfigModal";
 import { Button } from "../../../components/ui/Button";
 
 const STAT_LABELS = ["HP", "ATK", "DEF", "SPE", "SPD", "SPA"];
+
+const CORE_STARTER_IDS = [
+  1, 4, 7,           // Gen 1
+  152, 155, 158,     // Gen 2
+  252, 255, 258,     // Gen 3
+  387, 390, 393,     // Gen 4
+  495, 498, 501,     // Gen 5
+  650, 653, 656,     // Gen 6
+  722, 725, 728,     // Gen 7
+  810, 813, 816,     // Gen 8
+  906, 909, 912      // Gen 9
+];
 const RadarChart = ({
   stats,
   isIv = false,
@@ -123,11 +135,18 @@ export function StarterSelector() {
     const gen = GENERATIONS.find((g) => g.id === selectedGen);
     if (!gen) return;
 
-    const ids = meta.unlockedStarters
+    // Standard starters for this generation
+    const coreIds = CORE_STARTER_IDS.filter(id => id >= gen.range[0] && id <= gen.range[1]);
+
+    // Pokémon the user has already unlocked for this generation
+    const unlockedIds = meta.unlockedStarters
       .filter(s => s.id >= gen.range[0] && s.id <= gen.range[1])
       .map(s => s.id);
     
-    setValidIds(ids);
+    // Combine both unique lists and sort by Pokedex ID
+    const combined = Array.from(new Set([...coreIds, ...unlockedIds])).sort((a, b) => a - b);
+    
+    setValidIds(combined);
   }, [selectedGen, meta.unlockedStarters]);
 
   useEffect(() => {
@@ -299,6 +318,7 @@ export function StarterSelector() {
                           <PixelSprite
                             pokemonId={id}
                             variant="front"
+                            shiny={unlockedData?.isShiny}
                             size={48}
                             showScanlines={false}
                             alt={pokemonName}

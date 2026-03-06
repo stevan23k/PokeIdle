@@ -310,3 +310,15 @@ export async function learnMovesOnLevelUp(
     return null;
   }
 }
+
+export async function fetchAllPokemonList(): Promise<{ id: number; name: string }[]> {
+  const url = `${API_BASE}/pokemon?limit=1025`;
+  const data = await fetchJson(url);
+  return data.results.map((r: any) => {
+    const parts = r.url.split("/");
+    return {
+      id: parseInt(parts[parts.length - 2]),
+      name: r.name,
+    };
+  });
+}
