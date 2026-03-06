@@ -117,31 +117,18 @@ export function StarterSelector() {
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [pendingStarterId, setPendingStarterId] = useState<number | null>(null);
 
-  // Filter valid IDs for the current generation
+  // No longer checking every ID on every mount to avoid API rate limits/lag
+  // Instead, we just show what is in meta.unlockedStarters for that generation
   useEffect(() => {
     const gen = GENERATIONS.find((g) => g.id === selectedGen);
     if (!gen) return;
 
-    let isCancelled = false;
-    const ids = Array.from(
-      { length: gen.range[1] - gen.range[0] + 1 },
-      (_, i) => gen.range[0] + i,
-    );
-
-    const checkIds = async () => {
-      const results = await Promise.all(
-        ids.map(async (id) => ({ id, valid: await isStarterMaterial(id) })),
-      );
-      if (!isCancelled) {
-        setValidIds(results.filter((r) => r.valid).map((r) => r.id));
-      }
-    };
-
-    checkIds();
-    return () => {
-      isCancelled = true;
-    };
-  }, [selectedGen]);
+    const ids = meta.unlockedStarters
+      .filter(s => s.id >= gen.range[0] && s.id <= gen.range[1])
+      .map(s => s.id);
+    
+    setValidIds(ids);
+  }, [selectedGen, meta.unlockedStarters]);
 
   useEffect(() => {
     if (!selectedId) {

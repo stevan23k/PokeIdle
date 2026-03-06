@@ -148,49 +148,40 @@ const defaultMeta: MetaState = {
 const GameContext = createContext<GameContextValue | null>(null);
 
 function runMigrationsMeta(loaded: any) {
-  if (loaded.unlockedStarters && loaded.unlockedStarters.length > 0) {
+  const baseMeta = { ...defaultMeta };
+  if (!loaded) return baseMeta;
+
+  // Ensure unlockedStarters is an array and not empty
+  if (!loaded.unlockedStarters || loaded.unlockedStarters.length === 0) {
+    loaded.unlockedStarters = baseMeta.unlockedStarters;
+  } else {
+    // Check if the first element is a number (old format)
     if (typeof loaded.unlockedStarters[0] === "number") {
-      loaded.unlockedStarters = defaultMeta.unlockedStarters;
+      loaded.unlockedStarters = baseMeta.unlockedStarters;
     } else {
+      // Ensure all required fields exist for each starter
       loaded.unlockedStarters = loaded.unlockedStarters.map((s: any) => ({
         ...s,
-        maxIvs: s.maxIvs || {
-          hp: 15,
-          attack: 15,
-          defense: 15,
-          spAtk: 15,
-          spDef: 15,
-          speed: 15,
-        },
-        maxEvs: s.maxEvs || {
-          hp: 0,
-          attack: 0,
-          defense: 0,
-          spAtk: 0,
-          spDef: 0,
-          speed: 0,
-        },
+        maxIvs: s.maxIvs || { hp: 15, attack: 15, defense: 15, spAtk: 15, spDef: 15, speed: 15 },
+        maxEvs: s.maxEvs || { hp: 0, attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 },
         unlockedNatures: s.unlockedNatures || [],
       }));
     }
   }
-  if (loaded.pokeCoins === undefined) loaded.pokeCoins = 0;
-  if (loaded.autoLoot === undefined) loaded.autoLoot = true;
-  loaded.totalTimePlayed = loaded.totalTimePlayed ?? 0;
-  loaded.highestLevelReached = loaded.highestLevelReached ?? 0;
-  loaded.mostCapturedPokemonId = loaded.mostCapturedPokemonId ?? null;
-  loaded.fastestGym1Time = loaded.fastestGym1Time ?? null;
-  loaded.maxWinStreakEver = loaded.maxWinStreakEver ?? 0;
-  loaded.firstShiny = loaded.firstShiny ?? null;
-  loaded.lastShiny = loaded.lastShiny ?? null;
-  loaded.capturedUniqueIds = loaded.capturedUniqueIds ?? [];
-  loaded.totalItemsUsed = loaded.totalItemsUsed ?? {};
-  loaded.hideTutorial = loaded.hideTutorial ?? false;
-  return loaded;
+
+  // Backfill other missing fields
+  return {
+    ...baseMeta,
+    ...loaded,
+    unlockedStarters: loaded.unlockedStarters,
+    pokeCoins: loaded.pokeCoins ?? 0,
+    runHistory: loaded.runHistory ?? [],
+    unlockedRegions: loaded.unlockedRegions ?? ["kanto"],
+  };
 }
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const [isCloudSyncing, setIsCloudSyncing] = useState(false);
 
   const [run, setRun] = useState<RunState>(() =>
@@ -279,9 +270,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // Auto-save every 10s
   useEffect(() => {
-    const interval = setInterval(saveGame, 10000);
-    return () => clearInterval(interval);
+    let isCancelled = false; // Declare isCancelled here
+    const interval = setInterval(() => {
+      if (!isCancelled) {
+        saveGame();
+      }
+    }, 10000);
+    return () => {
+      isCancelled = true;
+      clearInterval(interval); // Ensure interval is cleared
+    };
   }, [saveGame]);
+
+  // Effect to handle logout or guest mode transition: Reset states
+  useEffect(() => {
+    if (!user && !isGuest) {
+      setRun(defaultRun);
+      setMeta(defaultMeta);
+      setTraining(defaultTrainingState);
+    }
+  }, [user, isGuest]);
 
   // Sync on unmount or unload
   useEffect(() => {
