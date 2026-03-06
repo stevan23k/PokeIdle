@@ -11,6 +11,14 @@ import { clsx } from "clsx";
 import { useBattleAnimation } from "../hooks/useBattleAnimation";
 import { PokeballCaptureAnimation } from "./PokeballCaptureAnimation";
 import { Button } from "../../../components/ui/Button";
+import { MegaButton } from "../components/MegaButton";
+import {
+  applyMegaEvolution,
+  revertMegaEvolution,
+  resetMegaStateAfterBattle,
+} from "../../../engine/mega.engine";
+import type { MegaEvolution } from "../../../lib/mega.service";
+import { generateUid } from "../../../utils/random";
 
 export interface BattleViewProps {
   onMoveClick?: (moveId: number) => void;
@@ -26,7 +34,7 @@ const ENEMY_SPRITE_POSITION: Record<string, string> = {
   "sand-route": "translate-y-[60px] -translate-x-[20px]",
   "tower-psychic": "translate-y-[50px] -translate-x-[20px]",
   "forest-green": "translate-y-[60px] -translate-x-[20px]",
-  "underwater": "translate-y-[70px] -translate-x-[30px]",
+  underwater: "translate-y-[70px] -translate-x-[30px]",
 };
 
 export function BattleView({ onMoveClick }: BattleViewProps) {
@@ -74,7 +82,43 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
   const { animState, playerRef, enemyRef } = useBattleAnimation(
     battle,
-    onResolveAnimation
+    onResolveAnimation,
+  );
+
+  const handleMegaEvolve = useCallback(
+    async (mega: MegaEvolution) => {
+      if (!battle || isTraining) return;
+      try {
+        const { updatedPokemon, megaState, logMessage } =
+          await applyMegaEvolution(battle.playerPokemon, mega, run.megaState);
+        setRun((prev) => {
+          if (!prev.currentBattle) return prev;
+          return {
+            ...prev,
+            megaState,
+            team: prev.team.map((p) =>
+              p.uid === updatedPokemon.uid ? updatedPokemon : p,
+            ),
+            currentBattle: {
+              ...prev.currentBattle,
+              playerPokemon: updatedPokemon,
+              usedManualTurn: true,
+            },
+            battleLog: [
+              ...prev.battleLog,
+              {
+                id: generateUid(),
+                text: logMessage,
+                type: "evolution" as const,
+              },
+            ].slice(-40),
+          };
+        });
+      } catch (err) {
+        console.error("[BattleView] Mega evolution failed:", err);
+      }
+    },
+    [battle, isTraining, run.megaState, setRun],
   );
 
   // --- Pokeball capture animation state ---
@@ -87,9 +131,25 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
   // Sync capture animation state from battle.pendingCaptureAnim
   useEffect(() => {
-    if (battle?.phase === "defeat") {
-      const timer = setTimeout(() => setShowGameOverOptions(true), 2500);
-      return () => clearTimeout(timer);
+    if (battle?.phase === "defeat" || battle?.phase === "victory") {
+      if (run.megaState.isMega && battle.playerPokemon) {
+        const reverted = revertMegaEvolution(
+          battle.playerPokemon,
+          run.megaState,
+        );
+        setRun((prev) => ({
+          ...prev,
+          megaState: resetMegaStateAfterBattle(),
+          team: prev.team.map((p) => (p.uid === reverted.uid ? reverted : p)),
+          currentBattle: prev.currentBattle
+            ? { ...prev.currentBattle, playerPokemon: reverted }
+            : null,
+        }));
+      }
+      if (battle?.phase === "defeat") {
+        const timer = setTimeout(() => setShowGameOverOptions(true), 2500);
+        return () => clearTimeout(timer);
+      }
     } else {
       setShowGameOverOptions(false);
     }
@@ -176,10 +236,12 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
   };
 
   return (
-    <div className={clsx(
-      "flex-1 flex flex-col bg-surface-dark crt-screen relative overflow-hidden border-2 border-border border-b-0 min-h-[300px] z-0",
-      animState.isScreenShaking && "anim-screen-shake"
-    )}>
+    <div
+      className={clsx(
+        "flex-1 flex flex-col bg-surface-dark crt-screen relative overflow-hidden border-2 border-border border-b-0 min-h-[300px] z-0",
+        animState.isScreenShaking && "anim-screen-shake",
+      )}
+    >
       {/* Background Sprite Sheet */}
       <BattleBackground backgroundId={bgId} className="absolute inset-0 z-0" />
 
@@ -274,17 +336,18 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
             <div
               className={clsx(
                 "w-40 h-40 sm:w-56 sm:h-56 flex items-end justify-center relative mt-2 shrink-0 transition-transform",
-                ENEMY_SPRITE_POSITION[bgId] || "translate-y-[60px] -translate-x-[20px]",
-                battle?.turnCount === 0 && "animate-slide-in-enemy"
+                ENEMY_SPRITE_POSITION[bgId] ||
+                  "translate-y-[60px] -translate-x-[20px]",
+                battle?.turnCount === 0 && "animate-slide-in-enemy",
               )}
             >
-              <div 
+              <div
                 ref={enemyRef}
                 className={clsx(
                   "w-full h-full flex items-end justify-center",
                   animState.isEnemyAttacking && "anim-lunge-left",
                   animState.isEnemyDefending && "anim-shake",
-                  animState.isEnemyFainting && "anim-faint-drop"
+                  animState.isEnemyFainting && "anim-faint-drop",
                 )}
               >
                 <div className="absolute bottom-2 w-32 sm:w-48 h-10 rounded-[100%] bg-black/50 blur-xs -z-10"></div>
@@ -349,7 +412,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                   Nv.{playerPokemon.level}
                 </span>
               </div>
-              
+
               {/* Status Badges */}
               <div className="flex flex-wrap gap-1 w-full mt-1">
                 {playerPokemon.status && (
@@ -391,16 +454,30 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
             {/* Sprite Container */}
             <div className="w-48 h-48 sm:w-64 sm:h-64 flex items-end justify-center relative mb-2 shrink-0">
-              <div 
+              <div
                 ref={playerRef}
                 className={clsx(
                   "w-full h-full flex items-end justify-center transition-transform",
                   animState.isPlayerAttacking && "anim-lunge-right",
                   animState.isPlayerDefending && "anim-shake",
-                  animState.isPlayerFainting && "anim-faint-drop"
+                  animState.isPlayerFainting && "anim-faint-drop",
                 )}
               >
                 <div className="absolute bottom-6 w-40 sm:w-56 h-12 rounded-[100%] bg-black/50 blur-[4px] -z-10"></div>
+                {run.isManualBattle && battle?.phase === "active" && (
+                  <div className="absolute bottom-full mb-2 right-0 z-30">
+                    <MegaButton
+                      activePokemonId={battle.playerPokemon.pokemonId}
+                      playerItems={run.items}
+                      hasMegaBracelet={run.hasMegaBracelet}
+                      usedThisBattle={run.megaState.usedThisBattle}
+                      isPlayerTurn={
+                        battle.turnState === "idle" && !battle.usedManualTurn
+                      }
+                      onMegaEvolve={handleMegaEvolve}
+                    />
+                  </div>
+                )}
                 <PixelSprite
                   pokemonId={playerPokemon.pokemonId}
                   variant="back"
@@ -421,33 +498,39 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       </div>
 
       {/* Searching Overlay */}
-      {!battle && run.isActive && !isTraining && !run.isManualBattle && !run.pendingLootSelection && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center z-30 pointer-events-none">
-          <div className="bg-surface-dark/60 backdrop-blur-md border border-brand/30 px-6 py-3 rounded-sm shadow-2xl animate-pulse">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-brand rounded-full animate-ping"></div>
-              <span className="font-display text-[1rem] tracking-[0.2em] text-brand-light drop-shadow-sm uppercase">
-                Buscando oponente...
-              </span>
-            </div>
-            <div className="mt-2 h-1 bg-surface-dark/80 rounded-full overflow-hidden border border-border/20">
-              <div
-                className="h-full bg-brand transition-all duration-300"
-                style={{ width: `${run.currentZoneProgress}%` }}
-              ></div>
-            </div>
-            <div className="mt-1 text-center font-body text-[0.55rem] text-white tracking-widest uppercase opacity-80">
-              Progreso de exploración: {run.currentZoneProgress}%
+      {!battle &&
+        run.isActive &&
+        !isTraining &&
+        !run.isManualBattle &&
+        !run.pendingLootSelection && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-30 pointer-events-none">
+            <div className="bg-surface-dark/60 backdrop-blur-md border border-brand/30 px-6 py-3 rounded-sm shadow-2xl animate-pulse">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-brand rounded-full animate-ping"></div>
+                <span className="font-display text-[1rem] tracking-[0.2em] text-brand-light drop-shadow-sm uppercase">
+                  Buscando oponente...
+                </span>
+              </div>
+              <div className="mt-2 h-1 bg-surface-dark/80 rounded-full overflow-hidden border border-border/20">
+                <div
+                  className="h-full bg-brand transition-all duration-300"
+                  style={{ width: `${run.currentZoneProgress}%` }}
+                ></div>
+              </div>
+              <div className="mt-1 text-center font-body text-[0.55rem] text-white tracking-widest uppercase opacity-80">
+                Progreso de exploración: {run.currentZoneProgress}%
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* Encounter Info Bar */}
       <div className="absolute bottom-0 inset-x-0 bg-surface border-t-2 border-border px-3 py-1 flex justify-between items-center z-20">
         <span className="font-body italic text-[0.6rem] text-white">
           {!battle && run.isActive && !isTraining
-            ? run.pendingLootSelection ? "Seleccionando botín..." : "Explorando la zona..."
+            ? run.pendingLootSelection
+              ? "Seleccionando botín..."
+              : "Explorando la zona..."
             : battle?.type === "wild"
               ? "Encuentro salvaje"
               : battle?.type === "trainer"
@@ -506,12 +589,23 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
             </p>
           </div>
 
-          <div className={clsx(
-            "flex flex-col gap-4 w-full max-w-xs transition-all duration-700",
-            showGameOverOptions ? "opacity-100 translate-y-0" : "opacity-0 translate-y-12"
-          )}>
+          <div
+            className={clsx(
+              "flex flex-col gap-4 w-full max-w-xs transition-all duration-700",
+              showGameOverOptions
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 translate-y-12",
+            )}
+          >
             <Button
-              onClick={() => setRun((prev) => ({ ...prev, isActive: false, team: [], currentBattle: null }))}
+              onClick={() =>
+                setRun((prev) => ({
+                  ...prev,
+                  isActive: false,
+                  team: [],
+                  currentBattle: null,
+                }))
+              }
               variant="primary"
               size="lg"
               className="w-full border-2 border-white shadow-[4px_4px_0_white]"

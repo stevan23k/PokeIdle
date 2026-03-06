@@ -24,7 +24,8 @@ import {
   getBestAvailableHealingItem,
   useItemOnPokemon,
 } from "../../../engine/items.engine";
-import { REGIONS } from "../../../lib/regions";
+import { getZonesForRegion } from "../../../lib/regions.service";
+import type { Zone } from "../../../lib/regions";
 import {
   getPokemonData,
   learnMovesOnLevelUp,
@@ -46,6 +47,12 @@ export function useEngineTick() {
   const fetchingRef = useRef(false);
   const turnStateRef = useRef<string>("idle");
   const processedAnimRef = useRef<string | null>(null);
+
+  const [regionZones, setRegionZones] = useState<Zone[]>([]);
+
+  useEffect(() => {
+    getZonesForRegion(run.currentRegion).then(setRegionZones);
+  }, [run.currentRegion]);
 
   const tick = async () => {
     if (
@@ -84,8 +91,7 @@ export function useEngineTick() {
               starterId: run.starterId,
               badges: run.gymsBadges.length,
               zoneReached:
-                REGIONS[run.currentRegion]?.zones[run.currentZoneIndex]?.name ||
-                "Desconocido",
+                regionZones[run.currentZoneIndex]?.name || "Desconocido",
               totalCaptured: run.totalCaptured,
               totalBattlesWon: run.totalBattlesWon,
               totalFainted: run.totalFainted,
@@ -151,13 +157,14 @@ export function useEngineTick() {
       return;
     }
 
-    const region = REGIONS[run.currentRegion];
+    const region = { zones: regionZones };
     const currentZone = region.zones[run.currentZoneIndex];
 
     if (!run.currentBattle) {
       // Progress zone
       const nextProgress =
-        run.currentZoneProgress + (run.speedMultiplier === "SKIP" || run.isManualBattle ? 100 : 10);
+        run.currentZoneProgress +
+        (run.speedMultiplier === "SKIP" || run.isManualBattle ? 100 : 10);
 
       if (nextProgress >= 100) {
         // Find encounter
@@ -206,7 +213,7 @@ export function useEngineTick() {
           setRun((prev) => {
             // Safety check: if a battle was already spawned by another tick, don't overwrite it
             if (prev.currentBattle) return prev;
-            
+
             return {
               ...prev,
               currentZoneProgress: 0,
@@ -317,10 +324,13 @@ export function useEngineTick() {
     // We do functional state update to ensure latest state
     setRun((state) => {
       // Guard against stale state reads during animation
-      if (turnStateRef.current === "animating" && state.currentBattle?.turnState === "animating") {
+      if (
+        turnStateRef.current === "animating" &&
+        state.currentBattle?.turnState === "animating"
+      ) {
         return state;
       }
-      
+
       let nextState = { ...state };
       let logs = [...nextState.battleLog];
 
@@ -355,7 +365,9 @@ export function useEngineTick() {
         return nextState;
       }
 
-      const bState = { ...nextState.currentBattle } as import("../types/game.types").BattleState;
+      const bState = {
+        ...nextState.currentBattle,
+      } as import("../types/game.types").BattleState;
       const pushLog = (text: string, type: any = "normal") => {
         logs.push({ id: generateUid(), text, type });
       };
@@ -380,7 +392,7 @@ export function useEngineTick() {
         nextState.battleLog = logs.slice(-40);
         return nextState;
       }
-      
+
       if (bState.turnState === "apply_capture") {
         const pca = bState.pendingCaptureAnim;
         if (!pca || pca.captured === null) return state;
@@ -391,7 +403,7 @@ export function useEngineTick() {
 
           // --- ZONE PROGRESSION (on capture) ---
           if (bState.isBossBattle) {
-            const region = REGIONS[nextState.currentRegion];
+            const region = { zones: regionZones };
             if (nextState.currentZoneIndex + 1 < region.zones.length) {
               nextState.currentZoneIndex += 1;
               nextState.zoneBattlesWon = 0;
@@ -436,13 +448,17 @@ export function useEngineTick() {
               const newMaxIvs = { ...existing.maxIvs };
               const newMaxEvs = { ...existing.maxEvs };
 
-              (["hp", "attack", "defense", "spAtk", "spDef", "speed"] as const).forEach((stat) => {
-                const enemyStat = bState.enemyPokemon.ivs[stat as keyof PokemonStats];
+              (
+                ["hp", "attack", "defense", "spAtk", "spDef", "speed"] as const
+              ).forEach((stat) => {
+                const enemyStat =
+                  bState.enemyPokemon.ivs[stat as keyof PokemonStats];
                 if (enemyStat > newMaxIvs[stat as keyof PokemonStats]) {
                   newMaxIvs[stat as keyof PokemonStats] = enemyStat;
                   updated = true;
                 }
-                const enemyEvStat = bState.enemyPokemon.evs[stat as keyof PokemonStats];
+                const enemyEvStat =
+                  bState.enemyPokemon.evs[stat as keyof PokemonStats];
                 if (enemyEvStat > newMaxEvs[stat as keyof PokemonStats]) {
                   newMaxEvs[stat as keyof PokemonStats] = enemyEvStat;
                   updated = true;
@@ -463,12 +479,22 @@ export function useEngineTick() {
                 pokemonId,
                 pokemonName,
                 ivs: Object.fromEntries(
-                  Object.entries(bState.enemyPokemon.ivs).map(([k, v]) => [k, [existing.maxIvs[k as keyof PokemonStats] || 0, v]])
+                  Object.entries(bState.enemyPokemon.ivs).map(([k, v]) => [
+                    k,
+                    [existing.maxIvs[k as keyof PokemonStats] || 0, v],
+                  ]),
                 ),
                 evs: Object.fromEntries(
-                  Object.entries(bState.enemyPokemon.evs).map(([k, v]) => [k, [existing.maxEvs[k as keyof PokemonStats] || 0, v]])
+                  Object.entries(bState.enemyPokemon.evs).map(([k, v]) => [
+                    k,
+                    [existing.maxEvs[k as keyof PokemonStats] || 0, v],
+                  ]),
                 ),
-                newNatures: existing.unlockedNatures.includes(bState.enemyPokemon.nature) ? [] : [bState.enemyPokemon.nature],
+                newNatures: existing.unlockedNatures.includes(
+                  bState.enemyPokemon.nature,
+                )
+                  ? []
+                  : [bState.enemyPokemon.nature],
               };
 
               return {
@@ -485,7 +511,9 @@ export function useEngineTick() {
                 ),
               };
             } else {
-              const newUniqueIds = m.capturedUniqueIds.includes(bState.enemyPokemon.pokemonId)
+              const newUniqueIds = m.capturedUniqueIds.includes(
+                bState.enemyPokemon.pokemonId,
+              )
                 ? m.capturedUniqueIds
                 : [...m.capturedUniqueIds, bState.enemyPokemon.pokemonId];
 
@@ -508,8 +536,18 @@ export function useEngineTick() {
               nextState.inheritanceProgress[pokemonId] = {
                 pokemonId,
                 pokemonName,
-                ivs: Object.fromEntries(Object.entries(bState.enemyPokemon.ivs).map(([k, v]) => [k, [0, v]])),
-                evs: Object.fromEntries(Object.entries(bState.enemyPokemon.evs).map(([k, v]) => [k, [0, v]])),
+                ivs: Object.fromEntries(
+                  Object.entries(bState.enemyPokemon.ivs).map(([k, v]) => [
+                    k,
+                    [0, v],
+                  ]),
+                ),
+                evs: Object.fromEntries(
+                  Object.entries(bState.enemyPokemon.evs).map(([k, v]) => [
+                    k,
+                    [0, v],
+                  ]),
+                ),
                 newNatures: [bState.enemyPokemon.nature],
               };
 
@@ -552,7 +590,7 @@ export function useEngineTick() {
         // Manual Battle Handling
         let pMove: ActiveMove | null | undefined;
         let usedManualTurn = false;
-        
+
         if (nextState.isManualBattle) {
           if (!bState.manualActionQueue) return nextState; // Wait for input
 
@@ -613,7 +651,7 @@ export function useEngineTick() {
             return nextState; // Wait for switch input
           }
         }
-        
+
         // We have moves selected. Determine order and queue up actions.
         const order = determineAttackOrder(
           bState.playerPokemon,
@@ -623,24 +661,24 @@ export function useEngineTick() {
           bState.activeMechanic,
         );
         bState.turnQueue = order === "player-first" ? ["p", "e"] : ["e", "p"];
-        
+
         // Store the chosen moves properly on the state
         bState.playerCurrentMove = pMove;
         bState.enemyCurrentMove = eMove;
         bState.usedManualTurn = usedManualTurn;
-        
+
         bState.turnState = "turn_start";
         turnStateRef.current = "turn_start";
         nextState.currentBattle = bState;
         nextState.battleLog = logs.slice(-40);
         return nextState;
       }
-      
+
       if (bState.turnState === "animating") {
         turnStateRef.current = "animating";
         return state; // Wait for UI to resolve animation
       }
-      
+
       let nextEnemyHP = bState.enemyPokemon.currentHP;
       let nextPlayerHP = bState.playerPokemon.currentHP;
 
@@ -679,18 +717,24 @@ export function useEngineTick() {
         if (currentActor) {
           // --- ACTION CALCULATE PHASE ---
           const isPlayer = currentActor === "p";
-          const attacker = isPlayer ? bState.playerPokemon : bState.enemyPokemon;
-          const defender = isPlayer ? bState.enemyPokemon : bState.playerPokemon;
-          const move = isPlayer ? bState.playerCurrentMove : bState.enemyCurrentMove;
+          const attacker = isPlayer
+            ? bState.playerPokemon
+            : bState.enemyPokemon;
+          const defender = isPlayer
+            ? bState.enemyPokemon
+            : bState.playerPokemon;
+          const move = isPlayer
+            ? bState.playerCurrentMove
+            : bState.enemyCurrentMove;
           const usedManual = isPlayer ? bState.usedManualTurn : false;
-          
+
           let resolvedMove = move;
           if (isPlayer && !resolvedMove && !usedManual) {
             // Fallback: re-select best move in case playerCurrentMove was lost between ticks
             resolvedMove = chooseBestMove(
               bState.playerPokemon,
               bState.enemyPokemon,
-              bState.activeMechanic
+              bState.activeMechanic,
             );
             if (resolvedMove) {
               bState.playerCurrentMove = resolvedMove;
@@ -699,154 +743,157 @@ export function useEngineTick() {
 
           // If the player used a manual switch or item and didn't select a move, skip attack calc
           if (isPlayer && usedManual && !resolvedMove) {
-             (bState.turnQueue || []).shift(); // Remove "p"
-             if (bState.turnQueue && bState.turnQueue.length > 0) {
-               bState.turnState = "turn_start";
-               turnStateRef.current = "turn_start";
-             } else {
-               bState.turnState = "idle";
-               turnStateRef.current = "idle";
-             }
-             nextState.currentBattle = bState;
-             nextState.battleLog = logs.slice(-40);
-             return nextState; // Loop will continue on next tick for enemy
+            (bState.turnQueue || []).shift(); // Remove "p"
+            if (bState.turnQueue && bState.turnQueue.length > 0) {
+              bState.turnState = "turn_start";
+              turnStateRef.current = "turn_start";
+            } else {
+              bState.turnState = "idle";
+              turnStateRef.current = "idle";
+            }
+            nextState.currentBattle = bState;
+            nextState.battleLog = logs.slice(-40);
+            return nextState; // Loop will continue on next tick for enemy
           }
 
-          if (resolvedMove && attacker.currentHP > 0 && defender.currentHP > 0) {
-             let canAttack = true;
+          if (
+            resolvedMove &&
+            attacker.currentHP > 0 &&
+            defender.currentHP > 0
+          ) {
+            let canAttack = true;
 
-             // Esporas en el Aire mechanic
-             if (
-               bState.activeMechanic === "esporas_aire" &&
-               !attacker.status
-             ) {
-               const isImmune = attacker.types.some((t: string) =>
-                 ["poison", "steel"].includes(t.toLowerCase()),
-               );
-               const moveType = resolvedMove?.type.toLowerCase();
-               const clearsSpores =
-                 moveType === "fire" ||
-                 moveType === "ice" ||
-                 moveType === "poison";
-               if (!isImmune && !clearsSpores && Math.random() < 0.1) {
-                 attacker.status = "SLP";
-                 pushLog(
-                   `¡Las Esporas en el Aire durmieron a ${attacker.name}!`,
-                   isPlayer ? "danger" : "normal",
-                 );
-               }
-             }
+            // Esporas en el Aire mechanic
+            if (bState.activeMechanic === "esporas_aire" && !attacker.status) {
+              const isImmune = attacker.types.some((t: string) =>
+                ["poison", "steel"].includes(t.toLowerCase()),
+              );
+              const moveType = resolvedMove?.type.toLowerCase();
+              const clearsSpores =
+                moveType === "fire" ||
+                moveType === "ice" ||
+                moveType === "poison";
+              if (!isImmune && !clearsSpores && Math.random() < 0.1) {
+                attacker.status = "SLP";
+                pushLog(
+                  `¡Las Esporas en el Aire durmieron a ${attacker.name}!`,
+                  isPlayer ? "danger" : "normal",
+                );
+              }
+            }
 
-             // Status checks
-             if (attacker.status === "SLP") {
-               if (Math.random() < 0.3) {
-                 attacker.status = null;
-                 pushLog(`¡${attacker.name} se despertó!`, isPlayer ? "normal" : "danger");
-               } else {
-                 pushLog(
-                   `¡${attacker.name} está profundamente dormido!`,
-                   "normal",
-                 );
-                 canAttack = false;
-               }
-             } else if (attacker.status === "FRZ") {
-               if (Math.random() < 0.2) {
-                 attacker.status = null;
-                 pushLog(`¡${attacker.name} se descongeló!`, isPlayer ? "normal" : "danger");
-               } else {
-                 pushLog(
-                   `¡${attacker.name} está congelado!`,
-                   "normal",
-                 );
-                 canAttack = false;
-               }
-             } else if (attacker.status === "PAR") {
-               if (Math.random() < 0.25) {
-                 pushLog(
-                   `¡${attacker.name} está paralizado y no puede moverse!`,
-                   isPlayer ? "danger" : "normal",
-                 );
-                 canAttack = false;
-               }
-             }
+            // Status checks
+            if (attacker.status === "SLP") {
+              if (Math.random() < 0.3) {
+                attacker.status = null;
+                pushLog(
+                  `¡${attacker.name} se despertó!`,
+                  isPlayer ? "normal" : "danger",
+                );
+              } else {
+                pushLog(
+                  `¡${attacker.name} está profundamente dormido!`,
+                  "normal",
+                );
+                canAttack = false;
+              }
+            } else if (attacker.status === "FRZ") {
+              if (Math.random() < 0.2) {
+                attacker.status = null;
+                pushLog(
+                  `¡${attacker.name} se descongeló!`,
+                  isPlayer ? "normal" : "danger",
+                );
+              } else {
+                pushLog(`¡${attacker.name} está congelado!`, "normal");
+                canAttack = false;
+              }
+            } else if (attacker.status === "PAR") {
+              if (Math.random() < 0.25) {
+                pushLog(
+                  `¡${attacker.name} está paralizado y no puede moverse!`,
+                  isPlayer ? "danger" : "normal",
+                );
+                canAttack = false;
+              }
+            }
 
-             if (canAttack) {
-               let {
-                 damage,
-                 isCrit,
-                 effectiveness,
-               } = calculateDamage(
-                 attacker,
-                 defender,
-                 resolvedMove,
-                 bState.activeMechanic,
-               );
+            if (canAttack) {
+              let { damage, isCrit, effectiveness } = calculateDamage(
+                attacker,
+                defender,
+                resolvedMove,
+                bState.activeMechanic,
+              );
 
-               // Calculate Status Effect from Move
-               let statusEffectToApply = null;
-               if (
-                 resolvedMove.statusEffect &&
-                 !defender.status &&
-                 defender.currentHP - damage > 0
-               ) {
-                 if (Math.random() * 100 < resolvedMove.statusEffect.chance) {
-                   statusEffectToApply = resolvedMove.statusEffect.condition;
-                 }
-               }
+              // Calculate Status Effect from Move
+              let statusEffectToApply = null;
+              if (
+                resolvedMove.statusEffect &&
+                !defender.status &&
+                defender.currentHP - damage > 0
+              ) {
+                if (Math.random() * 100 < resolvedMove.statusEffect.chance) {
+                  statusEffectToApply = resolvedMove.statusEffect.condition;
+                }
+              }
 
-               // Campo Electrificado mechanic
-               if (
-                 bState.activeMechanic === "campo_electrificado" &&
-                 resolvedMove.category === "physical" &&
-                 !defender.status &&
-                 defender.currentHP - damage > 0
-               ) {
-                 if (Math.random() < 0.15 && !statusEffectToApply) {
-                   statusEffectToApply = "PAR";
-                 }
-               }
-               
-               // Prepare the animation state block
-               bState.pendingAnimation = {
-                 actor: isPlayer ? "p" : "e",
-                 target: isPlayer ? "e" : "p",
-                 moveType: resolvedMove.type,
-                 moveCategory: resolvedMove.category,
-                 damage: damage,
-                 isCrit: isCrit,
-                 effectiveness: effectiveness,
-                 statusApplied: statusEffectToApply as any,
-                 statChanges: [], // Can implement stat changes later if needed
-                 hpTrigger: false,
-               };
-               
-               // Pre-deduct PP
-               if (isPlayer) {
-                 const pMoveIdx = attacker.moves.findIndex(
-                   (m: any) => m.moveId === resolvedMove.moveId,
-                 );
-                 if (pMoveIdx >= 0) {
-                   attacker.moves[pMoveIdx].currentPP = Math.max(
-                     0,
-                     attacker.moves[pMoveIdx].currentPP - 1,
-                   );
-                 }
-               }
+              // Campo Electrificado mechanic
+              if (
+                bState.activeMechanic === "campo_electrificado" &&
+                resolvedMove.category === "physical" &&
+                !defender.status &&
+                defender.currentHP - damage > 0
+              ) {
+                if (Math.random() < 0.15 && !statusEffectToApply) {
+                  statusEffectToApply = "PAR";
+                }
+              }
+
+              // Prepare the animation state block
+              bState.pendingAnimation = {
+                actor: isPlayer ? "p" : "e",
+                target: isPlayer ? "e" : "p",
+                moveType: resolvedMove.type,
+                moveCategory: resolvedMove.category,
+                damage: damage,
+                isCrit: isCrit,
+                effectiveness: effectiveness,
+                statusApplied: statusEffectToApply as any,
+                statChanges: [], // Can implement stat changes later if needed
+                hpTrigger: false,
+              };
+
+              // Pre-deduct PP
+              if (isPlayer) {
+                const pMoveIdx = attacker.moves.findIndex(
+                  (m: any) => m.moveId === resolvedMove.moveId,
+                );
+                if (pMoveIdx >= 0) {
+                  attacker.moves[pMoveIdx].currentPP = Math.max(
+                    0,
+                    attacker.moves[pMoveIdx].currentPP - 1,
+                  );
+                }
+              }
 
               // Transition to animating, the actual damage will be applied via resolveAnimation by the UI
               bState.turnState = "animating";
               turnStateRef.current = "animating";
               nextState.currentBattle = bState;
               nextState.battleLog = logs.slice(-40);
-              return nextState; 
+              return nextState;
             }
           }
-          
+
           // If they couldn't attack, or no move, just remove from queue and proceed
           bState.turnQueue = bState.turnQueue ? bState.turnQueue.slice(1) : [];
-          
+
           if (!resolvedMove && isPlayer) {
-            pushLog(`¡${bState.playerPokemon.name} no pudo ejecutar su acción!`, "normal");
+            pushLog(
+              `¡${bState.playerPokemon.name} no pudo ejecutar su acción!`,
+              "normal",
+            );
           }
 
           if (bState.turnQueue && bState.turnQueue.length > 0) {
@@ -856,10 +903,10 @@ export function useEngineTick() {
             bState.turnState = "idle";
             turnStateRef.current = "idle";
           }
-          
+
           nextState.currentBattle = bState;
           nextState.battleLog = logs.slice(-40);
-          return nextState; 
+          return nextState;
         }
       }
 
@@ -875,154 +922,194 @@ export function useEngineTick() {
 
         if (anim) {
           const isPlayer = anim.actor === "p";
-          const attacker = isPlayer ? bState.playerPokemon : bState.enemyPokemon;
-          const defender = isPlayer ? bState.enemyPokemon : bState.playerPokemon;
-          const move = isPlayer ? bState.playerCurrentMove : bState.enemyCurrentMove;
+          const attacker = isPlayer
+            ? bState.playerPokemon
+            : bState.enemyPokemon;
+          const defender = isPlayer
+            ? bState.enemyPokemon
+            : bState.playerPokemon;
+          const move = isPlayer
+            ? bState.playerCurrentMove
+            : bState.enemyCurrentMove;
 
           // Apply damage
-          const { nextHP, focusBandTriggered } = applyDamage(defender, anim.damage);
-          
+          const { nextHP, focusBandTriggered } = applyDamage(
+            defender,
+            anim.damage,
+          );
+
           if (isPlayer) {
             bState.enemyPokemon = { ...bState.enemyPokemon, currentHP: nextHP };
           } else {
-            bState.playerPokemon = { ...bState.playerPokemon, currentHP: nextHP };
+            bState.playerPokemon = {
+              ...bState.playerPokemon,
+              currentHP: nextHP,
+            };
           }
 
           // Apply status if any
           if (anim.statusApplied && !defender.status) {
             defender.status = anim.statusApplied;
-            pushLog(`¡${defender.name} ahora está ${anim.statusApplied}!`, isPlayer ? "normal" : "danger");
+            pushLog(
+              `¡${defender.name} ahora está ${anim.statusApplied}!`,
+              isPlayer ? "normal" : "danger",
+            );
           }
 
           // Logs
           if (move) {
-            pushLog(`${attacker.name} usó ${move.moveName} causando ${anim.damage} de daño!`, isPlayer ? "attack" : "normal");
+            pushLog(
+              `${attacker.name} usó ${move.moveName} causando ${anim.damage} de daño!`,
+              isPlayer ? "attack" : "normal",
+            );
           }
           if (anim.effectiveness > 1.5) pushLog("¡Es súper efectivo!", "super");
-          if (anim.effectiveness < 0.7 && anim.effectiveness > 0) pushLog("No es muy efectivo...", "not-very");
-          if (anim.effectiveness === 0) pushLog(`No afecta a ${defender.name}...`, "normal");
+          if (anim.effectiveness < 0.7 && anim.effectiveness > 0)
+            pushLog("No es muy efectivo...", "not-very");
+          if (anim.effectiveness === 0)
+            pushLog(`No afecta a ${defender.name}...`, "normal");
           if (anim.isCrit) pushLog("¡Un golpe crítico!", "crit");
-          if (focusBandTriggered) pushLog(`¡${defender.name} resistió el golpe con su Cinta Focus!`, "normal");
+          if (focusBandTriggered)
+            pushLog(
+              `¡${defender.name} resistió el golpe con su Cinta Focus!`,
+              "normal",
+            );
 
           bState.pendingAnimation = null;
         }
 
         // Shift queue and determine next turnState
         bState.turnQueue = bState.turnQueue ? bState.turnQueue.slice(1) : [];
-        
+
         // --- CHECK FOR DEFEAT/VICTORY ---
         if (bState.enemyPokemon.currentHP === 0) {
-           pushLog(`¡${bState.enemyPokemon.name} enemigo se ha debilitado!`, "faint");
+          pushLog(
+            `¡${bState.enemyPokemon.name} enemigo se ha debilitado!`,
+            "faint",
+          );
 
-           const moneyReward = calculateMoneyGain(
-             bState.enemyPokemon.level,
-             bState.type,
-             bState.isBossBattle
-           );
-           nextState.money += moneyReward;
-           pushLog(`¡Has ganado $${moneyReward.toLocaleString()}!`, "normal");
+          const moneyReward = calculateMoneyGain(
+            bState.enemyPokemon.level,
+            bState.type,
+            bState.isBossBattle,
+          );
+          nextState.money += moneyReward;
+          pushLog(`¡Has ganado $${moneyReward.toLocaleString()}!`, "normal");
 
-           nextState.totalBattlesWon += 1;
-           nextState.zoneBattlesWon += 1;
+          nextState.totalBattlesWon += 1;
+          nextState.zoneBattlesWon += 1;
 
-           // --- ZONE PROGRESSION ---
-           if (bState.isBossBattle) {
-             const region = REGIONS[nextState.currentRegion];
-             if (nextState.currentZoneIndex + 1 < region.zones.length) {
-               nextState.currentZoneIndex += 1;
-               nextState.zoneBattlesWon = 0;
-               nextState.pendingZoneTransition = true;
-             }
-           }
-           
-           // Calculate XP
-           const baseXP = bState.enemyPokemon.baseStats.hp;
-           const xpGain = calculateXPGain(
-             bState.enemyPokemon.level, 
-             baseXP, 
-             bState.type === "trainer" || bState.type === "gym" || bState.type === "elite",
-             nextState.expMultiplier
-           );
-           
-           const expShareCount = nextState.items["exp-share"] || 0;
-           const { updatedTeam } = distributeTeamXP(
-             nextState.team, 
-             bState.playerPokemon.uid,
-             xpGain,
-             expShareCount
-           );
-           
-           let currentActive = updatedTeam.find(p => p.uid === bState.playerPokemon.uid);
-           let pendingLearnMove: import("../types/game.types").ActiveMove | null = null;
-           let pendingEvoData: import("../types/game.types").EvolutionData | null = null;
+          // --- ZONE PROGRESSION ---
+          if (bState.isBossBattle) {
+            const region = { zones: regionZones };
+            if (nextState.currentZoneIndex + 1 < region.zones.length) {
+              nextState.currentZoneIndex += 1;
+              nextState.zoneBattlesWon = 0;
+              nextState.pendingZoneTransition = true;
+            }
+          }
 
-           if (currentActive) {
-             currentActive.xp += xpGain;
-             pushLog(`¡${currentActive.name} ganó ${xpGain} PV!`, "level");
+          // Calculate XP
+          const baseXP = bState.enemyPokemon.baseStats.hp;
+          const xpGain = calculateXPGain(
+            bState.enemyPokemon.level,
+            baseXP,
+            bState.type === "trainer" ||
+              bState.type === "gym" ||
+              bState.type === "elite",
+            nextState.expMultiplier,
+          );
 
-             while (currentActive.xp >= xpToNextLevel(currentActive.level)) {
-               const prevLevel = currentActive.level;
-               const leveled = levelUpPokemon(currentActive);
-               pushLog(`¡${leveled.name} subió al nivel ${leveled.level}!`, "level");
-               currentActive = leveled;
+          const expShareCount = nextState.items["exp-share"] || 0;
+          const { updatedTeam } = distributeTeamXP(
+            nextState.team,
+            bState.playerPokemon.uid,
+            xpGain,
+            expShareCount,
+          );
 
-               // Queue move learning (async — handled after setRun via side effect)
-               // We store the level for post-battle async check
-               if (!nextState.pendingMoveLearn) {
-                 // Mark that we need to check for new moves at this level
-                 // The actual async fetch happens in a useEffect outside the reducer
-                 (nextState as any).__checkMoveLearnAt = {
-                   pokemonUid: currentActive.uid,
-                   level: currentActive.level,
-                 };
-               }
+          let currentActive = updatedTeam.find(
+            (p) => p.uid === bState.playerPokemon.uid,
+          );
+          let pendingLearnMove:
+            | import("../types/game.types").ActiveMove
+            | null = null;
+          let pendingEvoData:
+            | import("../types/game.types").EvolutionData
+            | null = null;
 
-               // Queue evolution check — also async, mark for post-battle check
-               if (!pendingEvoData) {
-                 (nextState as any).__checkEvolutionAt = {
-                   pokemonUid: currentActive.uid,
-                   level: currentActive.level,
-                   pokemonId: currentActive.pokemonId,
-                 };
-               }
-             }
-           }
+          if (currentActive) {
+            currentActive.xp += xpGain;
+            pushLog(`¡${currentActive.name} ganó ${xpGain} PV!`, "level");
 
-           nextState.team = updatedTeam.map(p => p.uid === currentActive?.uid ? currentActive : p);
+            while (currentActive.xp >= xpToNextLevel(currentActive.level)) {
+              const prevLevel = currentActive.level;
+              const leveled = levelUpPokemon(currentActive);
+              pushLog(
+                `¡${leveled.name} subió al nivel ${leveled.level}!`,
+                "level",
+              );
+              currentActive = leveled;
 
-           // Generate Loot
-           nextState.pendingLootSelection = generateLootOptions([], {
-             team: nextState.team,
-             pc: nextState.pc
-           });
+              // Queue move learning (async — handled after setRun via side effect)
+              // We store the level for post-battle async check
+              if (!nextState.pendingMoveLearn) {
+                // Mark that we need to check for new moves at this level
+                // The actual async fetch happens in a useEffect outside the reducer
+                (nextState as any).__checkMoveLearnAt = {
+                  pokemonUid: currentActive.uid,
+                  level: currentActive.level,
+                };
+              }
 
-           // End Battle
-           processedAnimRef.current = null;
-           nextState.currentBattle = null;
-           nextState.battleLog = logs.slice(-40);
-           return nextState;
+              // Queue evolution check — also async, mark for post-battle check
+              if (!pendingEvoData) {
+                (nextState as any).__checkEvolutionAt = {
+                  pokemonUid: currentActive.uid,
+                  level: currentActive.level,
+                  pokemonId: currentActive.pokemonId,
+                };
+              }
+            }
+          }
+
+          nextState.team = updatedTeam.map((p) =>
+            p.uid === currentActive?.uid ? currentActive : p,
+          );
+
+          // Generate Loot
+          nextState.pendingLootSelection = generateLootOptions([], {
+            team: nextState.team,
+            pc: nextState.pc,
+          });
+
+          // End Battle
+          processedAnimRef.current = null;
+          nextState.currentBattle = null;
+          nextState.battleLog = logs.slice(-40);
+          return nextState;
         }
 
         if (bState.playerPokemon.currentHP === 0) {
-           pushLog(`¡${bState.playerPokemon.name} se ha debilitado!`, "faint");
-           nextState.totalFainted += 1;
-           // If manual, we wait for switch. If auto, the next tick will handle it.
-           if (!nextState.isManualBattle) {
-              const nextP = getNextActivePokemon(nextState.team);
-              if (nextP) {
-                pushLog(`¡Adelante ${nextP.name}!`, "normal");
-                bState.playerPokemon = nextP;
-                bState.turnState = "idle"; // Reset turn after a faint
-                turnStateRef.current = "idle";
-                bState.turnQueue = [];
-              }
-           } else {
-              bState.pendingManualSwitch = true;
-              bState.turnState = "idle";
+          pushLog(`¡${bState.playerPokemon.name} se ha debilitado!`, "faint");
+          nextState.totalFainted += 1;
+          // If manual, we wait for switch. If auto, the next tick will handle it.
+          if (!nextState.isManualBattle) {
+            const nextP = getNextActivePokemon(nextState.team);
+            if (nextP) {
+              pushLog(`¡Adelante ${nextP.name}!`, "normal");
+              bState.playerPokemon = nextP;
+              bState.turnState = "idle"; // Reset turn after a faint
               turnStateRef.current = "idle";
-              processedAnimRef.current = null;
               bState.turnQueue = [];
-           }
+            }
+          } else {
+            bState.pendingManualSwitch = true;
+            bState.turnState = "idle";
+            turnStateRef.current = "idle";
+            processedAnimRef.current = null;
+            bState.turnQueue = [];
+          }
         }
 
         if (bState.turnQueue && bState.turnQueue.length > 0) {
@@ -1039,13 +1126,13 @@ export function useEngineTick() {
         nextState.battleLog = logs.slice(-40);
         return nextState;
       }
-      
+
       // If we reach here, turnQueue is empty, meaning both actors have finished their turn actions
       // We process end of turn effects, then reset to idle
-      
+
       bState.turnState = "idle";
       turnStateRef.current = "idle";
-      
+
       // Cleanup turn state vars
       bState.playerCurrentMove = undefined;
       bState.enemyCurrentMove = undefined;
@@ -1229,19 +1316,19 @@ export function useEngineTick() {
             bState.enemyPokemon,
             ITEMS["poke-ball"],
             null,
-            255, 
+            255,
             bState.isBossBattle || false,
-            nextState.totalCaptured, 
-            false, 
-            1.0 
+            nextState.totalCaptured,
+            false,
+            1.0,
           );
 
           pushLog(`Auto-captura: lanzando Poké Ball...`, "capture");
-          
+
           // Trigger animation
           bState.pendingCaptureAnim = {
             ballId: "poke-ball",
-            captured: catchAttempt.success
+            captured: catchAttempt.success,
           };
           bState.turnState = "animating";
           turnStateRef.current = "animating";
@@ -1265,36 +1352,35 @@ export function useEngineTick() {
     const marker = (run as any).__checkMoveLearnAt;
     if (!marker || run.pendingMoveLearn) return;
     const { pokemonUid, level } = marker;
-    const pokemon = run.team.find(p => p.uid === pokemonUid);
+    const pokemon = run.team.find((p) => p.uid === pokemonUid);
     if (!pokemon) return;
 
     // Clear marker immediately to avoid re-triggering
-    setRun(prev => {
+    setRun((prev) => {
       const next = { ...prev };
       delete (next as any).__checkMoveLearnAt;
       return next;
     });
 
-    learnMovesOnLevelUp(pokemon, level).then(newMove => {
+    learnMovesOnLevelUp(pokemon, level).then((newMove) => {
       if (!newMove) return;
-      setRun(prev => {
+      setRun((prev) => {
         // Already has a pending learn — don't overwrite
         if (prev.pendingMoveLearn) return prev;
-        const p = prev.team.find(t => t.uid === pokemonUid);
+        const p = prev.team.find((t) => t.uid === pokemonUid);
         if (!p) return prev;
         // If has room, add directly
         if (p.moves.length < 4) {
           const nextMoves = [...p.moves, newMove];
-          const updatedTeam = prev.team.map(t => t.uid === pokemonUid
-            ? { ...t, moves: nextMoves }
-            : t
+          const updatedTeam = prev.team.map((t) =>
+            t.uid === pokemonUid ? { ...t, moves: nextMoves } : t,
           );
 
           let nextBattle = prev.currentBattle;
           if (nextBattle && nextBattle.playerPokemon.uid === pokemonUid) {
             nextBattle = {
               ...nextBattle,
-              playerPokemon: { ...nextBattle.playerPokemon, moves: nextMoves }
+              playerPokemon: { ...nextBattle.playerPokemon, moves: nextMoves },
             };
           }
 
@@ -1302,11 +1388,14 @@ export function useEngineTick() {
             ...prev,
             team: updatedTeam,
             currentBattle: nextBattle,
-            battleLog: [...prev.battleLog, {
-              id: Date.now().toString(),
-              text: `¡${p.name} aprendió ${newMove.moveName}!`,
-              type: "level" as const,
-            }].slice(-40),
+            battleLog: [
+              ...prev.battleLog,
+              {
+                id: Date.now().toString(),
+                text: `¡${p.name} aprendió ${newMove.moveName}!`,
+                type: "level" as const,
+              },
+            ].slice(-40),
           };
         }
         // Full moveset — open modal
@@ -1328,7 +1417,7 @@ export function useEngineTick() {
     if (!marker || run.pendingEvolution) return;
     const { pokemonUid, level, pokemonId } = marker;
 
-    setRun(prev => {
+    setRun((prev) => {
       const next = { ...prev };
       delete (next as any).__checkEvolutionAt;
       return next;
@@ -1353,26 +1442,35 @@ export function useEngineTick() {
         if (!node || node.evolves_to.length === 0) return;
 
         for (const evo of node.evolves_to) {
-          const detail = evo.evolution_details.find((d: any) =>
-            d.trigger.name === "level-up" && d.min_level && d.min_level <= level
+          const detail = evo.evolution_details.find(
+            (d: any) =>
+              d.trigger.name === "level-up" &&
+              d.min_level &&
+              d.min_level <= level,
           );
           if (!detail) continue;
 
           // Found a valid level-up evolution
-          const evoSpeciesRes = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${evo.species.name}`).then(r => r.json());
-          const evoPokeRes = await fetch(`https://pokeapi.co/api/v2/pokemon/${evo.species.name}`).then(r => r.json());
+          const evoSpeciesRes = await fetch(
+            `https://pokeapi.co/api/v2/pokemon-species/${evo.species.name}`,
+          ).then((r) => r.json());
+          const evoPokeRes = await fetch(
+            `https://pokeapi.co/api/v2/pokemon/${evo.species.name}`,
+          ).then((r) => r.json());
 
-          const fromPokemon = run.team.find(p => p.uid === pokemonUid);
+          const fromPokemon = run.team.find((p) => p.uid === pokemonUid);
           if (!fromPokemon) return;
 
-          setRun(prev => {
+          setRun((prev) => {
             if (prev.pendingEvolution) return prev;
             return {
               ...prev,
               pendingEvolution: {
                 pokemonUid,
                 fromName: fromPokemon.name,
-                toName: evoPokeRes.name.charAt(0).toUpperCase() + evoPokeRes.name.slice(1),
+                toName:
+                  evoPokeRes.name.charAt(0).toUpperCase() +
+                  evoPokeRes.name.slice(1),
                 toId: evoPokeRes.id,
                 reason: `nivel ${level}`,
               },

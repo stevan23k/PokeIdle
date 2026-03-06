@@ -7,6 +7,8 @@
 
 export type EvolutionTier = 1 | 2 | 3;
 
+import { isSpecialPokemon, canAppearInWild } from "../lib/legendaries";
+
 // Tier 1: Base forms / First stage
 const TIER_1_POOL = [
   1,
@@ -179,18 +181,19 @@ export function getPokemonTier(pokemonId: number): EvolutionTier {
   if (TIER_2_POOL.includes(pokemonId)) return 2;
   if (TIER_3_POOL.includes(pokemonId)) return 3;
 
-  // Fallback heuristic:
-  // Most legendaries and single-evos are 3.
-  // We can add more specific rules as needed.
-  if (pokemonId >= 144 && pokemonId <= 151) return 3; // Gen 1 Legendaries
-  if (pokemonId >= 243 && pokemonId <= 251) return 3; // Gen 2 Legendaries
+  // Fallback: use legendaries registry for accurate classification
+  if (isSpecialPokemon(pokemonId)) return 3;
 
-  // Default to 1 if unknown, as it's the safest for low levels
+  // Default to 1 for unknown regular Pokémon
   return 1;
 }
 
 export function getRandomEnemyForTier(tier: EvolutionTier): number {
-  const pool =
+  const basePool =
     tier === 1 ? TIER_1_POOL : tier === 2 ? TIER_2_POOL : TIER_3_POOL;
+  // Filter out legendaries/mythicals — they are gacha-only, never wild
+  const pool = basePool.filter((id) => canAppearInWild(id));
+  if (pool.length === 0)
+    return basePool[Math.floor(Math.random() * basePool.length)];
   return pool[Math.floor(Math.random() * pool.length)];
 }

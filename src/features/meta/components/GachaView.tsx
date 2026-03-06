@@ -11,6 +11,7 @@ import {
   getRandomNature,
 } from "../../../engine/stats.engine";
 import { Coins, Sparkles, Wand2, X, Star, Zap } from "lucide-react";
+import { GACHA_LEGENDARY_POOL, isGachaEligible } from "../../../lib/legendaries";
 
 // ── TYPES ────────────────────────────────────────────────────────────────────
 interface Banner {
@@ -40,11 +41,8 @@ const BANNERS: Banner[] = [
   },
 ];
 
-// Legendaries from all generations
-const PERMANENT_LEGENDARIES = [
-  150, 243, 244, 245, 249, 250, 377, 378, 379, 380, 381, 382, 383, 384, 483,
-  484, 487, 643, 644, 646, 716, 717, 791, 792, 888, 889, 1007, 1008,
-];
+// Legendary pool — sourced from centralized legendaries.ts
+const PERMANENT_LEGENDARIES = GACHA_LEGENDARY_POOL;
 
 const GACHA_COST = 0;
 const FEATURED_RATE = 0.01; // 1.0% for the featured legendary
