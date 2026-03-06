@@ -12,6 +12,13 @@ import {
   calculateStats,
 } from "../../../engine/stats.engine";
 
+import {
+  isLegendaryOrMythical,
+  canAppearInWild,
+  getLegendaryCategory,
+} from "../../../lib/legendaries";
+import { supabase } from "../../../lib/supabase";
+
 const API_BASE = "https://pokeapi.co/api/v2";
 
 function mapAilment(
@@ -73,6 +80,124 @@ export async function getPokemonData(
   forcedIVs?: PokemonStats,
   forcedNature?: string,
 ): Promise<ActivePokemon> {
+  // 1. Try Supabase cache first
+  try {
+    const { data: cachedPokemon } = await supabase
+      .from("pokemon_cache")
+      .select("*")
+      .eq("pokemon_id", id)
+      .single();
+
+    if (cachedPokemon) {
+      // Filter level-up moves from cache
+      const eligibleMoves = (
+        cachedPokemon.level_up_moves as { moveId: number; level: number }[]
+      )
+        .filter((m) => m.level <= level)
+        .sort((a, b) => b.level - a.level)
+        .slice(0, 8);
+
+      const moveIds = eligibleMoves.map((m) => m.moveId);
+      const { data: cachedMoves } = await supabase
+        .from("move_cache")
+        .select("*")
+        .in("move_id", moveIds);
+
+      const activeMoves: ActiveMove[] = [];
+      for (const m of eligibleMoves) {
+        if (activeMoves.length >= 4) break;
+        const md = cachedMoves?.find((c) => c.move_id === m.moveId);
+        if (!md || !md.power || md.power === 0) continue;
+
+        activeMoves.push({
+          moveId: md.move_id,
+          moveName: md.name_es,
+          type: md.type,
+          category: md.category,
+          power: md.power,
+          accuracy: md.accuracy ?? 100,
+          currentPP: md.pp,
+          maxPP: md.pp,
+          priority: md.priority ?? 0,
+          enabled: true,
+          statusEffect: md.ailment
+            ? {
+                condition: md.ailment as any,
+                chance: md.ailment_chance ?? 100,
+              }
+            : undefined,
+        });
+      }
+
+      // Fallback move
+      if (activeMoves.length === 0) {
+        activeMoves.push({
+          moveId: 33,
+          moveName: "Placaje",
+          type: "normal",
+          category: "physical",
+          power: 40,
+          accuracy: 100,
+          currentPP: 35,
+          maxPP: 35,
+          priority: 0,
+          enabled: true,
+        });
+      }
+
+      const ivs = forcedIVs || generateRandomIVs();
+      const evs = getZeroEVs();
+      const nature = forcedNature || getRandomNature();
+      const stats = calculateStats(
+        cachedPokemon.base_stats,
+        ivs,
+        evs,
+        level,
+        nature,
+      );
+      const maxHP = stats.hp;
+
+      return {
+        uid: generateUid(),
+        pokemonId: id,
+        name:
+          cachedPokemon.name.charAt(0).toUpperCase() +
+          cachedPokemon.name.slice(1),
+        nickname: null,
+        level,
+        xp: Math.pow(level, 3),
+        xpToNext: Math.pow(level + 1, 3),
+        currentHP: maxHP,
+        maxHP,
+        baseStats: cachedPokemon.base_stats,
+        ivs,
+        evs,
+        nature,
+        stats,
+        types: cachedPokemon.types,
+        moves: activeMoves,
+        status: null,
+        statModifiers: {
+          atk: 0,
+          def: 0,
+          spa: 0,
+          spd: 0,
+          spe: 0,
+          acc: 0,
+          eva: 0,
+          crit: 0,
+        },
+        heldItem: null,
+        isShiny: shiny,
+        caughtAt: "Zona desconocida",
+        caughtLevel: level,
+      };
+    }
+  } catch (e) {
+    console.error("Supabase cache fetch failed, falling back to PokeAPI", e);
+  }
+
+  // 2. Fallback to PokeAPI
   const data = await fetchJson(`${API_BASE}/pokemon/${id}`);
 
   const baseStats: any = {};
@@ -165,6 +290,33 @@ export async function getPokemonData(
     });
   }
 
+  // Fire-and-forget cache update
+  supabase
+    .from("pokemon_cache")
+    .upsert(
+      {
+        pokemon_id: id,
+        name: data.name,
+        types,
+        base_stats: baseStats,
+        level_up_moves: movesToCheck.map((m: any) => {
+          const vg = m.version_group_details
+            .filter((v: any) => v.move_learn_method.name === "level-up")
+            .sort(
+              (a: any, b: any) => b.level_learned_at - a.level_learned_at,
+            )[0];
+          return {
+            moveId: parseInt(m.move.url.split("/").at(-2)),
+            level: vg.level_learned_at,
+          };
+        }),
+      },
+      { onConflict: "pokemon_id" },
+    )
+    .then(({ error }) => {
+      if (error) console.error("Error caching pokemon in Supabase:", error);
+    });
+
   const ivs = forcedIVs || generateRandomIVs();
   const evs = getZeroEVs();
   const nature = forcedNature || getRandomNature();
@@ -207,6 +359,28 @@ export async function getPokemonData(
 }
 
 export async function getPokemonSpecies(id: number) {
+  try {
+    const { data: cached } = await supabase
+      .from("species_cache")
+      .select("*")
+      .eq("pokemon_id", id)
+      .single();
+
+    if (cached) {
+      return {
+        is_legendary: cached.is_legendary,
+        is_mythical: cached.is_mythical,
+        evolves_from_species: cached.evolves_from_id
+          ? { url: `https://pokeapi.co/api/v2/pokemon-species/${cached.evolves_from_id}/` }
+          : null,
+        evolution_chain: cached.evolution_chain_url
+          ? { url: cached.evolution_chain_url }
+          : null,
+      };
+    }
+  } catch (e) {
+    console.error("species_cache fetch failed, falling back to PokeAPI", e);
+  }
   return await fetchJson(`${API_BASE}/pokemon-species/${id}`);
 }
 
@@ -216,8 +390,11 @@ export async function getEvolutionChain(url: string) {
 
 /**
  * Checks if a Pokémon is a "starter" (base form or legendary/mythical).
+ * Uses local legendaries.ts as a fast path before hitting PokeAPI.
  */
 export async function isStarterMaterial(id: number): Promise<boolean> {
+  // Fast path: known legendaries/mythicals from local registry
+  if (isLegendaryOrMythical(id)) return true;
   try {
     const species = await getPokemonSpecies(id);
     return (
@@ -228,6 +405,30 @@ export async function isStarterMaterial(id: number): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Returns true if this Pokémon can appear as a wild encounter.
+ * Legendaries and mythicals are blocked; UBs and Paradox can appear in late zones.
+ * Uses local registry first, falls back to PokeAPI for unknown IDs.
+ */
+export async function isWildEncounterAllowed(id: number): Promise<boolean> {
+  if (!canAppearInWild(id)) return false;
+  try {
+    const species = await getPokemonSpecies(id);
+    if (species.is_legendary || species.is_mythical) return false;
+    return true;
+  } catch {
+    return canAppearInWild(id);
+  }
+}
+
+/**
+ * Sync (no API) version — use when async is not possible.
+ * Based purely on local legendaries registry.
+ */
+export function isWildEncounterAllowedSync(id: number): boolean {
+  return canAppearInWild(id);
 }
 
 export async function fetchEggMoves(id: number): Promise<number[]> {
@@ -254,6 +455,47 @@ export async function learnMovesOnLevelUp(
   newLevel: number,
 ): Promise<import("../types/game.types").ActiveMove | null> {
   try {
+    // Fast path: usar pokemon_cache para encontrar el movimiento del nivel
+    const { data: cachedPokemon } = await supabase
+      .from("pokemon_cache")
+      .select("level_up_moves")
+      .eq("pokemon_id", pokemon.pokemonId)
+      .single();
+
+    if (cachedPokemon) {
+      const match = (
+        cachedPokemon.level_up_moves as { moveId: number; level: number }[]
+      ).find((m) => m.level === newLevel);
+
+      if (!match) return null;
+      if (pokemon.moves.some((m) => m.moveId === match.moveId)) return null;
+
+      const { data: md } = await supabase
+        .from("move_cache")
+        .select("*")
+        .eq("move_id", match.moveId)
+        .single();
+
+      if (!md || !md.power || md.power === 0) return null;
+
+      return {
+        moveId: md.move_id,
+        moveName: md.name_es,
+        type: md.type,
+        category: md.category,
+        power: md.power,
+        accuracy: md.accuracy ?? 100,
+        currentPP: md.pp,
+        maxPP: md.pp,
+        priority: md.priority ?? 0,
+        enabled: true,
+        statusEffect: md.ailment
+          ? { condition: md.ailment as any, chance: md.ailment_chance ?? 100 }
+          : undefined,
+      };
+    }
+
+    // Fallback to PokeAPI
     const data = await fetchJson(`${API_BASE}/pokemon/${pokemon.pokemonId}`);
 
     // Find moves learned exactly at this new level
@@ -311,7 +553,9 @@ export async function learnMovesOnLevelUp(
   }
 }
 
-export async function fetchAllPokemonList(): Promise<{ id: number; name: string }[]> {
+export async function fetchAllPokemonList(): Promise<
+  { id: number; name: string }[]
+> {
   const url = `${API_BASE}/pokemon?limit=1025`;
   const data = await fetchJson(url);
   return data.results.map((r: any) => {

@@ -127,7 +127,12 @@ export interface BattleState {
     target?: string;
   } | null;
 
-  turnState?: "idle" | "turn_start" | "animating" | "apply_damage" | "apply_capture";
+  turnState?:
+    | "idle"
+    | "turn_start"
+    | "animating"
+    | "apply_damage"
+    | "apply_capture";
   turnQueue?: ("p" | "e")[];
   pendingAnimation?: {
     actor: "p" | "e";
@@ -164,9 +169,35 @@ export interface EvolutionData {
   pokemonUid: string;
   fromName: string;
   toName: string;
-  toId: number;        // new pokemonId
-  reason: string;      // e.g. "nivel 16" or "Piedra Fuego"
+  toId: number; // new pokemonId
+  reason: string; // e.g. "nivel 16" or "Piedra Fuego"
 }
+
+// ─── Mega Evolution ──────────────────────────────────────────────────────────
+
+export interface ActiveMegaState {
+  isMega: boolean;
+  megaName: string | null;
+  originalPokemonId: number | null;
+  originalName: string | null;
+  originalTypes: string[];
+  originalBaseStats: PokemonStats | null;
+  originalStats: PokemonStats | null;
+  usedThisBattle: boolean;
+}
+
+export const defaultActiveMegaState: ActiveMegaState = {
+  isMega: false,
+  megaName: null,
+  originalPokemonId: null,
+  originalName: null,
+  originalTypes: [],
+  originalBaseStats: null,
+  originalStats: null,
+  usedThisBattle: false,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export interface RunState {
   runId: string;
@@ -189,6 +220,7 @@ export interface RunState {
   items: Record<string, number>;
   expMultiplier: number; // Cumulative from "Cartas"
   hasMegaBracelet: boolean;
+  megaState: ActiveMegaState;
 
   speedMultiplier: 0 | 1 | 2 | 4 | "SKIP";
   autoCapture: boolean;

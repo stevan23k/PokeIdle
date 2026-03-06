@@ -63,8 +63,10 @@ export function ItemBag() {
         const pendingMove = (result as any)?.pendingMove ?? null;
 
         setRun((prev) => {
-          const consumesTurn = prev.isManualBattle && prev.currentBattle &&
-            (itemDef.category === "heal" || itemDef.category === "battle" || itemDef.category === "tm");
+          const consumesTurn =
+            prev.isManualBattle &&
+            prev.currentBattle &&
+            (itemDef.category === "heal" || itemDef.category === "battle");
 
           return {
             ...prev,
@@ -73,26 +75,45 @@ export function ItemBag() {
               ...prev.itemUsage,
               [useTargetModal]: (prev.itemUsage[useTargetModal] || 0) + 1,
             },
-            team: prev.team.map((p) => (p.uid === pokemon!.uid ? newPokemon : p)),
-            pendingMoveLearn: isTMPending && pendingMove
-              ? { pokemonUid: pokemon!.uid, pokemonName: pokemon!.name, newMove: pendingMove }
-              : prev.pendingMoveLearn,
+            team: prev.team.map((p) =>
+              p.uid === pokemon!.uid ? newPokemon : p,
+            ),
+            pendingMoveLearn:
+              isTMPending && pendingMove
+                ? {
+                    pokemonUid: pokemon!.uid,
+                    pokemonName: pokemon!.name,
+                    newMove: pendingMove,
+                  }
+                : prev.pendingMoveLearn,
             currentBattle: prev.currentBattle
               ? {
                   ...prev.currentBattle,
-                  playerPokemon: prev.currentBattle.playerPokemon?.uid === pokemon!.uid
-                    ? newPokemon
-                    : prev.currentBattle.playerPokemon,
-                  ...(consumesTurn ? { manualActionQueue: { type: "item" as const, id: useTargetModal } } : {}),
+                  playerPokemon:
+                    prev.currentBattle.playerPokemon?.uid === pokemon!.uid
+                      ? newPokemon
+                      : prev.currentBattle.playerPokemon,
+                  ...(consumesTurn
+                    ? {
+                        manualActionQueue: {
+                          type: "item" as const,
+                          id: useTargetModal,
+                        },
+                      }
+                    : {}),
                 }
               : null,
             battleLog: [
               ...prev.battleLog,
-              ...(!isTMPending ? [{
-                id: Date.now().toString(),
-                text: resultLog,
-                type: "normal" as const,
-              }] : []),
+              ...(!isTMPending
+                ? [
+                    {
+                      id: Date.now().toString(),
+                      text: resultLog,
+                      type: "normal" as const,
+                    },
+                  ]
+                : []),
             ].slice(-40),
           };
         });
@@ -116,8 +137,12 @@ export function ItemBag() {
         ...prev,
         battleLog: [
           ...prev.battleLog,
-          { id: Date.now().toString(), text: "¡No puedes usar esta Ball aquí!", type: "danger" as const }
-        ].slice(-40)
+          {
+            id: Date.now().toString(),
+            text: "¡No puedes usar esta Ball aquí!",
+            type: "danger" as const,
+          },
+        ].slice(-40),
       }));
       return;
     }
@@ -136,7 +161,11 @@ export function ItemBag() {
         },
         battleLog: [
           ...prev.battleLog,
-          { id: Date.now().toString(), text: `Lanzaste ${ballDef.name}...`, type: "capture" as const },
+          {
+            id: Date.now().toString(),
+            text: `Lanzaste ${ballDef.name}...`,
+            type: "capture" as const,
+          },
         ].slice(-40),
       };
     });
@@ -154,7 +183,7 @@ export function ItemBag() {
           bState.isBossBattle,
           prev.totalCaptured,
           false, // isDarkGrass
-          1.0 // oPower
+          1.0, // oPower
         );
         const caught = catchAttempt.success;
         return {
@@ -165,13 +194,18 @@ export function ItemBag() {
             phase: caught ? "caught" : bState.phase,
             pendingCaptureAnim: { ballId: itemId, captured: caught },
             // NEW: Consume turn on failure in manual battle
-            manualActionQueue: (!caught && prev.isManualBattle) 
-              ? { type: "item", id: itemId } 
-              : bState.manualActionQueue,
+            manualActionQueue:
+              !caught && prev.isManualBattle
+                ? { type: "item", id: itemId }
+                : bState.manualActionQueue,
           },
           battleLog: [
             ...prev.battleLog,
-            { id: Date.now().toString(), text: catchAttempt.log, type: "normal" as const },
+            {
+              id: Date.now().toString(),
+              text: catchAttempt.log,
+              type: "normal" as const,
+            },
           ].slice(-40),
         };
       });
@@ -253,7 +287,11 @@ export function ItemBag() {
                         }}
                         className="px-2 py-1 text-[0.45rem]"
                       >
-                        {item.category === "held" ? "EQUIPAR" : item.category === "tm" ? "ENSEÑAR" : "USAR"}
+                        {item.category === "held"
+                          ? "EQUIPAR"
+                          : item.category === "tm"
+                            ? "ENSEÑAR"
+                            : "USAR"}
                       </Button>
                     )}
                   </div>

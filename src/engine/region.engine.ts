@@ -1,19 +1,29 @@
 import type { Zone, WildEncounter } from "../lib/regions";
+import { canAppearInWild } from "../lib/legendaries";
 
 export function getWildEncounter(zone: Zone): WildEncounter {
-  const totalWeight = zone.wildPokemon.reduce((acc, sum) => acc + sum.weight, 0);
+  // Filter out Pokémon that cannot appear in the wild (legendaries/mythicals)
+  const allowedPokemon = zone.wildPokemon.filter((p) =>
+    canAppearInWild(p.pokemonId),
+  );
+
+  if (allowedPokemon.length === 0) {
+    console.warn(`No wild encounters allowed for zone ${zone.id}`);
+    return zone.wildPokemon[0]; // fallback
+  }
+
+  const totalWeight = allowedPokemon.reduce((acc, p) => acc + p.weight, 0);
   const roll = Math.random() * totalWeight;
-  
+
   let accumulated = 0;
-  for (const encounter of zone.wildPokemon) {
+  for (const encounter of allowedPokemon) {
     accumulated += encounter.weight;
     if (roll <= accumulated) {
       return encounter;
     }
   }
-  
-  // Fallback to first
-  return zone.wildPokemon[0];
+
+  return allowedPokemon[0];
 }
 
 export function rollZoneItem(zone: Zone): string | null {

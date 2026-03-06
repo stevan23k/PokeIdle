@@ -16,6 +16,8 @@ import {
 import { loadFromStorage, saveToStorage } from "../utils/localStorage";
 import { useAuth } from "./AuthContext";
 import { supabase } from "../lib/supabase";
+import { loadMegaEvolutions } from "../lib/mega.service";
+import { defaultActiveMegaState } from "../features/run/types/game.types";
 
 interface GameContextValue {
   run: RunState;
@@ -49,6 +51,7 @@ export const defaultRun: RunState = {
   items: { "poke-ball": 10, potion: 5 }, // Starter items
   expMultiplier: 1.0,
   hasMegaBracelet: false,
+  megaState: defaultActiveMegaState,
   speedMultiplier: 1,
   autoCapture: true,
   autoItems: true,
@@ -162,8 +165,22 @@ function runMigrationsMeta(loaded: any) {
       // Ensure all required fields exist for each starter
       loaded.unlockedStarters = loaded.unlockedStarters.map((s: any) => ({
         ...s,
-        maxIvs: s.maxIvs || { hp: 15, attack: 15, defense: 15, spAtk: 15, spDef: 15, speed: 15 },
-        maxEvs: s.maxEvs || { hp: 0, attack: 0, defense: 0, spAtk: 0, spDef: 0, speed: 0 },
+        maxIvs: s.maxIvs || {
+          hp: 15,
+          attack: 15,
+          defense: 15,
+          spAtk: 15,
+          spDef: 15,
+          speed: 15,
+        },
+        maxEvs: s.maxEvs || {
+          hp: 0,
+          attack: 0,
+          defense: 0,
+          spAtk: 0,
+          spDef: 0,
+          speed: 0,
+        },
         unlockedNatures: s.unlockedNatures || [],
       }));
     }
@@ -207,11 +224,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user || isGuest) {
       const idsToCache = new Set<number>();
-      run.team.forEach(p => idsToCache.add(p.pokemonId));
-      if (training.pokemon?.pokemonId) idsToCache.add(training.pokemon.pokemonId);
+      run.team.forEach((p) => idsToCache.add(p.pokemonId));
+      if (training.pokemon?.pokemonId)
+        idsToCache.add(training.pokemon.pokemonId);
 
       // Pre-fetch images
-      idsToCache.forEach(id => {
+      idsToCache.forEach((id) => {
         const img = new Image();
         img.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
         const imgBack = new Image();
@@ -219,6 +237,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
       });
     }
   }, [user, isGuest, run.team, training.pokemon]);
+
+  // Preload mega evolutions cache on login/guest
+  useEffect(() => {
+    if (user || isGuest) {
+      loadMegaEvolutions();
+    }
+  }, [user, isGuest]);
 
   // Load from Supabase on Login
   useEffect(() => {
