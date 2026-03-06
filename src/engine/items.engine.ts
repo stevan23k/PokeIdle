@@ -6,6 +6,7 @@ import {
   getPokemonSpecies,
   getEvolutionChain,
 } from "../features/run/services/pokeapi.service";
+import { levelUpPokemon, xpToNextLevel } from "./xp.engine";
 
 export function getBestAvailableHealingItem(
   inventory?: Record<string, number>,
@@ -27,16 +28,32 @@ export function getBestAvailableHealingItem(
   return null;
 }
 
-export async function useItemOnPokemon(
-  pokemon: ActivePokemon,
-  itemId: string,
-  inventory: Record<string, number>,
-): Promise<{
+export interface UseItemResult {
   resultLog: string;
   success: boolean;
   newPokemon: ActivePokemon;
   newInventory: Record<string, number>;
-}> {
+  /**
+   * Must be spread onto RunState (not the pokemon) so useEngineTick
+   * useEffect dependencies fire correctly. Usage in any setRun call:
+   *   setRun(prev => ({ ...prev, ...(result.runStateMarkers ?? {}), team: [...] }))
+   */
+  runStateMarkers?: {
+    __checkEvolutionAt?: {
+      pokemonUid: string;
+      level: number;
+      pokemonId: number;
+      _nonce: number;
+    };
+    __checkMoveLearnAt?: { pokemonUid: string; level: number; _nonce: number };
+  };
+}
+
+export async function useItemOnPokemon(
+  pokemon: ActivePokemon,
+  itemId: string,
+  inventory: Record<string, number>,
+): Promise<UseItemResult> {
   if (!inventory || !inventory[itemId] || inventory[itemId] <= 0) {
     return {
       resultLog: "No tienes este objeto.",
@@ -53,19 +70,23 @@ export async function useItemOnPokemon(
       itemDef.category !== "evo" &&
       itemDef.category !== "special" &&
       itemDef.category !== "battle" &&
-      itemDef.category !== "tm")
+      itemDef.category !== "tm") ||
+    (itemId !== "rare-candy" && itemDef.category === "special")
   ) {
-    return {
-      resultLog: `No puedes usar ${itemDef?.name || "este objeto"} así.`,
-      success: false,
-      newPokemon: pokemon,
-      newInventory: inventory,
-    };
+    if (itemId !== "rare-candy") {
+      return {
+        resultLog: `No puedes usar ${itemDef?.name || "este objeto"} así.`,
+        success: false,
+        newPokemon: pokemon,
+        newInventory: inventory,
+      };
+    }
   }
 
   let nextPokemon = { ...pokemon };
   let applied = false;
   let resultMsg = "";
+  let runStateMarkers: any = undefined;
 
   if (itemDef.effect.type === "stat_boost") {
     if (itemDef.category === "special") {
@@ -227,6 +248,22 @@ export async function useItemOnPokemon(
     );
     applied = true;
     resultMsg = `¡${nextPokemon.name} revivió!`;
+  } else if (itemId === "rare-candy") {
+    if (nextPokemon.level >= 100) {
+      return {
+        resultLog: `${nextPokemon.name} ya está al nivel máximo.`,
+        success: false,
+        newPokemon: pokemon,
+        newInventory: inventory,
+      };
+    }
+
+    // Set XP to next level and level up
+    nextPokemon.xp = xpToNextLevel(nextPokemon.level);
+    nextPokemon = levelUpPokemon(nextPokemon);
+
+    applied = true;
+    resultMsg = `¡${nextPokemon.name} subió al nivel ${nextPokemon.level}!`;
   } else if (itemDef.category === "evo") {
     // Evolution logic
     try {
@@ -234,7 +271,7 @@ export async function useItemOnPokemon(
       const chain = await getEvolutionChain(species.evolution_chain.url);
 
       const findEvolution = (current: any): any => {
-        if (current.species.name === species.name) {
+        if (current.species.name.toLowerCase() === species.name.toLowerCase()) {
           return current.evolves_to;
         }
         for (const next of current.evolves_to) {
@@ -245,6 +282,14 @@ export async function useItemOnPokemon(
       };
 
       const possibleEvolutions = findEvolution(chain.chain);
+      console.log(
+        `[Evolution] PokemonID: ${pokemon.pokemonId}, Name: ${pokemon.name}, SpeciesName: ${species.name}`,
+      );
+      console.log(
+        `[Evolution] Possible evolutions found:`,
+        possibleEvolutions?.length || 0,
+      );
+
       if (!possibleEvolutions || possibleEvolutions.length === 0) {
         return {
           resultLog: `${pokemon.name} no puede evolucionar más.`,
@@ -261,7 +306,14 @@ export async function useItemOnPokemon(
           if (itemId === "cable-link") {
             return d.trigger.name === "trade";
           }
-          return d.trigger.name === "use-item" && d.item?.name === itemId;
+          const itemMatch =
+            d.trigger.name === "use-item" && d.item?.name === itemId;
+          if (d.item?.name) {
+            console.log(
+              `[Evolution] Checking item: ${d.item.name} vs ${itemId} -> ${itemMatch}`,
+            );
+          }
+          return itemMatch;
         });
         if (details) {
           targetEvolution = evo;
@@ -278,32 +330,28 @@ export async function useItemOnPokemon(
         };
       }
 
-      // Evolve!
-      const evoSpeciesName = targetEvolution.species.name;
-      const evoData = await fetch(
-        `https://pokeapi.co/api/v2/pokemon/${evoSpeciesName}`,
-      ).then((r) => r.json());
-      const evolvedForm = await getPokemonData(
-        evoData.id,
-        pokemon.level,
-        pokemon.isShiny,
-      );
+      // Trigger Evolution Modal via Markers
+      const parts = targetEvolution.species.url.split("/").filter(Boolean);
+      const evoId = parseInt(parts[parts.length - 1]);
+      const evoName =
+        targetEvolution.species.name.charAt(0).toUpperCase() +
+        targetEvolution.species.name.slice(1);
 
-      // Preserve current state
-      nextPokemon = {
-        ...evolvedForm,
-        uid: pokemon.uid,
-        nickname: pokemon.nickname,
-        currentHP:
-          Math.floor((pokemon.currentHP / pokemon.maxHP) * evolvedForm.maxHP) ||
-          1,
-        caughtAt: pokemon.caughtAt,
-        caughtLevel: pokemon.caughtLevel,
-        heldItem: pokemon.heldItem,
+      runStateMarkers = {
+        __checkEvolutionAt: {
+          pokemonUid: pokemon.uid,
+          pokemonId: pokemon.pokemonId, // Added missing pokemonId
+          level: pokemon.level, // Added level for consistency
+          fromName: pokemon.name,
+          toId: evoId,
+          toName: evoName,
+          reason: itemDef.name,
+          _nonce: Date.now(),
+        },
       };
 
       applied = true;
-      resultMsg = `¡Tu ${pokemon.name} ha evolucionado en ${nextPokemon.name}!`;
+      resultMsg = `¡${pokemon.name} está reaccionando a la ${itemDef.name}!`;
     } catch (e) {
       console.error(e);
       return {
@@ -317,7 +365,11 @@ export async function useItemOnPokemon(
 
   // ─── TM: Teach move ──────────────────────────────────────────────────────
   if (itemDef.category === "tm" && itemDef.effect.type === "teach") {
-    const effect = itemDef.effect as { type: "teach"; moveId: number; moveName: string };
+    const effect = itemDef.effect as {
+      type: "teach";
+      moveId: number;
+      moveName: string;
+    };
     const { moveId, moveName } = effect;
 
     if (nextPokemon.moves.some((m) => m.moveId === moveId)) {
@@ -330,16 +382,31 @@ export async function useItemOnPokemon(
     }
 
     try {
-      const md = await fetch(`https://pokeapi.co/api/v2/move/${moveId}`).then(r => r.json());
-      const spanName = md.names?.find((n: any) => n.language.name === "es")?.name ?? moveName;
+      const md = await fetch(`https://pokeapi.co/api/v2/move/${moveId}`).then(
+        (r) => r.json(),
+      );
+      const spanName =
+        md.names?.find((n: any) => n.language.name === "es")?.name ?? moveName;
 
-      const ailmentMap: Record<string, import("../features/run/types/game.types").StatusCondition> = {
-        paralysis: "PAR", burn: "BRN", poison: "PSN", toxic: "TOX", sleep: "SLP", freeze: "FRZ",
+      const ailmentMap: Record<
+        string,
+        import("../features/run/types/game.types").StatusCondition
+      > = {
+        paralysis: "PAR",
+        burn: "BRN",
+        poison: "PSN",
+        toxic: "TOX",
+        sleep: "SLP",
+        freeze: "FRZ",
       };
       let statusEffect = undefined;
       if (md.meta?.ailment?.name && md.meta.ailment.name !== "none") {
         const cond = ailmentMap[md.meta.ailment.name];
-        if (cond) statusEffect = { condition: cond, chance: md.meta.ailment_chance || 100 };
+        if (cond)
+          statusEffect = {
+            condition: cond,
+            chance: md.meta.ailment_chance || 100,
+          };
       }
 
       const newMove: import("../features/run/types/game.types").ActiveMove = {
@@ -389,11 +456,30 @@ export async function useItemOnPokemon(
   if (applied) {
     const nextInv = { ...inventory };
     nextInv[itemId] -= 1;
+
+    // Rare Candy automatic markers (if not already set by stones)
+    if (itemId === "rare-candy" && !runStateMarkers) {
+      runStateMarkers = {
+        __checkEvolutionAt: {
+          pokemonUid: nextPokemon.uid,
+          level: nextPokemon.level,
+          pokemonId: nextPokemon.pokemonId,
+          _nonce: Date.now(),
+        },
+        __checkMoveLearnAt: {
+          pokemonUid: nextPokemon.uid,
+          level: nextPokemon.level,
+          _nonce: Date.now(),
+        },
+      };
+    }
+
     return {
       resultLog: resultMsg,
       success: true,
       newPokemon: nextPokemon,
       newInventory: nextInv,
+      runStateMarkers,
     };
   }
 

@@ -65,11 +65,8 @@ export function TrainingLayout({
   };
 
   const handleUseItem = async (itemId: string) => {
-    const { success, resultLog, newPokemon, newInventory } = await useItemOnPokemon(
-      training.pokemon,
-      itemId,
-      training.items,
-    );
+    const { success, resultLog, newPokemon, newInventory, runStateMarkers } =
+      await useItemOnPokemon(training.pokemon, itemId, training.items);
 
     if (success) {
       setTraining((prev) => {
@@ -84,6 +81,7 @@ export function TrainingLayout({
 
         return {
           ...prev,
+          ...(runStateMarkers ?? {}),
           pokemon: newPokemon,
           currentBattle: nextBattle,
           items: newInventory,

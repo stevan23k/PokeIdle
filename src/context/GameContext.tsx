@@ -16,6 +16,7 @@ import {
 import { loadFromStorage, saveToStorage } from "../utils/localStorage";
 import { useAuth } from "./AuthContext";
 import { supabase } from "../lib/supabase";
+import { pokemonSprites } from "../lib/sprites";
 import { loadMegaEvolutions } from "../lib/mega.service";
 import { defaultActiveMegaState } from "../features/run/types/game.types";
 
@@ -228,12 +229,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
       if (training.pokemon?.pokemonId)
         idsToCache.add(training.pokemon.pokemonId);
 
-      // Pre-fetch images
+      // Pre-fetch images using the same logic as PixelSprite
       idsToCache.forEach((id) => {
+        // Front sprite is usually reliable
         const img = new Image();
-        img.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
-        const imgBack = new Image();
-        imgBack.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/${id}.png`;
+        img.src = pokemonSprites.front(id);
+
+        // Back sprites are missing for many Gen 6+ pokemon in the 2D sets
+        if (id <= 649) {
+          const imgBack = new Image();
+          imgBack.src = pokemonSprites.back(id);
+        }
+
+        // Also pre-fetch artwork as it's used in many UI places
+        const imgArt = new Image();
+        imgArt.src = pokemonSprites.artwork(id);
       });
     }
   }, [user, isGuest, run.team, training.pokemon]);

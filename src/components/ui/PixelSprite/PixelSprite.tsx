@@ -37,8 +37,8 @@ export function PixelSprite({
 
   const fallbackUrl =
     variant === "front"
-      ? pokemonSprites.frontFallback(pokemonId)
-      : pokemonSprites.backFallback(pokemonId);
+      ? pokemonSprites.frontFallback(pokemonId, shiny)
+      : pokemonSprites.backFallback(pokemonId, shiny);
 
   const [stage, setStage] = useState(0); // 0: primary, 1: secondary, 2: front-as-back
   const [hasFailed, setHasFailed] = useState(false);

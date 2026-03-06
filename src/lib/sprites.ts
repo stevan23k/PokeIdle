@@ -14,6 +14,9 @@ const FRLG_BASE = `${SPRITE_BASE}/pokemon/versions/generation-iii/firered-leafgr
 export const pokemonSprites = {
   // Battle front sprite (enemy) — FR/LG style, fallback to default
   front: (id: number, shiny = false): string => {
+    // FRLG only has up to Deoxys (386)
+    if (id > 386) return pokemonSprites.frontFallback(id, shiny);
+
     if (shiny) {
       const local = getShinySpriteSet(id);
       if (local?.front) return `/${local.front}`;
@@ -24,6 +27,9 @@ export const pokemonSprites = {
 
   // Battle back sprite (player) — FR/LG style, fallback to default
   back: (id: number, shiny = false): string => {
+    // FRLG only has up to Deoxys (386)
+    if (id > 386) return pokemonSprites.backFallback(id, shiny);
+
     if (shiny) {
       const local = getShinySpriteSet(id);
       if (local?.back) return `/${local.back}`;
@@ -33,13 +39,27 @@ export const pokemonSprites = {
   },
 
   // Fallback sprites (for Pokémon not in Gen III)
-  frontFallback: (id: number): string => `${SPRITE_BASE}/pokemon/${id}.png`,
+  frontFallback: (id: number, shiny = false): string => {
+    if (shiny) return `${SPRITE_BASE}/pokemon/shiny/${id}.png`;
+    return `${SPRITE_BASE}/pokemon/${id}.png`;
+  },
 
-  backFallback: (id: number): string => `${SPRITE_BASE}/pokemon/back/${id}.png`,
+  backFallback: (id: number, shiny = false): string => {
+    // Gen 6+ (ID > 649) really lacks 2D back sprites in many sets.
+    // Also skip shiny back sprites for any Gen 4+ (ID > 386) to be safe.
+    if (id > 649 || (id > 386 && shiny)) {
+      return pokemonSprites.frontFallback(id, shiny);
+    }
+    if (shiny) return `${SPRITE_BASE}/pokemon/back/shiny/${id}.png`;
+    return `${SPRITE_BASE}/pokemon/back/${id}.png`;
+  },
 
   // Official artwork (for UI cards, roster, etc.)
-  artwork: (id: number): string =>
-    `${SPRITE_BASE}/pokemon/other/official-artwork/${id}.png`,
+  artwork: (id: number, shiny = false): string => {
+    if (shiny)
+      return `${SPRITE_BASE}/pokemon/other/official-artwork/shiny/${id}.png`;
+    return `${SPRITE_BASE}/pokemon/other/official-artwork/${id}.png`;
+  },
 
   // Small icon (for team slots, capture log, etc.)
   icon: (id: number): string =>

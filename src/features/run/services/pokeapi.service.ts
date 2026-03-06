@@ -86,7 +86,7 @@ export async function getPokemonData(
       .from("pokemon_cache")
       .select("*")
       .eq("pokemon_id", id)
-      .single();
+      .maybeSingle();
 
     if (cachedPokemon) {
       // Filter level-up moves from cache
@@ -290,33 +290,6 @@ export async function getPokemonData(
     });
   }
 
-  // Fire-and-forget cache update
-  supabase
-    .from("pokemon_cache")
-    .upsert(
-      {
-        pokemon_id: id,
-        name: data.name,
-        types,
-        base_stats: baseStats,
-        level_up_moves: movesToCheck.map((m: any) => {
-          const vg = m.version_group_details
-            .filter((v: any) => v.move_learn_method.name === "level-up")
-            .sort(
-              (a: any, b: any) => b.level_learned_at - a.level_learned_at,
-            )[0];
-          return {
-            moveId: parseInt(m.move.url.split("/").at(-2)),
-            level: vg.level_learned_at,
-          };
-        }),
-      },
-      { onConflict: "pokemon_id" },
-    )
-    .then(({ error }) => {
-      if (error) console.error("Error caching pokemon in Supabase:", error);
-    });
-
   const ivs = forcedIVs || generateRandomIVs();
   const evs = getZeroEVs();
   const nature = forcedNature || getRandomNature();
@@ -364,14 +337,17 @@ export async function getPokemonSpecies(id: number) {
       .from("species_cache")
       .select("*")
       .eq("pokemon_id", id)
-      .single();
+      .maybeSingle();
 
     if (cached) {
       return {
+        name: cached.name.toLowerCase(),
         is_legendary: cached.is_legendary,
         is_mythical: cached.is_mythical,
         evolves_from_species: cached.evolves_from_id
-          ? { url: `https://pokeapi.co/api/v2/pokemon-species/${cached.evolves_from_id}/` }
+          ? {
+              url: `https://pokeapi.co/api/v2/pokemon-species/${cached.evolves_from_id}/`,
+            }
           : null,
         evolution_chain: cached.evolution_chain_url
           ? { url: cached.evolution_chain_url }
@@ -460,7 +436,7 @@ export async function learnMovesOnLevelUp(
       .from("pokemon_cache")
       .select("level_up_moves")
       .eq("pokemon_id", pokemon.pokemonId)
-      .single();
+      .maybeSingle();
 
     if (cachedPokemon) {
       const match = (
@@ -474,7 +450,7 @@ export async function learnMovesOnLevelUp(
         .from("move_cache")
         .select("*")
         .eq("move_id", match.moveId)
-        .single();
+        .maybeSingle();
 
       if (!md || !md.power || md.power === 0) return null;
 

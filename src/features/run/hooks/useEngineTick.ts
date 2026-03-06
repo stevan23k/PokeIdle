@@ -41,6 +41,7 @@ import {
   scaleGymPokemon,
 } from "../../../engine/boss.engine";
 import { calculateMoneyGain } from "../../../engine/economy.engine";
+import { handleStanceChange } from "../../../engine/abilities.engine";
 
 export function useEngineTick() {
   const { run, setRun, setMeta, notify } = useGame();
@@ -717,9 +718,7 @@ export function useEngineTick() {
         if (currentActor) {
           // --- ACTION CALCULATE PHASE ---
           const isPlayer = currentActor === "p";
-          const attacker = isPlayer
-            ? bState.playerPokemon
-            : bState.enemyPokemon;
+          let attacker = isPlayer ? bState.playerPokemon : bState.enemyPokemon;
           const defender = isPlayer
             ? bState.enemyPokemon
             : bState.playerPokemon;
@@ -819,6 +818,20 @@ export function useEngineTick() {
             }
 
             if (canAttack) {
+              // Handle Stance Change (Aegislash)
+              if (attacker.pokemonId === 681 || attacker.pokemonId === 10034) {
+                const { updatedPokemon, log } = handleStanceChange(
+                  attacker,
+                  resolvedMove,
+                );
+                if (log) {
+                  attacker = updatedPokemon;
+                  if (isPlayer) bState.playerPokemon = updatedPokemon;
+                  else bState.enemyPokemon = updatedPokemon;
+                  pushLog(log, isPlayer ? "normal" : "normal");
+                }
+              }
+
               let { damage, isCrit, effectiveness } = calculateDamage(
                 attacker,
                 defender,
@@ -1414,8 +1427,22 @@ export function useEngineTick() {
   // ─── Async: Evolution Check on Level Up ─────────────────────────────────
   useEffect(() => {
     const marker = (run as any).__checkEvolutionAt;
-    if (!marker || run.pendingEvolution) return;
-    const { pokemonUid, level, pokemonId } = marker;
+    if (!marker) return;
+
+    // If already showing evolution modal, clear marker but don't check again
+    if (run.pendingEvolution) {
+      setRun((prev) => {
+        const next = { ...prev };
+        delete (next as any).__checkEvolutionAt;
+        return next;
+      });
+      return;
+    }
+
+    const { pokemonUid, level, pokemonId, toId, toName } = marker;
+    console.log(
+      `[Evolution] Checking evolution for ${pokemonUid} (ID: ${pokemonId}) at level ${level}. Explicit Target: ${toName || "None"}`,
+    );
 
     setRun((prev) => {
       const next = { ...prev };
@@ -1428,9 +1455,9 @@ export function useEngineTick() {
         const species = await getPokemonSpecies(pokemonId);
         const chain = await getEvolutionChain(species.evolution_chain.url);
 
-        // Find this pokemon in the chain
         const findInChain = (node: any): any => {
-          if (node.species.name === species.name) return node;
+          if (node.species.name.toLowerCase() === species.name.toLowerCase())
+            return node;
           for (const next of node.evolves_to) {
             const found = findInChain(next);
             if (found) return found;
@@ -1439,23 +1466,17 @@ export function useEngineTick() {
         };
 
         const node = findInChain(chain.chain);
-        if (!node || node.evolves_to.length === 0) return;
-
-        for (const evo of node.evolves_to) {
-          const detail = evo.evolution_details.find(
-            (d: any) =>
-              d.trigger.name === "level-up" &&
-              d.min_level &&
-              d.min_level <= level,
+        if (!node) {
+          console.log(
+            `[Evolution] Pokemon ${species.name} not found in evolution chain`,
           );
-          if (!detail) continue;
+          return;
+        }
 
-          // Found a valid level-up evolution
-          const evoSpeciesRes = await fetch(
-            `https://pokeapi.co/api/v2/pokemon-species/${evo.species.name}`,
-          ).then((r) => r.json());
+        // --- NEW: Explicit stone/item target ---
+        if (toId && toName) {
           const evoPokeRes = await fetch(
-            `https://pokeapi.co/api/v2/pokemon/${evo.species.name}`,
+            `https://pokeapi.co/api/v2/pokemon/${toId}`,
           ).then((r) => r.json());
 
           const fromPokemon = run.team.find((p) => p.uid === pokemonUid);
@@ -1463,6 +1484,62 @@ export function useEngineTick() {
 
           setRun((prev) => {
             if (prev.pendingEvolution) return prev;
+            return {
+              ...prev,
+              pendingEvolution: {
+                pokemonUid: fromPokemon.uid,
+                fromName: fromPokemon.name,
+                toId: toId,
+                toName: toName,
+                reason: marker.reason || "Piedra evolutiva",
+              },
+            };
+          });
+          return;
+        }
+
+        if (node.evolves_to.length === 0) {
+          console.log(`[Evolution] ${species.name} has no further evolutions.`);
+          return;
+        }
+
+        for (const evo of node.evolves_to) {
+          const detail = evo.evolution_details.find(
+            (d: any) =>
+              d.trigger.name === "level-up" &&
+              (!d.min_level || d.min_level <= level),
+          );
+
+          if (!detail) {
+            console.log(
+              `[Evolution] ${species.name} -> ${evo.species.name} detail not met or not level-up trigger`,
+            );
+            continue;
+          }
+
+          console.log(
+            `[Evolution] Found valid evolution: ${species.name} -> ${evo.species.name}`,
+          );
+
+          const parts = evo.species.url.split("/").filter(Boolean);
+          const evoId = parseInt(parts[parts.length - 1]);
+          const evoPokeRes = await fetch(
+            `https://pokeapi.co/api/v2/pokemon/${evoId}`,
+          ).then((r) => r.json());
+
+          const fromPokemon = run.team.find((p) => p.uid === pokemonUid);
+          if (!fromPokemon) {
+            console.log(
+              `[Evolution] Source pokemon ${pokemonUid} not found in team`,
+            );
+            return;
+          }
+
+          setRun((prev) => {
+            if (prev.pendingEvolution) return prev;
+            console.log(
+              `[Evolution] Setting pendingEvolution for ${fromPokemon.name} -> ${evoPokeRes.name}`,
+            );
             return {
               ...prev,
               pendingEvolution: {
@@ -1479,7 +1556,7 @@ export function useEngineTick() {
           break;
         }
       } catch (e) {
-        console.error("Evolution check failed", e);
+        console.error("[Evolution] Evolution check failed", e);
       }
     };
 

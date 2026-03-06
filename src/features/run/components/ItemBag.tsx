@@ -57,7 +57,8 @@ export function ItemBag() {
       }
     } else {
       const result = await useItemOnPokemon(pokemon, useTargetModal, run.items);
-      const { success, newPokemon, newInventory, resultLog } = result;
+      const { success, newPokemon, newInventory, resultLog, runStateMarkers } =
+        result;
       if (success) {
         const isTMPending = resultLog === "__PENDING_MOVE_LEARN__";
         const pendingMove = (result as any)?.pendingMove ?? null;
@@ -70,6 +71,7 @@ export function ItemBag() {
 
           return {
             ...prev,
+            ...(runStateMarkers ?? {}),
             items: newInventory,
             itemUsage: {
               ...prev.itemUsage,

@@ -90,54 +90,91 @@ export function BagModal({ onClose }: BagModalProps) {
       }
     } else {
       const result = await useItemOnPokemon(pokemon, useTargetModal, run.items);
-      const { success, newPokemon, newInventory, resultLog } = result;
+      const { success, newPokemon, newInventory, resultLog, runStateMarkers } =
+        result;
       if (success) {
         const isTMPending = resultLog === "__PENDING_MOVE_LEARN__";
         const pendingMove = (result as any)?.pendingMove ?? null;
 
         setRun((prev) => {
-          const consumesTurn = prev.isManualBattle && prev.currentBattle &&
-            (itemDef.category === "heal" || itemDef.category === "battle" || itemDef.category === "tm");
+          const consumesTurn =
+            prev.isManualBattle &&
+            prev.currentBattle &&
+            (itemDef.category === "heal" ||
+              itemDef.category === "battle" ||
+              itemDef.category === "tm");
 
           return {
             ...prev,
+            ...(runStateMarkers ?? {}),
             items: newInventory,
             itemUsage: {
               ...prev.itemUsage,
               [useTargetModal]: (prev.itemUsage[useTargetModal] || 0) + 1,
             },
-            team: prev.team.map((p) => (p.uid === pokemon!.uid ? newPokemon : p)),
-            pendingMoveLearn: isTMPending && pendingMove
-              ? { pokemonUid: pokemon!.uid, pokemonName: pokemon!.name, newMove: pendingMove }
-              : prev.pendingMoveLearn,
+            team: prev.team.map((p) =>
+              p.uid === pokemon!.uid ? newPokemon : p,
+            ),
+            pendingMoveLearn:
+              isTMPending && pendingMove
+                ? {
+                    pokemonUid: pokemon!.uid,
+                    pokemonName: pokemon!.name,
+                    newMove: pendingMove,
+                  }
+                : prev.pendingMoveLearn,
             currentBattle: prev.currentBattle
               ? {
                   ...prev.currentBattle,
-                  playerPokemon: prev.currentBattle.playerPokemon?.uid === pokemon!.uid
-                    ? newPokemon
-                    : prev.currentBattle.playerPokemon,
-                  ...(consumesTurn ? { manualActionQueue: { type: "item" as const, id: useTargetModal } } : {}),
+                  playerPokemon:
+                    prev.currentBattle.playerPokemon?.uid === pokemon!.uid
+                      ? newPokemon
+                      : prev.currentBattle.playerPokemon,
+                  ...(consumesTurn
+                    ? {
+                        manualActionQueue: {
+                          type: "item" as const,
+                          id: useTargetModal,
+                        },
+                      }
+                    : {}),
                 }
               : null,
             battleLog: [
               ...prev.battleLog,
-              ...(!isTMPending ? [{
-                id: Date.now().toString(),
-                text: resultLog,
-                type: "normal" as const,
-              }] : []),
+              ...(!isTMPending
+                ? [
+                    {
+                      id: Date.now().toString(),
+                      text: resultLog,
+                      type: "normal" as const,
+                    },
+                  ]
+                : []),
             ].slice(-40),
           };
         });
-        setMeta((prev) => ({
+      } else {
+        // Show failure log even if not success
+        setRun((prev) => ({
           ...prev,
-          totalItemsUsed: {
-            ...prev.totalItemsUsed,
-            [itemDef.category]:
-              (prev.totalItemsUsed[itemDef.category] || 0) + 1,
-          },
+          battleLog: [
+            ...prev.battleLog,
+            {
+              id: Date.now().toString(),
+              text: resultLog,
+              type: "normal" as const,
+            },
+          ].slice(-40),
         }));
       }
+      setMeta((prev) => ({
+        ...prev,
+        totalItemsUsed: {
+          ...prev.totalItemsUsed,
+          [itemDef.category]: (prev.totalItemsUsed[itemDef.category] || 0) + 1,
+        },
+      }));
     }
 
     setUseTargetModal(null);
@@ -149,8 +186,12 @@ export function BagModal({ onClose }: BagModalProps) {
         ...prev,
         battleLog: [
           ...prev.battleLog,
-          { id: Date.now().toString(), text: "¡No puedes usar esta Ball aquí!", type: "danger" as const }
-        ].slice(-40)
+          {
+            id: Date.now().toString(),
+            text: "¡No puedes usar esta Ball aquí!",
+            type: "danger" as const,
+          },
+        ].slice(-40),
       }));
       return;
     }
@@ -169,7 +210,11 @@ export function BagModal({ onClose }: BagModalProps) {
         },
         battleLog: [
           ...prev.battleLog,
-          { id: Date.now().toString(), text: `Lanzaste ${ballDef.name}...`, type: "capture" as const },
+          {
+            id: Date.now().toString(),
+            text: `Lanzaste ${ballDef.name}...`,
+            type: "capture" as const,
+          },
         ].slice(-40),
       };
     });
@@ -187,7 +232,7 @@ export function BagModal({ onClose }: BagModalProps) {
           bState.isBossBattle,
           prev.totalCaptured,
           false, // isDarkGrass
-          1.0 // oPower
+          1.0, // oPower
         );
         const caught = catchAttempt.success;
         return {
@@ -198,13 +243,18 @@ export function BagModal({ onClose }: BagModalProps) {
             phase: caught ? "caught" : bState.phase,
             pendingCaptureAnim: { ballId: itemId, captured: caught },
             // NEW: Consume turn on failure in manual battle
-            manualActionQueue: (!caught && prev.isManualBattle) 
-              ? { type: "item", id: itemId } 
-              : bState.manualActionQueue,
+            manualActionQueue:
+              !caught && prev.isManualBattle
+                ? { type: "item", id: itemId }
+                : bState.manualActionQueue,
           },
           battleLog: [
             ...prev.battleLog,
-            { id: Date.now().toString(), text: catchAttempt.log, type: "normal" as const },
+            {
+              id: Date.now().toString(),
+              text: catchAttempt.log,
+              type: "normal" as const,
+            },
           ].slice(-40),
         };
       });
@@ -223,7 +273,9 @@ export function BagModal({ onClose }: BagModalProps) {
   };
 
   const filteredAndSortedItems = useMemo(() => {
-    let entries = Object.entries(run.items).filter(([id, qty]) => (qty as number) > 0);
+    let entries = Object.entries(run.items).filter(
+      ([id, qty]) => (qty as number) > 0,
+    );
 
     // Filter Category
     if (activeTab !== "all") {
@@ -274,7 +326,10 @@ export function BagModal({ onClose }: BagModalProps) {
       }}
       className="crt-screen"
     >
-      <Card className="w-full max-w-4xl h-[85vh] flex flex-col relative shadow-[10px_10px_0_rgba(0,0,0,0.5)]" noPadding>
+      <Card
+        className="w-full max-w-4xl h-[85vh] flex flex-col relative shadow-[10px_10px_0_rgba(0,0,0,0.5)]"
+        noPadding
+      >
         <button
           onClick={onClose}
           className="absolute -top-4 -right-4 w-10 h-10 bg-danger border-4 border-black text-white flex items-center justify-center hover:bg-red-500 hover:-translate-y-1 transition-transform z-10 shadow-pixel"
@@ -415,7 +470,8 @@ export function BagModal({ onClose }: BagModalProps) {
                           item.category === "ball" ||
                           item.category === "battle" ||
                           item.category === "tm" ||
-                          item.category === "berry") && (
+                          item.category === "berry" ||
+                          id === "rare-candy") && (
                           <Button
                             variant="secondary"
                             size="sm"
@@ -428,7 +484,11 @@ export function BagModal({ onClose }: BagModalProps) {
                               }
                             }}
                           >
-                            {item.category === "held" ? "EQUIPAR" : item.category === "tm" ? "ENSEÑAR" : "USAR"}
+                            {item.category === "held"
+                              ? "EQUIPAR"
+                              : item.category === "tm"
+                                ? "ENSEÑAR"
+                                : "USAR"}
                           </Button>
                         )}
                       </div>
