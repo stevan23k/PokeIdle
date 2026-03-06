@@ -142,12 +142,12 @@ export function MainMenu({
           </div>
 
           <div className="mt-8 flex flex-col items-center gap-2">
-            <span className="font-display text-[0.5rem] text-muted uppercase tracking-[0.2em] opacity-60">
+            <span className="font-display text-[1rem] text-muted uppercase tracking-[0.2em] opacity-60">
               {isGuest ? "Sessión: INVITADO" : "Sesión Activada"}
             </span>
             <button
-               onClick={() => logout()}
-               className="font-display text-[0.5rem] text-brand hover:text-white transition-colors uppercase underline underline-offset-4"
+              onClick={() => logout()}
+              className="font-display text-[0.8rem] text-brand hover:text-white transition-colors uppercase underline underline-offset-4"
             >
               CERRAR SESIÓN
             </button>
