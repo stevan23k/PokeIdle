@@ -132,9 +132,10 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
   // Sync capture animation state from battle.pendingCaptureAnim
   useEffect(() => {
     if (battle?.phase === "defeat" || battle?.phase === "victory") {
-      if (run.megaState.isMega && battle.playerPokemon) {
+      const battleForRevert = battle;
+      if (run.megaState.isMega && battleForRevert) {
         const reverted = revertMegaEvolution(
-          battle.playerPokemon,
+          battleForRevert.playerPokemon,
           run.megaState,
         );
         setRun((prev) => ({

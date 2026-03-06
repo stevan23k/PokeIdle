@@ -485,24 +485,24 @@ export function useEngineTick() {
           nextState.team = res.newTeam;
           nextState.pc = res.newPC;
 
-          // Revertar mega si estaba activa
-          if (
-            nextState.megaState?.isMega &&
-            nextState.currentBattle?.playerPokemon
-          ) {
-            const reverted = revertMegaEvolution(
-              nextState.currentBattle.playerPokemon,
-              nextState.megaState,
-            );
-            nextState.team = nextState.team.map((p) =>
-              p.uid === reverted.uid ? reverted : p,
-            );
-            nextState.currentBattle = {
-              ...nextState.currentBattle,
-              playerPokemon: reverted,
-            };
+          {
+            // Revertir mega si estaba activa
+            const battleForRevert = nextState.currentBattle;
+            if (nextState.megaState?.isMega && battleForRevert) {
+              const reverted = revertMegaEvolution(
+                battleForRevert.playerPokemon,
+                nextState.megaState,
+              );
+              nextState.team = nextState.team.map((p) =>
+                p.uid === reverted.uid ? reverted : p,
+              );
+              nextState.currentBattle = {
+                ...battleForRevert,
+                playerPokemon: reverted,
+              };
+            }
+            nextState.megaState = resetMegaStateAfterBattle();
           }
-          nextState.megaState = resetMegaStateAfterBattle();
 
           nextState.currentBattle = null;
           nextState.pendingLootSelection = generateLootOptions([], {
@@ -645,24 +645,7 @@ export function useEngineTick() {
           bState.pendingCaptureAnim = null;
           processedAnimRef.current = null;
 
-          // Revertar mega si estaba activa
-          if (
-            nextState.megaState?.isMega &&
-            nextState.currentBattle?.playerPokemon
-          ) {
-            const reverted = revertMegaEvolution(
-              nextState.currentBattle.playerPokemon,
-              nextState.megaState,
-            );
-            nextState.team = nextState.team.map((p) =>
-              p.uid === reverted.uid ? reverted : p,
-            );
-            nextState.currentBattle = {
-              ...nextState.currentBattle,
-              playerPokemon: reverted,
-            };
-          }
-          nextState.megaState = resetMegaStateAfterBattle();
+
 
           nextState.currentBattle = null;
           return nextState;
@@ -1213,24 +1196,24 @@ export function useEngineTick() {
           // End Battle
           processedAnimRef.current = null;
 
-          // Revertar mega si estaba activa
-          if (
-            nextState.megaState?.isMega &&
-            nextState.currentBattle?.playerPokemon
-          ) {
-            const reverted = revertMegaEvolution(
-              nextState.currentBattle.playerPokemon,
-              nextState.megaState,
-            );
-            nextState.team = nextState.team.map((p) =>
-              p.uid === reverted.uid ? reverted : p,
-            );
-            nextState.currentBattle = {
-              ...nextState.currentBattle,
-              playerPokemon: reverted,
-            };
+          {
+            // Revertir mega si estaba activa
+            const battleForRevert = nextState.currentBattle;
+            if (nextState.megaState?.isMega && battleForRevert) {
+              const reverted = revertMegaEvolution(
+                battleForRevert.playerPokemon,
+                nextState.megaState,
+              );
+              nextState.team = nextState.team.map((p) =>
+                p.uid === reverted.uid ? reverted : p,
+              );
+              nextState.currentBattle = {
+                ...battleForRevert,
+                playerPokemon: reverted,
+              };
+            }
+            nextState.megaState = resetMegaStateAfterBattle();
           }
-          nextState.megaState = resetMegaStateAfterBattle();
 
           nextState.currentBattle = null;
           nextState.battleLog = logs.slice(-40);
