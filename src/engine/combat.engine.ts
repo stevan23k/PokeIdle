@@ -174,7 +174,7 @@ export function chooseBestMove(
   mechanic?: GymMechanic,
 ): ActiveMove | null {
   const allowedMoves = pokemon.moves.filter(
-    (m) => m.enabled && m.currentPP > 0 && m.power > 0,
+    (m) => m.enabled && m.currentPP > 0 && (m.power > 0 || m.selfBoost),
   );
   if (allowedMoves.length === 0) return null; // Needs struggle
 
@@ -183,8 +183,25 @@ export function chooseBestMove(
   let maxDmg = -1;
 
   for (const move of allowedMoves) {
+    if (move.selfBoost && move.power === 0) {
+      const currentStage =
+        pokemon.statModifiers[
+          move.selfBoost.stat as keyof typeof pokemon.statModifiers
+        ] ?? 0;
+      if (currentStage < 3) {
+        // Solo usar buff si hay margen decoroso (+3)
+        // Simulamos que el buff vale un 50% extra del daño máximo actual por cada stage
+        const boostVal = 0.5 * move.selfBoost.stages;
+        const projectedVal = 50 * (1 + boostVal); // Valor arbitrario para competir con daño
+        if (projectedVal > maxDmg) {
+          maxDmg = projectedVal;
+          bestMove = move;
+        }
+      }
+      continue;
+    }
+
     // calculateDamage already factors in power, stats, level, STAB, effectiveness and random rolls.
-    // We'll call it to get a baseline projection.
     const res = calculateDamage(pokemon, opponent, move, mechanic);
     if (res.damage > maxDmg) {
       maxDmg = res.damage;

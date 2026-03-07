@@ -2,8 +2,13 @@ import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useGame } from "../../../context/GameContext";
 import { ITEMS, type ItemCategory } from "../../../lib/items";
+import type { ActiveMove } from "../types/game.types";
 import { PixelSprite } from "../../../components/ui/PixelSprite";
 import { levelUpPokemon } from "../../../engine/xp.engine";
+import {
+  getMissingMoves,
+  getPokemonData,
+} from "../../../features/run/services/pokeapi.service";
 import { generateUid } from "../../../utils/random";
 import { clsx } from "clsx";
 import {
@@ -15,6 +20,7 @@ import {
   X,
   Plus,
   Minus,
+  BookOpen,
 } from "lucide-react";
 import { ItemSprite } from "../../../components/ui/ItemSprite/ItemSprite";
 import { Button } from "../../../components/ui/Button";
@@ -23,9 +29,14 @@ import { Card } from "../../../components/ui/Card";
 export function ZoneTransitionModal() {
   const { run, setRun, setMeta, notify } = useGame();
 
-  const [step, setStep] = useState<"rewards" | "menu" | "shop" | "train">(
-    (run as any)._skipRewardsScreen ? "menu" : "rewards",
+  const isEliteFourTransition = !!(run as any)._eliteFourTransition;
+
+  const [step, setStep] = useState<"rewards" | "menu" | "shop" | "train" | "remember">(
+    isEliteFourTransition || (run as any)._skipRewardsScreen ? "menu" : "rewards",
   );
+  const [rememberTarget, setRememberTarget] = useState<string | null>(null); // uid del pokemon
+  const [missingMoves, setMissingMoves] = useState<ActiveMove[]>([]);
+  const [loadingMoves, setLoadingMoves] = useState(false);
   const [shopFilter, setShopFilter] = useState<ItemCategory | "All">("All");
   const [quantities, setQuantities] = useState<Record<string, number>>({});
 
@@ -52,9 +63,13 @@ export function ZoneTransitionModal() {
   // Reset step when a new transition starts
   React.useEffect(() => {
     if (run.pendingZoneTransition) {
-      setStep((run as any)._skipRewardsScreen ? "menu" : "rewards");
+      if (isEliteFourTransition) {
+        setStep("menu");
+      } else {
+        setStep((run as any)._skipRewardsScreen ? "menu" : "rewards");
+      }
     }
-  }, [run.pendingZoneTransition, (run as any)._skipRewardsScreen]);
+  }, [run.pendingZoneTransition, (run as any)._skipRewardsScreen, isEliteFourTransition]);
 
   if (!run.pendingZoneTransition) {
     return null;
@@ -65,7 +80,11 @@ export function ZoneTransitionModal() {
   };
 
   const finishTransition = () => {
-    setRun((p) => ({ ...p, pendingZoneTransition: false }));
+    setRun((p) => {
+      const next = { ...p, pendingZoneTransition: false };
+      delete (next as any)._eliteFourTransition;
+      return next;
+    });
   };
 
   const handleRest = () => {
@@ -86,7 +105,7 @@ export function ZoneTransitionModal() {
       }));
 
       const itemDef = ITEMS[randomItem];
-      return {
+      const next = {
         ...prev,
         team: healedTeam,
         items: {
@@ -103,6 +122,9 @@ export function ZoneTransitionModal() {
           },
         ].slice(-40),
       };
+
+      delete (next as any)._eliteFourTransition;
+      return next;
     });
     notify({
       message: `¡Descansaste y obtuviste ${ITEMS[randomItem].name}!`,
@@ -169,6 +191,79 @@ export function ZoneTransitionModal() {
     });
   };
 
+  const handleSelectRememberTarget = async (pokemonUid: string) => {
+    const pokemon = run.team.find((p) => p.uid === pokemonUid);
+    if (!pokemon) return;
+    setRememberTarget(pokemonUid);
+    setLoadingMoves(true);
+    const moves = await getMissingMoves(pokemon);
+    setMissingMoves(moves);
+    setLoadingMoves(false);
+  };
+
+  const handleTeachMove = (move: ActiveMove) => {
+    if (!rememberTarget) return;
+    const pokemon = run.team.find((p) => p.uid === rememberTarget);
+    if (!pokemon) return;
+
+    // Calcular costo: 200 * nivel del Pokémon
+    const cost = pokemon.level * 200;
+    if (run.money < cost) {
+      notify({
+        message: `Necesitas ₽${cost}`,
+        type: "defeat",
+        icon: "❌",
+        duration: 2000,
+      });
+      return;
+    }
+
+    setRun((prev) => {
+      const p = prev.team.find((t) => t.uid === rememberTarget);
+      if (!p) return prev;
+
+      if (p.moves.length < 4) {
+        // Hay espacio — añadir directo
+        const updatedTeam = prev.team.map((t) =>
+          t.uid === rememberTarget ? { ...t, moves: [...t.moves, move] } : t,
+        );
+        return {
+          ...prev,
+          money: prev.money - cost,
+          team: updatedTeam,
+          pendingZoneTransition: false,
+          battleLog: [
+            ...prev.battleLog,
+            {
+              id: Date.now().toString(),
+              text: `¡${p.name} recordó ${move.moveName}!`,
+              type: "level" as const,
+            },
+          ].slice(-40),
+        };
+      } else {
+        // Moveset lleno — abrir modal de reemplazo
+        return {
+          ...prev,
+          money: prev.money - cost,
+          pendingZoneTransition: false,
+          pendingMoveLearn: {
+            pokemonUid: rememberTarget,
+            pokemonName: p.name,
+            newMove: move,
+          },
+        };
+      }
+    });
+
+    notify({
+      message: `¡${pokemon.name} recordó ${move.moveName}!`,
+      type: "level_up",
+      icon: "📖",
+      duration: 3000,
+    });
+  };
+
   const handleBuy = (itemId: string, price: number, quantity: number) => {
     const totalCost = price * quantity;
     if (run.money >= totalCost) {
@@ -205,7 +300,7 @@ export function ZoneTransitionModal() {
     <div className="fixed inset-0 z-200 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
       <Card className="w-full max-w-4xl relative flex flex-col max-h-[90vh] shadow-[12px_12px_0_rgba(0,0,0,0.8)]" noPadding>
         {/* REWARDS STEP */}
-        {step === "rewards" && (
+        {step === "rewards" && !isEliteFourTransition && (
           <div className="flex flex-col items-center justify-center p-8 space-y-8 animate-in fade-in zoom-in duration-300">
             <h2 className="font-display text-2xl text-accent drop-shadow-[0_0_8px_rgba(255,215,0,0.6)] animate-pulse">
               ¡JEFE DERROTADO!
@@ -262,7 +357,7 @@ export function ZoneTransitionModal() {
           <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-300">
             <div className="p-6 border-b-4 border-border bg-surface-alt flex justify-between items-center bg-striped">
               <h2 className="font-display text-xl text-white drop-shadow-[2px_2px_0_rgba(0,0,0,1)]">
-                ÁREA DE DESCANSO
+                {isEliteFourTransition ? "ÁREA DE RECUPERACIÓN — ALTO MANDO" : "ÁREA DE DESCANSO"}
               </h2>
               <div className="font-display text-xs text-brand flex items-center gap-2">
                 <span className="opacity-80">Saldo:</span>
@@ -277,7 +372,7 @@ export function ZoneTransitionModal() {
               acción.
             </div>
 
-            <div className="p-4 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 items-stretch">
+            <div className="p-4 sm:p-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 flex-1 items-stretch">
               {/* REST CARD */}
               <button
                 onClick={handleRest}
@@ -335,6 +430,26 @@ export function ZoneTransitionModal() {
                   <li>Aplica a SOLO 1 Pokémon.</li>
                   <li>Inmediato y permanente.</li>
                   <li>¡Piénsatelo bien!</li>
+                </ul>
+              </button>
+
+              {/* REMEMBER CARD */}
+              <button
+                onClick={() => setStep("remember")}
+                className="group flex flex-col items-center bg-surface-dark border-4 border-border p-6 hover:border-purple-500 hover:bg-purple-950/30 transition-all text-left relative overflow-hidden"
+              >
+                <BookOpen
+                  size={48}
+                  className="text-purple-400 mb-6 group-hover:scale-110 transition-transform"
+                />
+                <h3 className="font-display text-lg text-purple-400 mb-3 w-full text-center">
+                  RECORDAR
+                </h3>
+                <ul className="space-y-2 mt-4 text-[0.65rem] font-display text-muted w-full list-disc list-inside">
+                  <li>Recupera movimientos olvidados.</li>
+                  <li>Solo movimientos del nivel actual.</li>
+                  <li>Costo: ₽200 × nivel del Pokémon.</li>
+                  <li>Cierra el área de descanso.</li>
                 </ul>
               </button>
             </div>
@@ -577,6 +692,154 @@ export function ZoneTransitionModal() {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* REMEMBER MENU */}
+        {step === "remember" && (
+          <div className="flex flex-col h-full animate-in fade-in slide-in-from-right-8 duration-300">
+            <div className="p-4 border-b-4 border-border bg-surface-alt flex justify-between items-center bg-striped shrink-0">
+              <div className="flex flex-col">
+                <h2 className="font-display text-lg text-purple-400">
+                  RECORDADOR DE MOVIMIENTOS
+                </h2>
+                <span className="font-display text-[0.55rem] text-muted uppercase">
+                  Recupera lo que olvidaste
+                </span>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <div className="font-display text-xs text-brand">
+                  <span className="text-emerald-400 bg-black/50 px-3 py-1 border border-border">
+                    ₽{run.money}
+                  </span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setRememberTarget(null);
+                    setMissingMoves([]);
+                    setStep("menu");
+                  }}
+                  className="flex items-center gap-1 text-muted hover:text-white"
+                >
+                  <ArrowLeft size={12} /> VOLVER
+                </Button>
+              </div>
+            </div>
+
+            {/* Selección de Pokémon */}
+            {!rememberTarget && (
+              <div className="p-6 flex flex-col gap-4 overflow-y-auto">
+                <p className="font-display text-[0.6rem] text-muted text-center uppercase tracking-widest">
+                  Selecciona el Pokémon que quieres ayudar a recordar:
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {run.team.map((pokemon) => (
+                    <button
+                      key={pokemon.uid}
+                      onClick={() => handleSelectRememberTarget(pokemon.uid)}
+                      className="flex flex-col items-center gap-2 border-4 border-border p-4 bg-surface-dark hover:border-purple-500 hover:bg-purple-950/20 transition-colors group"
+                    >
+                      <PixelSprite
+                        pokemonId={pokemon.pokemonId}
+                        variant="front"
+                        shiny={pokemon.isShiny}
+                        size={64}
+                        showScanlines={false}
+                      />
+                      <span className="font-display text-xs text-white">
+                        {pokemon.name}
+                      </span>
+                      <span className="font-display text-[0.6rem] text-purple-400">
+                        Niv. {pokemon.level}
+                      </span>
+                      <span className="font-display text-[0.5rem] text-muted">
+                        Costo: ₽{pokemon.level * 200}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Lista de movimientos faltantes */}
+            {rememberTarget && (
+              <div className="flex-1 overflow-y-auto p-4">
+                {loadingMoves && (
+                  <div className="text-center py-12 font-display text-[0.6rem] text-muted animate-pulse">
+                    Consultando movimientos...
+                  </div>
+                )}
+                {!loadingMoves && missingMoves.length === 0 && (
+                  <div className="text-center py-12 font-display text-[0.6rem] text-muted">
+                    ¡Este Pokémon ya conoce todos sus movimientos disponibles!
+                  </div>
+                )}
+                {!loadingMoves && missingMoves.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {missingMoves.map((move) => {
+                      const pokemon = run.team.find(
+                        (p) => p.uid === rememberTarget,
+                      );
+                      const cost = (pokemon?.level ?? 1) * 200;
+                      const canAfford = run.money >= cost;
+                      return (
+                        <Card
+                          key={move.moveId}
+                          className="flex items-center justify-between p-3 gap-3"
+                        >
+                          <div className="flex flex-col gap-1 flex-1 min-w-0">
+                            <span className="font-display text-[0.65rem] text-white truncate">
+                              {move.moveName}
+                            </span>
+                            <div className="flex gap-2 text-[0.5rem] font-display text-muted">
+                              <span className="uppercase">{move.type}</span>
+                              <span>·</span>
+                              <span className="uppercase">{move.category}</span>
+                              {move.power > 0 && (
+                                <>
+                                  <span>·</span>
+                                  <span>POD {move.power}</span>
+                                </>
+                              )}
+                              <span>·</span>
+                              <span>PP {move.maxPP}</span>
+                            </div>
+                          </div>
+                          <Button
+                            variant={canAfford ? "primary" : "secondary"}
+                            size="sm"
+                            disabled={!canAfford}
+                            onClick={() => handleTeachMove(move)}
+                            className="shrink-0 text-[0.5rem] px-3"
+                          >
+                            ₽{cost}
+                          </Button>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Botón volver a selección de Pokémon */}
+            {rememberTarget && !loadingMoves && (
+              <div className="p-4 border-t border-border shrink-0 text-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setRememberTarget(null);
+                    setMissingMoves([]);
+                  }}
+                  className="text-muted hover:text-white text-[0.55rem]"
+                >
+                  ← Cambiar Pokémon
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </Card>

@@ -632,13 +632,32 @@ export function useEngineTick() {
             // ── ELITE FOUR PROGRESSION (on capture) ─────────────────────────────
             if (bState.type === "elite" && isLastGymPokemon) {
               const allMembersCount = (regionEliteFour?.trainers.length ?? 4) + 1;
-              if ((nextState.eliteFourProgress ?? 0) + 1 >= allMembersCount) {
+              const currentProgress = nextState.eliteFourProgress ?? 0;
+              const nextProgress = currentProgress + 1;
+
+              if (nextProgress >= allMembersCount) {
                 nextState.eliteFourDefeated = true;
                 pushLog("¡Has derrotado al Campeón! ¡Eres el nuevo Campeón Pokémon!", "badge");
               } else {
-                nextState.eliteFourProgress = (nextState.eliteFourProgress ?? 0) + 1;
+                nextState.eliteFourProgress = nextProgress;
                 nextState.currentZoneProgress = 0;
                 nextState.pendingZoneTransition = true;
+                (nextState as any)._eliteFourTransition = true;
+
+                const allMembers = [
+                  ...(regionEliteFour?.trainers ?? []),
+                  ...(regionEliteFour?.champion ? [regionEliteFour.champion] : []),
+                ];
+                const nextMember = allMembers[nextProgress];
+                if (nextMember) {
+                  const isNextChampion = nextProgress >= (regionEliteFour?.trainers.length ?? 4);
+                  pushLog(
+                    isNextChampion
+                      ? `¡Siguiente: El Campeón ${nextMember.name}!`
+                      : `¡Siguiente rival del Alto Mando: ${nextMember.name}!`,
+                    "badge"
+                  );
+                }
               }
             }
 
@@ -646,7 +665,24 @@ export function useEngineTick() {
               const region = { zones: regionZones };
               if (nextState.currentZoneIndex + 1 < region.zones.length) {
                 nextState.currentZoneIndex += 1;
-                nextState.maxZoneIndex = Math.max(nextState.maxZoneIndex, nextState.currentZoneIndex);
+                nextState.maxZoneIndex = Math.max(
+                  nextState.maxZoneIndex,
+                  nextState.currentZoneIndex,
+                );
+                nextState.zoneBattlesWon = 0;
+                nextState.pendingZoneTransition = true;
+              }
+            }
+
+            // ── ROUTE BOSS PROGRESSION (on capture) ────────────────────────────────
+            if (isLastGymPokemon && bState.type === "wild" && bState.isBossBattle) {
+              const region = { zones: regionZones };
+              if (nextState.currentZoneIndex + 1 < region.zones.length) {
+                nextState.currentZoneIndex += 1;
+                nextState.maxZoneIndex = Math.max(
+                  nextState.maxZoneIndex,
+                  nextState.currentZoneIndex,
+                );
                 nextState.zoneBattlesWon = 0;
                 nextState.pendingZoneTransition = true;
               }
@@ -1163,6 +1199,42 @@ export function useEngineTick() {
                 hpTrigger: false,
               };
 
+              // ── SELF STAT BOOST ───────────────────────────────────────────
+              if (resolvedMove?.selfBoost) {
+                const { stat, stages } = resolvedMove.selfBoost;
+                if (isPlayer) {
+                  const currentStage =
+                    bState.playerPokemon.statModifiers[
+                      stat as keyof typeof bState.playerPokemon.statModifiers
+                    ] ?? 0;
+                  const newStage = Math.min(6, currentStage + stages);
+                  bState.playerPokemon = {
+                    ...bState.playerPokemon,
+                    statModifiers: {
+                      ...bState.playerPokemon.statModifiers,
+                      [stat]: newStage,
+                    },
+                  };
+                  pushLog(
+                    `¡${bState.playerPokemon.name} subió su ${stat}!`,
+                    "level",
+                  );
+                } else {
+                  const currentStage =
+                    bState.enemyPokemon.statModifiers[
+                      stat as keyof typeof bState.enemyPokemon.statModifiers
+                    ] ?? 0;
+                  const newStage = Math.min(6, currentStage + stages);
+                  bState.enemyPokemon = {
+                    ...bState.enemyPokemon,
+                    statModifiers: {
+                      ...bState.enemyPokemon.statModifiers,
+                      [stat]: newStage,
+                    },
+                  };
+                }
+              }
+
               // Pre-deduct PP
               if (isPlayer) {
                 const pMoveIdx = attacker.moves.findIndex(
@@ -1444,13 +1516,32 @@ export function useEngineTick() {
             // ── ELITE FOUR PROGRESSION ───────────────────────────────────────────
             if (bState.type === "elite" && isLastGymPokemon) {
               const allMembersCount = (regionEliteFour?.trainers.length ?? 4) + 1;
-              if ((nextState.eliteFourProgress ?? 0) + 1 >= allMembersCount) {
+              const currentProgress = nextState.eliteFourProgress ?? 0;
+              const nextProgress = currentProgress + 1;
+
+              if (nextProgress >= allMembersCount) {
                 nextState.eliteFourDefeated = true;
                 pushLog("¡Has derrotado al Campeón! ¡Eres el nuevo Campeón Pokémon!", "badge");
               } else {
-                nextState.eliteFourProgress = (nextState.eliteFourProgress ?? 0) + 1;
+                nextState.eliteFourProgress = nextProgress;
                 nextState.currentZoneProgress = 0;
                 nextState.pendingZoneTransition = true;
+                (nextState as any)._eliteFourTransition = true;
+
+                const allMembers = [
+                  ...(regionEliteFour?.trainers ?? []),
+                  ...(regionEliteFour?.champion ? [regionEliteFour.champion] : []),
+                ];
+                const nextMember = allMembers[nextProgress];
+                if (nextMember) {
+                  const isNextChampion = nextProgress >= (regionEliteFour?.trainers.length ?? 4);
+                  pushLog(
+                    isNextChampion
+                      ? `¡Siguiente: El Campeón ${nextMember.name}!`
+                      : `¡Siguiente rival del Alto Mando: ${nextMember.name}!`,
+                    "badge"
+                  );
+                }
               }
             }
 
@@ -1459,6 +1550,20 @@ export function useEngineTick() {
               if (nextState.currentZoneIndex + 1 < region.zones.length) {
                 nextState.currentZoneIndex += 1;
                 nextState.maxZoneIndex = Math.max(nextState.maxZoneIndex, nextState.currentZoneIndex);
+                nextState.zoneBattlesWon = 0;
+                nextState.pendingZoneTransition = true;
+              }
+            }
+
+            // ── ROUTE BOSS PROGRESSION (on defeat) ────────────────────────────────
+            if (isLastGymPokemon && bState.type === "wild" && bState.isBossBattle) {
+              const region = { zones: regionZones };
+              if (nextState.currentZoneIndex + 1 < region.zones.length) {
+                nextState.currentZoneIndex += 1;
+                nextState.maxZoneIndex = Math.max(
+                  nextState.maxZoneIndex,
+                  nextState.currentZoneIndex,
+                );
                 nextState.zoneBattlesWon = 0;
                 nextState.pendingZoneTransition = true;
               }

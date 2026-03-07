@@ -54,6 +54,10 @@ export interface ActiveMove {
     condition: StatusCondition;
     chance: number; // 0 to 100
   };
+  selfBoost?: {
+    stat: "atk" | "def" | "spa" | "spd" | "spe" | "crit";
+    stages: number;
+  };
 }
 
 export interface ActivePokemon {
@@ -263,6 +267,7 @@ export interface RunState {
   pendingEvolution: EvolutionData | null;
   pendingMegaEvolution: PendingMegaEvolution | null;
   pendingZoneTransition: boolean;
+  _eliteFourTransition?: boolean;
   pinnedItems: string[]; // slug
   inheritanceProgress: Record<number, InheritanceProgress>;
 }

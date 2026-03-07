@@ -21,6 +21,18 @@ import { supabase } from "../../../lib/supabase";
 
 const API_BASE = "https://pokeapi.co/api/v2";
 
+const COMMON_SELF_BOOSTS: Record<number, { stat: string; stages: number }> = {
+  14: { stat: "spe", stages: 2 }, // Agilidad
+  56: { stat: "atk", stages: 2 }, // Danza Espada
+  87: { stat: "def", stages: 1 }, // Fortaleza (Harden)
+  116: { stat: "def", stages: 2 }, // Defensa Férrea (Iron Defense)
+  156: { stat: "spa", stages: 1 }, // Carga
+  164: { stat: "crit", stages: 2 }, // Foco de Energía (Focus Energy - usually +2 crit ratio)
+  207: { stat: "spe", stages: 1 }, // Subir velocidad (varios)
+  239: { stat: "atk", stages: 1 }, // Dragon Dance (atk) - Note: officially also speed
+  349: { stat: "atk", stages: 1 }, // Agudeza
+};
+
 function mapAilment(
   ailmentName: string,
 ): import("../types/game.types").StatusCondition | null {
@@ -127,6 +139,7 @@ export async function getPokemonData(
                 chance: md.ailment_chance ?? 100,
               }
             : undefined,
+          selfBoost: COMMON_SELF_BOOSTS[md.move_id] as any,
         });
       }
 
@@ -268,6 +281,7 @@ export async function getPokemonData(
           priority: md.priority || 0,
           enabled: true,
           statusEffect,
+          selfBoost: COMMON_SELF_BOOSTS[md.id] as any,
         });
       }
     } catch (e) {
@@ -476,6 +490,7 @@ export async function learnMovesOnLevelUp(
           statusEffect: md.ailment
             ? { condition: md.ailment as any, chance: md.ailment_chance ?? 100 }
             : undefined,
+          selfBoost: COMMON_SELF_BOOSTS[md.move_id] as any,
         };
       }
       return null;
@@ -528,11 +543,78 @@ export async function learnMovesOnLevelUp(
       priority: md.priority || 0,
       enabled: true,
       statusEffect,
+      selfBoost: COMMON_SELF_BOOSTS[md.id] as any,
     };
 
     return newMove;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Retorna todos los movimientos que el Pokémon debería saber hasta su nivel actual
+ * pero que NO están en su moveset. Ordenados de más reciente a más antiguo.
+ * Usado por el Recordador de Movimientos.
+ */
+export async function getMissingMoves(
+  pokemon: import("../types/game.types").ActivePokemon,
+): Promise<import("../types/game.types").ActiveMove[]> {
+  try {
+    const { data: cachedPokemon } = await supabase
+      .from("pokemon_cache")
+      .select("level_up_moves")
+      .eq("pokemon_id", pokemon.pokemonId)
+      .maybeSingle();
+
+    if (!cachedPokemon) return [];
+
+    const allLevelMoves = (
+      cachedPokemon.level_up_moves as { moveId: number; level: number }[]
+    )
+      .filter((m) => m.level <= pokemon.level)
+      .sort((a, b) => b.level - a.level); // más reciente primero
+
+    // Filtrar los que ya sabe
+    const knownIds = new Set(pokemon.moves.map((m) => m.moveId));
+    const missing = allLevelMoves.filter((m) => !knownIds.has(m.moveId));
+
+    if (missing.length === 0) return [];
+
+    // Fetch move data para los primeros 12 faltantes (evitar demasiadas queries)
+    const moveIds = missing.slice(0, 12).map((m) => m.moveId);
+    const { data: movesData } = await supabase
+      .from("move_cache")
+      .select("*")
+      .in("move_id", moveIds);
+
+    if (!movesData) return [];
+
+    const result: import("../types/game.types").ActiveMove[] = [];
+    for (const m of missing.slice(0, 12)) {
+      const md = movesData.find((d) => d.move_id === m.moveId);
+      if (!md) continue;
+      result.push({
+        moveId: md.move_id,
+        moveName: md.name_es,
+        type: md.type,
+        category: md.category,
+        power: md.power ?? 0,
+        accuracy: md.accuracy ?? 100,
+        currentPP: md.pp,
+        maxPP: md.pp,
+        priority: md.priority ?? 0,
+        enabled: true,
+        statusEffect: md.ailment
+          ? { condition: md.ailment as any, chance: md.ailment_chance ?? 100 }
+          : undefined,
+      });
+    }
+
+    return result;
+  } catch (e) {
+    console.error("[getMissingMoves] Error:", e);
+    return [];
   }
 }
 
