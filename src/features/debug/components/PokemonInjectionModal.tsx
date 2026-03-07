@@ -43,6 +43,18 @@ export function PokemonInjectionModal({ onClose }: PokemonInjectionModalProps) {
   const [nature, setNature] = useState("hardy");
   const [perfectIVs, setPerfectIVs] = useState(true);
   const [injecting, setInjecting] = useState(false);
+  const [selectedPokeData, setSelectedPokeData] = useState<any | null>(null);
+
+  // Fetch full data for the selected Pokémon to show types, etc.
+  useEffect(() => {
+    if (selectedPoke) {
+      getPokemonData(selectedPoke.id, 50).then((data) => {
+        setSelectedPokeData(data);
+      });
+    } else {
+      setSelectedPokeData(null);
+    }
+  }, [selectedPoke]);
 
   useEffect(() => {
     fetchAllPokemonList().then((list) => {
@@ -60,11 +72,11 @@ export function PokemonInjectionModal({ onClose }: PokemonInjectionModalProps) {
   }, [onClose]);
 
   const filteredPokemon = useMemo(() => {
-    if (!searchQuery.trim()) return allPokemon.slice(0, 50);
+    if (!searchQuery.trim()) return allPokemon.slice(0, 120);
     const q = searchQuery.toLowerCase();
     return allPokemon
       .filter((p) => p.name.toLowerCase().includes(q) || p.id.toString() === q)
-      .slice(0, 50);
+      .slice(0, 120);
   }, [allPokemon, searchQuery]);
 
   const handleInjectToRun = async () => {
@@ -174,56 +186,61 @@ export function PokemonInjectionModal({ onClose }: PokemonInjectionModalProps) {
   };
 
   return createPortal(
-    <div
-      className="fixed inset-0 flex flex-col items-center justify-center p-4 crt-screen"
-      style={{
-        zIndex: 2147483647,
-        backgroundColor: "rgba(0,0,0,0.85)",
-        backdropFilter: "blur(4px)",
-      }}
-    >
+    <div className="fixed inset-0 z-1000000 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <Card
-        className="w-full max-w-5xl h-[90vh] flex flex-col relative shadow-pixel-heavy border-4 border-brand-dark"
+        className="w-full max-w-6xl h-[90vh] flex flex-col relative shadow-[10px_10px_0_rgba(0,0,0,0.5)] border-4 border-black"
         noPadding
       >
         <button
           onClick={onClose}
-          className="absolute -top-4 -right-4 w-12 h-12 bg-danger border-4 border-black text-white flex items-center justify-center hover:bg-red-500 hover:-translate-y-1 transition-all z-10 shadow-pixel"
+          className="absolute -top-4 -right-4 w-12 h-12 bg-danger border-4 border-black text-white flex items-center justify-center hover:bg-red-500 hover:-translate-y-1 transition-transform z-20 shadow-pixel"
         >
           <X size={24} />
         </button>
 
+        {/* ── Header ────────────────────────────────────────────────────────── */}
+        <div className="p-4 border-b-4 border-border bg-surface-alt bg-striped flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-2">
+            <Zap size={20} className="text-brand animate-pulse" />
+            <h2 className="font-display text-brand text-xl tracking-widest uppercase">
+              Laboratorio de Clonación
+            </h2>
+          </div>
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex flex-col items-end">
+              <span className="text-[0.45rem] tracking-[0.2em] text-muted font-bold">ACCESO NIVEL 5</span>
+              <span className="text-[0.55rem] tracking-widest text-white font-display">INYECTOR DE ADN POKÉMON</span>
+            </div>
+            <div className="w-12 h-1 box-content border-2 border-brand/30 bg-brand/10" />
+          </div>
+        </div>
+
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          {/* SEARCH & LIST */}
-          <div className="w-full md:w-2/3 flex flex-col border-r border-border bg-surface">
-            <div className="p-4 border-b border-border bg-surface-dark shrink-0">
-              <h2 className="font-display text-brand text-xl tracking-widest flex items-center gap-2">
-                <Zap size={20} className="text-accent" />
-                DEPURADOR POKÉMON
-              </h2>
-              <div className="mt-4 relative">
-                <Search
-                  size={18}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
-                />
+          {/* ── SEARCH & LIST (Main Content) ─────────────────────────────────── */}
+          <div className="flex-1 flex flex-col min-w-0 bg-surface">
+            <div className="p-3 border-b border-border bg-surface-dark shrink-0 flex items-center gap-3">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   autoFocus
                   placeholder="Buscar por Nombre o ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-black/40 border-2 border-border pl-12 pr-4 py-3 font-display text-sm focus:border-brand focus:outline-none placeholder:text-muted/40"
+                  className="w-full bg-surface border border-border pl-10 pr-4 py-2 font-display text-[0.7rem] text-foreground focus:border-brand focus:outline-none placeholder:text-muted/50 uppercase tracking-widest"
                 />
+              </div>
+              <div className="hidden sm:flex items-center gap-2 px-3 border-l border-border/40">
+                <span className="text-[0.5rem] text-muted whitespace-nowrap uppercase">Resultados:</span>
+                <span className="text-[0.6rem] text-brand font-bold font-mono">{filteredPokemon.length}</span>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-4 grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 custom-scrollbar bg-surface-dark/30">
               {loading ? (
                 <div className="col-span-full flex flex-col items-center justify-center py-20 gap-4">
-                  <div className="w-12 h-12 border-4 border-brand border-t-accent rounded-full animate-spin" />
-                  <span className="font-display text-xs text-muted tracking-widest">
-                    CARGANDO BASE DE DATOS...
-                  </span>
+                  <div className="w-12 h-12 border-4 border-brand border-t-brand-light rounded-full animate-spin" />
+                  <span className="font-display text-[0.6rem] text-muted tracking-[0.3em] uppercase">Sincronizando PokeAPI...</span>
                 </div>
               ) : (
                 filteredPokemon.map((p) => (
@@ -231,72 +248,89 @@ export function PokemonInjectionModal({ onClose }: PokemonInjectionModalProps) {
                     key={p.id}
                     onClick={() => setSelectedPoke(p)}
                     className={clsx(
-                      "flex flex-col items-center p-3 border-2 transition-all relative group",
+                      "flex flex-col items-center p-2 border-2 transition-all relative group h-24 overflow-hidden",
                       selectedPoke?.id === p.id
-                        ? "bg-brand/20 border-brand -translate-y-1 shadow-pixel"
-                        : "bg-surface-alt border-border/40 hover:border-brand/60",
+                        ? "bg-brand/10 border-brand shadow-[inset_0_0_12px_rgba(255,203,5,0.1)]"
+                        : "bg-surface-alt border-border/40 hover:border-brand/40",
                     )}
                   >
-                    <div className="w-16 h-16 flex items-center justify-center mb-2">
-                      <PixelSprite
-                        pokemonId={p.id}
-                        variant="front"
-                        size={64}
-                        alt={p.name}
-                      />
+                    <div className="absolute inset-0 bg-striped opacity-5 pointer-events-none" />
+                    <div className="relative w-12 h-12 flex items-center justify-center mb-1 drop-shadow-md">
+                      <PixelSprite pokemonId={p.id} variant="front" size={48} alt={p.name} />
                     </div>
-                    <span className="font-display text-[0.6rem] text-muted tracking-tighter mb-1">
-                      #{p.id}
-                    </span>
-                    <span className="font-display text-[0.7rem] capitalize text-center truncate w-full">
-                      {p.name}
-                    </span>
+                    <div className="relative flex flex-col items-center w-full z-10">
+                      <span className="font-display text-[0.45rem] text-muted tracking-tighter">#{String(p.id).padStart(3, '0')}</span>
+                      <span className="font-display text-[0.55rem] capitalize truncate w-full text-center text-white/90 group-hover:text-brand transition-colors font-bold">
+                        {p.name}
+                      </span>
+                    </div>
+                    {selectedPoke?.id === p.id && (
+                      <div className="absolute top-1 right-1">
+                        <Check size={8} className="text-brand" />
+                      </div>
+                    )}
                   </button>
                 ))
               )}
             </div>
           </div>
 
-          {/* CUSTOMIZATION PANEL */}
-          <div className="w-full md:w-1/3 flex flex-col bg-surface-dark">
-            <div className="p-6 flex flex-col gap-6 flex-1 overflow-y-auto custom-scrollbar">
+          {/* ── CUSTOMIZATION PANEL (Sidebar Style) ─────────────────────────── */}
+          <div className="w-full md:w-80 bg-surface-alt border-l-4 border-border flex flex-col shrink-0 overflow-y-auto custom-scrollbar shadow-[-4px_0_12px_rgba(0,0,0,0.3)]">
+            <div className="p-4 border-b border-border bg-black/20">
+              <h3 className="font-display text-muted text-[0.65rem] tracking-[0.2em] uppercase">CONFIGURACIÓN DNA</h3>
+            </div>
+
+            <div className="p-5 flex flex-col gap-6 flex-1">
               {selectedPoke ? (
                 <>
-                  <div className="flex flex-col items-center gap-4 py-4 border-b border-border/30">
-                    <div className="w-32 h-32 bg-surface-alt border-4 border-border flex items-center justify-center relative shadow-inner">
+                  <div className="flex flex-col items-center gap-4 py-6 bg-black/40 border-2 border-border/40 relative overflow-hidden group">
+                    <div className="absolute inset-0 bg-striped opacity-10" />
+                    <div className="relative w-32 h-32 flex items-center justify-center">
+                      <div className="absolute inset-0 border-2 border-brand/20 animate-pulse rounded-full" />
                       <PixelSprite
                         pokemonId={selectedPoke.id}
                         variant="front"
                         shiny={isShiny}
                         size={96}
                         alt={selectedPoke.name}
-                        className="drop-shadow-xl animate-bounce"
+                        className="relative z-10 drop-shadow-2xl brightness-110"
                       />
                       {isShiny && (
                         <Sparkles
-                          className="absolute top-2 right-2 text-accent animate-pulse"
-                          size={20}
+                          className="absolute top-2 right-2 text-accent animate-spin-slow"
+                          size={24}
                         />
                       )}
                     </div>
-                    <div className="text-center">
-                      <h3 className="font-display text-xl text-white uppercase tracking-wider">
+                    <div className="text-center relative z-10">
+                      <h3 className="font-display text-xl text-brand uppercase tracking-tighter leading-none mb-1">
                         {selectedPoke.name}
                       </h3>
-                      <p className="font-display text-[0.6rem] text-muted tracking-[0.2em]">
-                        CÓDIGO POKÉDEX: #{selectedPoke.id}
-                      </p>
+                      {selectedPokeData && (
+                        <div className="flex gap-1.5 justify-center mt-2">
+                          {selectedPokeData.types.map((type: string) => (
+                            <span
+                              key={type}
+                              className={clsx(
+                                "px-2 py-0.5 text-[0.45rem] font-bold uppercase tracking-widest border-2",
+                                `type-bg-${type} border-black/40 text-white shadow-pixel-sm`,
+                              )}
+                            >
+                              {type}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-5">
                     {/* Level */}
                     <div className="flex flex-col gap-2">
                       <div className="flex justify-between items-center">
-                        <label className="font-display text-[0.65rem] text-brand tracking-widest">
-                          NIVEL
-                        </label>
-                        <span className="bg-brand text-white text-xs font-display px-2 py-0.5">
+                        <span className="font-display text-[0.6rem] text-muted tracking-widest uppercase">Nivel de Potencia</span>
+                        <span className="bg-brand text-black text-[0.65rem] font-bold font-display px-2 py-0.5 border-2 border-brand shadow-pixel-sm">
                           {level}
                         </span>
                       </div>
@@ -306,7 +340,7 @@ export function PokemonInjectionModal({ onClose }: PokemonInjectionModalProps) {
                         max="100"
                         value={level}
                         onChange={(e) => setLevel(parseInt(e.target.value))}
-                        className="w-full accent-brand cursor-pointer"
+                        className="w-full accent-brand cursor-pointer h-1.5 bg-black/40 rounded-full appearance-none"
                       />
                     </div>
 
@@ -314,30 +348,27 @@ export function PokemonInjectionModal({ onClose }: PokemonInjectionModalProps) {
                     <button
                       onClick={() => setIsShiny(!isShiny)}
                       className={clsx(
-                        "flex items-center justify-between p-3 border-2 transition-all",
+                        "flex items-center justify-between px-4 py-3 border-2 transition-all group",
                         isShiny
-                          ? "bg-accent/10 border-accent text-accent"
-                          : "bg-surface-alt border-border text-muted",
+                          ? "bg-accent/20 border-accent text-accent shadow-[0_0_12px_rgba(255,203,5,0.2)]"
+                          : "bg-black/20 border-border text-muted hover:border-brand/40",
                       )}
                     >
-                      <span className="font-display text-[0.6rem] tracking-widest">
-                        FORMA SHINY
-                      </span>
+                      <span className="font-display text-[0.6rem] tracking-widest uppercase">Codificación Shiny</span>
                       <Sparkles
                         size={16}
+                        className={clsx(isShiny ? "animate-pulse" : "opacity-30")}
                         fill={isShiny ? "currentColor" : "none"}
                       />
                     </button>
 
                     {/* Nature */}
                     <div className="flex flex-col gap-2">
-                      <label className="font-display text-[0.65rem] text-brand tracking-widest">
-                        NATURALEZA
-                      </label>
+                      <label className="font-display text-[0.6rem] text-muted tracking-widest uppercase">Preajuste de Naturaleza</label>
                       <select
                         value={nature}
                         onChange={(e) => setNature(e.target.value)}
-                        className="bg-surface-alt border-2 border-border p-2 font-display text-[0.7rem] text-white focus:border-brand focus:outline-none capitalize"
+                        className="bg-black/40 border-2 border-border p-2.5 font-display text-[0.65rem] text-white focus:border-brand focus:outline-none capitalize cursor-pointer hover:border-brand/40"
                       >
                         {Object.entries(NATURES).map(([id, n]) => (
                           <option key={id} value={id}>
@@ -351,53 +382,56 @@ export function PokemonInjectionModal({ onClose }: PokemonInjectionModalProps) {
                     <button
                       onClick={() => setPerfectIVs(!perfectIVs)}
                       className={clsx(
-                        "flex items-center justify-between p-3 border-2 transition-all",
+                        "flex items-center justify-between px-4 py-3 border-2 transition-all",
                         perfectIVs
-                          ? "bg-green-900/20 border-green-500 text-green-500"
-                          : "bg-surface-alt border-border text-muted",
+                          ? "bg-green-900/20 border-green-500 text-green-400"
+                          : "bg-black/20 border-border text-muted",
                       )}
                     >
-                      <span className="font-display text-[0.6rem] tracking-widest">
-                        IVS PERFECTOS (31)
-                      </span>
-                      {perfectIVs ? (
-                        <Check size={16} />
-                      ) : (
-                        <div className="w-4 h-4 border-2 border-border" />
-                      )}
+                      <span className="font-display text-[0.6rem] tracking-widest uppercase">Perfección Genética</span>
+                      <div className={clsx(
+                        "w-5 h-5 border-2 flex items-center justify-center transition-colors",
+                        perfectIVs ? "border-green-500 bg-green-500/20" : "border-border bg-black/20"
+                      )}>
+                        {perfectIVs && <Check size={12} />}
+                      </div>
                     </button>
                   </div>
 
-                  <div className="mt-auto flex flex-col gap-3 py-4">
+                  <div className="mt-auto pt-6 flex flex-col gap-3">
                     <Button
                       variant="primary"
                       onClick={handleInjectToRun}
                       disabled={!run.isActive || injecting}
-                      className="w-full py-4 tracking-[0.2em] flex items-center justify-center gap-2"
+                      className="w-full h-14 tracking-[0.2em] font-bold text-[0.7rem] relative overflow-hidden group"
                     >
-                      {injecting ? "INYECTANDO..." : "INYECTAR A RUN"}
-                      <ChevronRight size={14} />
+                      <div className="absolute inset-0 bg-brand/20 translate-y-full group-hover:translate-y-0 transition-transform" />
+                      <span className="relative z-10 flex items-center justify-center gap-2">
+                        {injecting ? "SECUENCIANDO..." : "INYECTAR DNA"}
+                        <Zap size={14} />
+                      </span>
                     </Button>
-                    <Button
-                      variant="secondary"
+                    <button
                       onClick={handleUnlockAsStarter}
-                      className="w-full py-4 tracking-[0.2em] flex items-center justify-center gap-2"
+                      className="w-full py-3 border-2 border-brand/40 text-brand-light font-display text-[0.55rem] tracking-[0.3em] uppercase hover:bg-brand/10 hover:border-brand transition-all flex items-center justify-center gap-2"
                     >
-                      DESBLOQUEAR INICIAL
-                      <Zap size={14} />
-                    </Button>
+                      CLONAR COMO INICIAL
+                      <Star size={10} />
+                    </button>
                   </div>
                 </>
               ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center gap-4 opacity-50">
-                  <div className="w-20 h-20 border-4 border-dashed border-muted rounded-full flex items-center justify-center">
-                    <Zap size={32} className="text-muted" />
+                <div className="h-full flex flex-col items-center justify-center text-center gap-6 opacity-30 py-20">
+                  <div className="relative">
+                    <div className="w-24 h-24 border-4 border-dashed border-muted rounded-full animate-spin-slow" />
+                    <Zap size={32} className="absolute inset-0 m-auto text-muted" />
                   </div>
-                  <p className="font-display text-[0.6rem] text-muted tracking-widest leading-relaxed">
-                    SELECCIONA UN POKÉMON
-                    <br />
-                    PARA PERSONALIZAR
-                  </p>
+                  <div>
+                    <p className="font-display text-[0.65rem] text-muted tracking-widest uppercase mb-2">Esperando Muestra</p>
+                    <p className="font-display text-[0.5rem] text-muted/60 tracking-tighter max-w-[180px]">
+                      SELECCIONA UN EJEMPLAR DE LA BASE DE DATOS PARA INICIAR EL PROCESO DE CLONACIÓN
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
