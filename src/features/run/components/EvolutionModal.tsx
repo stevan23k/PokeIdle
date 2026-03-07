@@ -101,11 +101,13 @@ export function EvolutionModal() {
 
       // Trigger move learning check for the newly evolved pokemon at its current level
       const learnQueue = (next as any).__checkMoveLearnQueue || [];
-      learnQueue.push({
-        pokemonUid: pending.pokemonUid,
-        level: evolvedPokemon.level,
-      });
-      (next as any).__checkMoveLearnQueue = learnQueue;
+      (next as any).__checkMoveLearnQueue = [
+        ...learnQueue,
+        {
+          pokemonUid: pending.pokemonUid,
+          level: evolvedPokemon.level,
+        },
+      ];
 
       return next;
     });

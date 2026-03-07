@@ -120,13 +120,25 @@ export function ZoneTransitionModal() {
       let p = updatedTeam[pokemonIndex];
       let gained = 0;
 
+      const evoTriggers: any[] = [];
+      const moveTriggers: any[] = [];
+
       for (let i = 0; i < levelsToGain && p.level < 100; i++) {
         p = levelUpPokemon(p);
         gained++;
+
+        // Queue markers
+        moveTriggers.push({ pokemonUid: p.uid, level: p.level });
+        evoTriggers.push({
+          pokemonUid: p.uid,
+          level: p.level,
+          pokemonId: p.pokemonId,
+        });
       }
 
       updatedTeam[pokemonIndex] = p;
-      return {
+
+      const next = {
         ...prev,
         team: updatedTeam,
         pendingZoneTransition: false,
@@ -139,6 +151,15 @@ export function ZoneTransitionModal() {
           },
         ].slice(-40),
       };
+
+      // Add to queues (immutable)
+      const existingLearn = (next as any).__checkMoveLearnQueue || [];
+      (next as any).__checkMoveLearnQueue = [...existingLearn, ...moveTriggers];
+
+      const existingEvo = (next as any).__checkEvolutionQueue || [];
+      (next as any).__checkEvolutionQueue = [...existingEvo, ...evoTriggers];
+
+      return next;
     });
     notify({
       message: `¡El Pokémon subió de nivel!`,

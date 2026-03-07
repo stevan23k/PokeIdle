@@ -1327,12 +1327,44 @@ export function useEngineTick() {
                 expShareCount,
               );
 
-              const currentActive = updatedTeam.find(
+              let currentActive = updatedTeam.find(
                 (p) => p.uid === bState.playerPokemon.uid,
               );
               if (currentActive) {
                 currentActive.xp += xpGain;
                 pushLog(`¡${currentActive.name} ganó ${xpGain} PV!`, "level");
+
+                while (
+                  currentActive.xp >= xpToNextLevel(currentActive.level) &&
+                  currentActive.level < 100
+                ) {
+                  currentActive = levelUpPokemon(currentActive);
+                  pushLog(
+                    `¡${currentActive.name} subió al nivel ${currentActive.level}!`,
+                    "level",
+                  );
+
+                  // Queue move learning
+                  const learnQueue = (nextState as any).__checkMoveLearnQueue || [];
+                  (nextState as any).__checkMoveLearnQueue = [
+                    ...learnQueue,
+                    {
+                      pokemonUid: currentActive.uid,
+                      level: currentActive.level,
+                    },
+                  ];
+
+                  // Queue evolution check
+                  const evoQueue = (nextState as any).__checkEvolutionQueue || [];
+                  (nextState as any).__checkEvolutionQueue = [
+                    ...evoQueue,
+                    {
+                      pokemonUid: currentActive.uid,
+                      level: currentActive.level,
+                      pokemonId: currentActive.pokemonId,
+                    },
+                  ];
+                }
               }
               nextState.team = updatedTeam;
 
@@ -1466,25 +1498,27 @@ export function useEngineTick() {
               // Queue move learning (async — handled after setRun via side effect)
               // We store the level for post-battle async check
               if (!nextState.pendingMoveLearn) {
-                // Mark that we need to check for new moves at this level
-                // The actual async fetch happens in a useEffect outside the reducer
                 const learnQueue = (nextState as any).__checkMoveLearnQueue || [];
-                learnQueue.push({
-                  pokemonUid: currentActive.uid,
-                  level: currentActive.level,
-                });
-                (nextState as any).__checkMoveLearnQueue = learnQueue;
+                (nextState as any).__checkMoveLearnQueue = [
+                  ...learnQueue,
+                  {
+                    pokemonUid: currentActive.uid,
+                    level: currentActive.level,
+                  },
+                ];
               }
 
-              // Queue evolution check — also async, mark for post-battle check
+              // Queue evolution check
               if (!pendingEvoData) {
                 const evoQueue = (nextState as any).__checkEvolutionQueue || [];
-                evoQueue.push({
-                  pokemonUid: currentActive.uid,
-                  level: currentActive.level,
-                  pokemonId: currentActive.pokemonId,
-                });
-                (nextState as any).__checkEvolutionQueue = evoQueue;
+                (nextState as any).__checkEvolutionQueue = [
+                  ...evoQueue,
+                  {
+                    pokemonUid: currentActive.uid,
+                    level: currentActive.level,
+                    pokemonId: currentActive.pokemonId,
+                  },
+                ];
               }
             }
           }
