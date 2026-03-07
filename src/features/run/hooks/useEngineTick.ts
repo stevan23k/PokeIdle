@@ -24,8 +24,8 @@ import {
   getBestAvailableHealingItem,
   useItemOnPokemon,
 } from "../../../engine/items.engine";
-import { getZonesForRegion } from "../../../lib/regions.service";
-import type { Zone } from "../../../lib/regions";
+import { getZonesForRegion, getGymsForRegion, getEliteFourForRegion } from "../../../lib/regions.service";
+import type { Zone, GymDefinition, EliteFourDefinition } from "../../../lib/regions";
 import {
   getPokemonData,
   learnMovesOnLevelUp,
@@ -56,9 +56,13 @@ export function useEngineTick() {
   const processedAnimRef = useRef<string | null>(null);
 
   const [regionZones, setRegionZones] = useState<Zone[]>([]);
+  const [regionGyms, setRegionGyms] = useState<GymDefinition[]>([]);
+  const [regionEliteFour, setRegionEliteFour] = useState<EliteFourDefinition | null>(null);
 
   useEffect(() => {
     getZonesForRegion(run.currentRegion).then(setRegionZones);
+    getGymsForRegion(run.currentRegion).then(setRegionGyms);
+    getEliteFourForRegion(run.currentRegion).then(setRegionEliteFour);
   }, [run.currentRegion]);
 
   const tick = async () => {
@@ -177,34 +181,149 @@ export function useEngineTick() {
         // Find encounter
         fetchingRef.current = true;
         try {
+          // ── ELITE FOUR MODE ────────────────────────────────────────────────────
+          // currentZone es undefined cuando currentZoneIndex >= regionZones.length
+          // (después de derrotar a Giovanni y avanzar más allá de la última zona)
+          if (!currentZone && !run.eliteFourDefeated && regionEliteFour) {
+            const allMembers = [
+              ...regionEliteFour.trainers,
+              regionEliteFour.champion,
+            ];
+            const currentMember = allMembers[run.eliteFourProgress ?? 0];
+            if (!currentMember) {
+              fetchingRef.current = false;
+              return;
+            }
+
+            const teamMaxLevel = Math.max(...run.team.map((p) => p.level), 5);
+            const spawnSlot = currentMember.pokemon[0];
+            const spawnLevel = Math.max(spawnSlot.level, teamMaxLevel);
+            // referenceBst escala suavemente: 540 (Lorelei) → 620 (Campeón)
+            const referenceBst = 540 + (run.eliteFourProgress ?? 0) * 20;
+
+            const baseEnemy = await getPokemonData(spawnSlot.pokemonId, spawnLevel, false);
+            const teamAverageBst = calculateTeamBST(run.team);
+            const multiplier = getBossMultiplier(teamAverageBst, referenceBst);
+            const enemy = scaleGymPokemon(baseEnemy, multiplier, false);
+
+            const activePlayer = getNextActivePokemon(run.team);
+            if (!activePlayer) {
+              fetchingRef.current = false;
+              return;
+            }
+
+            const isChampion = run.eliteFourProgress >= regionEliteFour.trainers.length;
+
+            setRun((prev) => {
+              if (prev.currentBattle) return prev;
+              return {
+                ...prev,
+                currentZoneProgress: 0,
+                currentBattle: {
+                  type: "elite",
+                  phase: "active",
+                  turnState: "idle",
+                  playerPokemon: activePlayer!,
+                  enemyPokemon: enemy,
+                  turnCount: 0,
+                  isBossBattle: true,
+                  bossMaxBars: currentMember.pokemon.length,
+                  bossCurrentBar: 1,
+                  gymTeam: currentMember.pokemon,
+                },
+                battleLog: [
+                  ...prev.battleLog,
+                  {
+                    id: generateUid(),
+                    text: isChampion
+                      ? `¡El Campeón ${currentMember.name} te desafía!`
+                      : `¡${currentMember.name} del Alto Mando te desafía!`,
+                    type: "badge" as any,
+                  },
+                ].slice(-40),
+              };
+            });
+            return;
+          }
+
           const requiredBattles = currentZone.trainerCount || 3;
           const isBossTime = run.zoneBattlesWon >= requiredBattles;
           let enemy;
           let isBoss = false;
-          let activeMechanic = undefined;
+          let activeMechanic:
+            | import("../types/game.types").GymMechanic
+            | undefined = undefined;
+          let battleType: "wild" | "gym" = "wild";
+          let gymForBattle: GymDefinition | null = null;
 
           if (isBossTime) {
             const teamMaxLevel = Math.max(...run.team.map((p) => p.level), 5);
-            const bossLevel = teamMaxLevel + 1; // More balanced
-            const encounter = getWildEncounter(currentZone);
 
-            let baseEnemy = await getPokemonData(
-              encounter.pokemonId,
-              bossLevel,
-              false,
-            );
+            // ── GYM ZONE ──────────────────────────────────────────────────────────
+            if (currentZone.isGym && currentZone.gymId != null) {
+              const gym =
+                regionGyms.find((g) => g.id === currentZone.gymId) ?? null;
 
-            // Dynamic Boss Scaling (using the zone's reference BST)
-            // Note: Route bosses do not trigger Gym Mechanics, so activeMechanic stays undefined.
-            const teamAverageBst = calculateTeamBST(run.team);
-            const multiplier = getBossMultiplier(
-              teamAverageBst,
-              currentZone.referenceBst || 280,
-            );
+              if (gym) {
+                gymForBattle = gym;
+                battleType = "gym";
+                activeMechanic =
+                  gym.mechanic as import("../types/game.types").GymMechanic;
 
-            enemy = scaleGymPokemon(baseEnemy, multiplier, true);
-            isBoss = true;
+                // Sequential spawning starts with the first Pokémon (index 0)
+                // The Ace is the last one in the team array.
+                const spawnSlot = gym.pokemon[0];
+                const spawnLevel = Math.max(spawnSlot.level, teamMaxLevel);
+
+                let baseEnemy = await getPokemonData(
+                  spawnSlot.pokemonId,
+                  spawnLevel,
+                  false,
+                );
+
+                const teamAverageBst = calculateTeamBST(run.team);
+                const multiplier = getBossMultiplier(
+                  teamAverageBst,
+                  gym.referenceBst || 400,
+                );
+                enemy = scaleGymPokemon(baseEnemy, multiplier, false);
+                // Don't prefix "BOSS" — it's a gym leader's Pokémon
+                enemy = { ...enemy, name: enemy.name }; // keep original name
+                isBoss = true;
+              } else {
+                // Gym data not loaded yet — fall back to wild boss
+                const encounter = getWildEncounter(currentZone);
+                let baseEnemy = await getPokemonData(
+                  encounter.pokemonId,
+                  teamMaxLevel + 1,
+                  false,
+                );
+                const teamAverageBst = calculateTeamBST(run.team);
+                const multiplier = getBossMultiplier(
+                  teamAverageBst,
+                  currentZone.referenceBst || 280,
+                );
+                enemy = scaleGymPokemon(baseEnemy, multiplier, true);
+                isBoss = true;
+              }
+            } else {
+              // ── ROUTE BOSS ────────────────────────────────────────────────────────
+              const encounter = getWildEncounter(currentZone);
+              let baseEnemy = await getPokemonData(
+                encounter.pokemonId,
+                teamMaxLevel + 1,
+                false,
+              );
+              const teamAverageBst = calculateTeamBST(run.team);
+              const multiplier = getBossMultiplier(
+                teamAverageBst,
+                currentZone.referenceBst || 280,
+              );
+              enemy = scaleGymPokemon(baseEnemy, multiplier, true);
+              isBoss = true;
+            }
           } else {
+            // ── WILD ENCOUNTER ────────────────────────────────────────────────────
             const encounter = getWildEncounter(currentZone);
             const level =
               Math.floor(
@@ -225,7 +344,7 @@ export function useEngineTick() {
               ...prev,
               currentZoneProgress: 0,
               currentBattle: {
-                type: "wild",
+                type: battleType,
                 phase: "active",
                 turnState: "idle",
                 playerPokemon: activePlayer!,
@@ -233,17 +352,32 @@ export function useEngineTick() {
                 turnCount: 0,
                 isBossBattle: isBoss,
                 activeMechanic: activeMechanic,
-                bossMaxBars: 1,
+                bossMaxBars:
+                  battleType === "gym" && gymForBattle
+                    ? gymForBattle.pokemon.length
+                    : 1,
                 bossCurrentBar: 1,
+                gymTeam:
+                  battleType === "gym" && gymForBattle
+                    ? gymForBattle.pokemon
+                    : undefined,
               },
               battleLog: [
                 ...prev.battleLog,
                 {
                   id: generateUid(),
-                  text: isBoss
-                    ? `¡EL BOSS ${enemy.name} TE DESAFÍA!`
-                    : `¡Un salvaje ${enemy.name} ha aparecido!`,
-                  type: isBoss ? "danger" : ("normal" as any),
+                  text:
+                    battleType === "gym"
+                      ? `¡El líder ${gymForBattle?.leaderName ?? "del Gimnasio"} te desafía!`
+                      : isBoss
+                        ? `¡EL BOSS ${enemy.name} TE DESAFÍA!`
+                        : `¡Un salvaje ${enemy.name} ha aparecido!`,
+                  type:
+                    battleType === "gym"
+                      ? "badge"
+                      : isBoss
+                        ? "danger"
+                        : ("normal" as any),
                 },
               ].slice(-40),
             };
@@ -464,11 +598,56 @@ export function useEngineTick() {
 
           // --- ZONE PROGRESSION (on capture) ---
           if (bState.isBossBattle) {
-            const region = { zones: regionZones };
-            if (nextState.currentZoneIndex + 1 < region.zones.length) {
-              nextState.currentZoneIndex += 1;
-              nextState.zoneBattlesWon = 0;
-              nextState.pendingZoneTransition = true;
+            // Solo otorgar badge/avance si es el último Pokémon del miembro actual
+            const isLastGymPokemon =
+              (bState.type !== "gym" && bState.type !== "elite") ||
+              !bState.gymTeam ||
+              !bState.bossCurrentBar ||
+              !bState.bossMaxBars ||
+              bState.bossCurrentBar >= bState.bossMaxBars;
+
+            // ── BADGE AWARD (gym battles only) ───────────────────────────────────
+            if (bState.type === "gym" && isLastGymPokemon) {
+              const currentZoneForBadge = regionZones[nextState.currentZoneIndex];
+              if (currentZoneForBadge?.gymId != null) {
+                const gym = regionGyms.find((g) => g.id === currentZoneForBadge.gymId);
+                if (gym && !nextState.gymsBadges.includes(gym.id)) {
+                  nextState.gymsBadges = [...nextState.gymsBadges, gym.id];
+                  pushLog(`¡Has obtenido la ${gym.badgeName}!`, "badge");
+
+                  // Award gym reward items
+                  for (const reward of gym.rewardItems) {
+                    if (Math.random() <= reward.chance) {
+                      nextState.items = {
+                        ...nextState.items,
+                        [reward.itemId]: (nextState.items[reward.itemId] ?? 0) + 1,
+                      };
+                    }
+                  }
+                }
+              }
+            }
+
+            // ── ELITE FOUR PROGRESSION (on capture) ─────────────────────────────
+            if (bState.type === "elite" && isLastGymPokemon) {
+              const allMembersCount = (regionEliteFour?.trainers.length ?? 4) + 1;
+              if ((nextState.eliteFourProgress ?? 0) + 1 >= allMembersCount) {
+                nextState.eliteFourDefeated = true;
+                pushLog("¡Has derrotado al Campeón! ¡Eres el nuevo Campeón Pokémon!", "badge");
+              } else {
+                nextState.eliteFourProgress = (nextState.eliteFourProgress ?? 0) + 1;
+                nextState.currentZoneProgress = 0;
+                nextState.pendingZoneTransition = true;
+              }
+            }
+
+            if (isLastGymPokemon && bState.type === "gym") {
+              const region = { zones: regionZones };
+              if (nextState.currentZoneIndex + 1 < region.zones.length) {
+                nextState.currentZoneIndex += 1;
+                nextState.zoneBattlesWon = 0;
+                nextState.pendingZoneTransition = true;
+              }
             }
           } else {
             nextState.zoneBattlesWon += 1;
@@ -1119,11 +1298,124 @@ export function useEngineTick() {
 
           // --- ZONE PROGRESSION ---
           if (bState.isBossBattle) {
-            const region = { zones: regionZones };
-            if (nextState.currentZoneIndex + 1 < region.zones.length) {
-              nextState.currentZoneIndex += 1;
-              nextState.zoneBattlesWon = 0;
-              nextState.pendingZoneTransition = true;
+            // ── GYM / ELITE MULTI-POKEMON ─────────────────────────────────────────
+            if (
+              (bState.type === "gym" || bState.type === "elite") &&
+              bState.gymTeam &&
+              bState.bossCurrentBar != null &&
+              bState.bossMaxBars != null &&
+              bState.bossCurrentBar < bState.bossMaxBars
+            ) {
+              // Hay más Pokémon en el equipo del líder
+              const nextBarIndex = bState.bossCurrentBar; // 0-indexed = bossCurrentBar (ya que empieza en 1)
+              const nextSlot = bState.gymTeam[nextBarIndex];
+
+              // ── CALCULAR XP del Pokémon intermedio ────────────────
+              const baseXP = bState.enemyPokemon.baseStats.hp;
+              const xpGain = calculateXPGain(
+                bState.enemyPokemon.level,
+                baseXP,
+                true,
+                nextState.expMultiplier,
+              );
+              const expShareCount = nextState.items["exp-share"] || 0;
+              const { updatedTeam } = distributeTeamXP(
+                nextState.team,
+                bState.playerPokemon.uid,
+                xpGain,
+                expShareCount,
+              );
+
+              const currentActive = updatedTeam.find(
+                (p) => p.uid === bState.playerPokemon.uid,
+              );
+              if (currentActive) {
+                currentActive.xp += xpGain;
+                pushLog(`¡${currentActive.name} ganó ${xpGain} PV!`, "level");
+              }
+              nextState.team = updatedTeam;
+
+              // BUG FIX: processedAnimRef.current no se limpia en la transición de gym
+              processedAnimRef.current = null;
+
+              // Spawn del siguiente Pokémon es async — marcar pendiente y salir del reducer
+              nextState.currentBattle = {
+                ...bState,
+                playerPokemon: currentActive || bState.playerPokemon,
+                enemyPokemon: bState.enemyPokemon, // se reemplazará en el useEffect
+                bossCurrentBar: bState.bossCurrentBar + 1,
+                turnState: "idle",
+                turnQueue: [],
+                pendingAnimation: null,
+              };
+              (nextState as any).__spawnNextGymPokemon = {
+                pokemonId: nextSlot.pokemonId,
+                level: Math.max(
+                  nextSlot.level,
+                  Math.max(...run.team.map((p) => p.level), 5),
+                ),
+                referenceBst:
+                  bState.type === "elite"
+                    ? 540 + (nextState.eliteFourProgress ?? 0) * 20
+                    : regionGyms.find(
+                        (g) =>
+                          g.id === regionZones[nextState.currentZoneIndex]?.gymId,
+                      )?.referenceBst ?? 400,
+              };
+              nextState.battleLog = logs.slice(-40);
+              return nextState;
+            }
+
+            // Solo otorgar badge/avance si es el último Pokémon del miembro actual
+            const isLastGymPokemon =
+              (bState.type !== "gym" && bState.type !== "elite") ||
+              !bState.gymTeam ||
+              !bState.bossCurrentBar ||
+              !bState.bossMaxBars ||
+              bState.bossCurrentBar >= bState.bossMaxBars;
+
+            // ── BADGE AWARD (gym battles only) ───────────────────────────────────
+            if (bState.type === "gym" && isLastGymPokemon) {
+              const currentZoneForBadge = regionZones[nextState.currentZoneIndex];
+              if (currentZoneForBadge?.gymId != null) {
+                const gym = regionGyms.find((g) => g.id === currentZoneForBadge.gymId);
+                if (gym && !nextState.gymsBadges.includes(gym.id)) {
+                  nextState.gymsBadges = [...nextState.gymsBadges, gym.id];
+                  pushLog(`¡Has obtenido la ${gym.badgeName}!`, "badge");
+
+                  // Award gym reward items
+                  for (const reward of gym.rewardItems) {
+                    if (Math.random() <= reward.chance) {
+                      nextState.items = {
+                        ...nextState.items,
+                        [reward.itemId]: (nextState.items[reward.itemId] ?? 0) + 1,
+                      };
+                    }
+                  }
+                }
+              }
+            }
+
+            // ── ELITE FOUR PROGRESSION ───────────────────────────────────────────
+            if (bState.type === "elite" && isLastGymPokemon) {
+              const allMembersCount = (regionEliteFour?.trainers.length ?? 4) + 1;
+              if ((nextState.eliteFourProgress ?? 0) + 1 >= allMembersCount) {
+                nextState.eliteFourDefeated = true;
+                pushLog("¡Has derrotado al Campeón! ¡Eres el nuevo Campeón Pokémon!", "badge");
+              } else {
+                nextState.eliteFourProgress = (nextState.eliteFourProgress ?? 0) + 1;
+                nextState.currentZoneProgress = 0;
+                nextState.pendingZoneTransition = true;
+              }
+            }
+
+            if (isLastGymPokemon && bState.type === "gym") {
+              const region = { zones: regionZones };
+              if (nextState.currentZoneIndex + 1 < region.zones.length) {
+                nextState.currentZoneIndex += 1;
+                nextState.zoneBattlesWon = 0;
+                nextState.pendingZoneTransition = true;
+              }
             }
           }
 
@@ -1411,7 +1703,11 @@ export function useEngineTick() {
           `¡El problema de estado debilitó a ${bState.enemyPokemon.name}!`,
           "normal",
         );
-        // Simplified skip to next turn. Next tick will evaluate death properly.
+        // Force evaluation of death in next tick's apply_damage phase to avoid ghost turns
+        bState.turnState = "apply_damage";
+        turnStateRef.current = "apply_damage";
+        bState.turnQueue = [];
+        bState.pendingAnimation = null;
       }
 
       if (nextPlayerHP === 0) {
@@ -1688,5 +1984,49 @@ export function useEngineTick() {
     checkEvolution();
   }, [(run as any).__checkEvolutionAt]);
 
+  useEffect(() => {
+    const marker = (run as any).__spawnNextGymPokemon;
+    if (!marker || !run.currentBattle) return;
+
+    // Limpiar marker
+    setRun((prev) => {
+      const next = { ...prev };
+      delete (next as any).__spawnNextGymPokemon;
+      return next;
+    });
+
+    const { pokemonId, level, referenceBst } = marker;
+
+    getPokemonData(pokemonId, level, false).then((baseEnemy) => {
+      const teamAverageBst = calculateTeamBST(run.team);
+      const multiplier = getBossMultiplier(teamAverageBst, referenceBst);
+      const nextEnemy = scaleGymPokemon(baseEnemy, multiplier, false);
+
+      setRun((prev) => {
+        if (!prev.currentBattle) return prev;
+        return {
+          ...prev,
+          currentBattle: {
+            ...prev.currentBattle,
+            enemyPokemon: nextEnemy,
+            turnState: "idle",
+            turnQueue: [],
+            pendingAnimation: null,
+          },
+          battleLog: [
+            ...prev.battleLog,
+            {
+              id: generateUid(),
+              text: `¡${nextEnemy.name} sale a combatir!`,
+              type: "danger" as any,
+            },
+          ].slice(-40),
+        };
+      });
+    });
+  }, [(run as any).__spawnNextGymPokemon]);
+
   useGameLoop(run.isActive, run.speedMultiplier, tick);
+
+  return { tick, regionZones, regionGyms };
 }

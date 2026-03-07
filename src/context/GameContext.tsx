@@ -49,6 +49,7 @@ export const defaultRun: RunState = {
   zoneBattlesWon: 0,
   gymsBadges: [],
   eliteFourDefeated: false,
+  eliteFourProgress: 0,
   items: { "poke-ball": 10, potion: 5 }, // Starter items
   expMultiplier: 1.0,
   hasMegaBracelet: false,

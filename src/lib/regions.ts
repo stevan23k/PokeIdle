@@ -41,6 +41,8 @@ export interface Zone {
   trainerCount: number; // Number of trainers to defeat to clear zone
   battleBgId: string; // ID of the battle background to use
   referenceBst: number; // Expected BST average to clear this zone
+  isGym?: boolean;
+  gymId?: number | null;
 }
 
 export interface EliteTrainer {

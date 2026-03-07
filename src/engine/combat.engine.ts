@@ -115,18 +115,10 @@ export function calculateDamage(
   let effectiveness = getEffectiveness(move.type, defender.types);
 
   if (mechanic === "gravedad_aumentada") {
-    if (move.type === "flying") {
-      return { damage: 0, isCrit: false, effectiveness: 0, isStab: false };
-    }
     if (move.type === "ground") {
-      // Ground hits flying normally
-      let overrideEff = 1;
-      for (const t of defender.types) {
-        if (t !== "flying") {
-          overrideEff *= getEffectiveness("ground", [t]);
-        }
-      }
-      effectiveness = overrideEff;
+      // Ground moves hit flying types (override immunity)
+      effectiveness = getEffectiveness(move.type, defender.types.filter(t => t.toLowerCase() !== "flying"));
+      if (effectiveness === 0) effectiveness = 1; // Safeguard if somehow still 0
     }
   }
 
@@ -223,12 +215,17 @@ export function determineAttackOrder(
   if (ePriority > pPriority) return "enemy-first";
 
   // 2. Speed Stat
-  const pSpeed =
+  let pSpeed =
     pPokemon.stats.speed *
     getStatMultiplier(pPokemon.statModifiers.spe, mechanic);
-  const eSpeed =
+  let eSpeed =
     ePokemon.stats.speed *
     getStatMultiplier(ePokemon.statModifiers.spe, mechanic);
+
+  if (mechanic === "gravedad_aumentada") {
+    pSpeed *= 0.5;
+    eSpeed *= 0.5;
+  }
 
   if (pSpeed > eSpeed) return "player-first";
   if (eSpeed > pSpeed) return "enemy-first";

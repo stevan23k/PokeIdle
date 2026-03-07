@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useGame } from '../../../context/GameContext';
 import { REGIONS } from '../../../lib/regions';
+import type { Zone } from '../../../lib/regions';
 import { clsx } from 'clsx';
-import { Trophy, CircleDashed, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Trophy, CircleDashed, CheckCircle2, ChevronRight, Medal } from 'lucide-react';
 
-export function RegionMap() {
+interface RegionMapProps {
+  zones: Zone[];
+}
+
+export function RegionMap({ zones }: RegionMapProps) {
   const { run } = useGame();
 
   if (!run.isActive) return null;
 
-  const region = REGIONS[run.currentRegion];
-  if (!region) return null;
+  const regionBase = REGIONS[run.currentRegion];
+  if (!regionBase) return null;
+
+  const region = { ...regionBase, zones };
 
   return (
     <div className="flex flex-col p-3 border-b-2 border-border mb-2 bg-surface-alt shadow-inner">
@@ -24,17 +31,27 @@ export function RegionMap() {
           const isCompleted = index < run.currentZoneIndex;
           const isCurrent = index === run.currentZoneIndex;
           const isLocked = index > run.currentZoneIndex;
+          const isGym = zone.isGym;
 
           return (
             <div key={zone.id} className="flex items-center gap-3 py-2 z-10">
               <div className="bg-surface-alt rounded-full">
-                {isCompleted ? <CheckCircle2 size={24} className="text-success fill-surface" /> :
-                 isCurrent   ? <ChevronRight size={24} className="text-brand animate-pulse bg-surface-alt" /> :
-                               <CircleDashed size={24} className="text-muted bg-surface-alt" />}
+                {isCompleted ? <CheckCircle2 size={24} className={clsx("fill-surface", isGym ? "text-accent" : "text-success")} /> :
+                 isCurrent   ? <ChevronRight size={24} className={clsx("bg-surface-alt animate-pulse", isGym ? "text-accent" : "text-brand")} /> :
+                               isGym ? <Medal size={24} className="text-muted/50 bg-surface-alt" /> : <CircleDashed size={24} className="text-muted bg-surface-alt" />}
               </div>
-              <div className={clsx("flex flex-col font-display text-[0.55rem]", isLocked ? "text-muted" : "text-foreground")}>
-                <span>{zone.name}</span>
-                {isCurrent && <span className="text-brand text-[0.45rem] mt-1 tracking-wider bg-brand/10 border border-brand/50 px-1 py-0.5 self-start">EXPLORANDO {Math.floor(run.currentZoneProgress)}%</span>}
+              <div className={clsx(
+                "flex flex-col font-display text-[0.55rem]", 
+                isLocked ? "text-muted" : (isGym ? "text-accent" : "text-foreground")
+              )}>
+                <span className="flex items-center gap-1">
+                  {zone.name}
+                  {isGym && <span className="text-[0.5rem] p-0.5 bg-accent/20 border border-accent/30 text-accent rounded px-1">GYM</span>}
+                </span>
+                {isCurrent && <span className={clsx(
+                  "text-[0.45rem] mt-1 tracking-wider border px-1 py-0.5 self-start",
+                  isGym ? "bg-accent/10 border-accent/50 text-accent" : "bg-brand/10 border-brand/50 text-brand"
+                )}>EXPLORANDO {Math.floor(run.currentZoneProgress)}%</span>}
               </div>
             </div>
           );

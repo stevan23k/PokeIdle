@@ -153,6 +153,7 @@ export interface BattleState {
   isBossBattle?: boolean;
   bossMaxBars?: number; // default 1
   bossCurrentBar?: number; // 1-indexed
+  gymTeam?: { pokemonId: number; level: number }[]; // equipo completo del líder
 
   pendingCaptureAnim?: { ballId: string; captured: boolean | null } | null;
   pendingManualSwitch?: boolean;
@@ -229,6 +230,7 @@ export interface RunState {
   zoneBattlesWon: number;
   gymsBadges: number[];
   eliteFourDefeated: boolean;
+  eliteFourProgress: number; // 0=Lorelei, 1=Bruno, 2=Agatha, 3=Lance, 4=Campeón
 
   items: Record<string, number>;
   expMultiplier: number; // Cumulative from "Cartas"

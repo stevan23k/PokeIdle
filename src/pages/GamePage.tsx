@@ -5,8 +5,8 @@ import { useEngineTick } from '../features/run/hooks/useEngineTick';
 import { ErrorBoundary } from '../components/ui/ErrorBoundary';
 
 function GameRunner() {
-  useEngineTick(); // Start engine
-  return <GameLayout />;
+  const { regionZones } = useEngineTick(); // Start engine and get data
+  return <GameLayout zones={regionZones} />;
 }
 
 export function GamePage() {

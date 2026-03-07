@@ -18,6 +18,7 @@ import { LootSelectionModal } from "../../features/run/components/LootSelectionM
 import { BagModal } from "../../features/run/components/BagModal";
 import { ZoneTransitionModal } from "../../features/run/components/ZoneTransitionModal";
 import { ITEMS } from "../../lib/items";
+import type { Zone } from "../../lib/regions";
 
 import { TrainingSelector } from "../../features/training/components/TrainingSelector";
 import { TrainingLayout } from "../../features/training/components/TrainingLayout";
@@ -30,7 +31,7 @@ import { MegaEvolutionModal } from "../../features/run/components/MegaEvolutionM
 import { useAuth } from "../../context/AuthContext";
 import { DebuggerPanel } from "../../features/debug/components/DebuggerPanel";
 
-export function GameLayout() {
+export function GameLayout({ zones }: { zones: Zone[] }) {
   const { isAdmin } = useAuth();
   const {
     run,
@@ -282,7 +283,7 @@ export function GameLayout() {
             </div>
 
             <div className="flex-1 md:w-[320px] md:max-w-[320px] border-r border-border bg-surface overflow-y-auto hidden md:flex flex-col">
-              <RegionMap />
+              <RegionMap zones={zones} />
               <TeamRoster />
             </div>
 
