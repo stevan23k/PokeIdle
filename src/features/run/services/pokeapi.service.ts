@@ -107,7 +107,8 @@ export async function getPokemonData(
       for (const m of eligibleMoves) {
         if (activeMoves.length >= 4) break;
         const md = cachedMoves?.find((c) => c.move_id === m.moveId);
-        if (!md || !md.power || md.power === 0) continue;
+        if (!md) continue;
+        if ((!md.power || md.power === 0) && activeMoves.length >= 2) continue;
 
         activeMoves.push({
           moveId: md.move_id,
@@ -429,6 +430,7 @@ export async function fetchEggMoves(id: number): Promise<number[]> {
 export async function learnMovesOnLevelUp(
   pokemon: import("../types/game.types").ActivePokemon,
   newLevel: number,
+  fromLevel?: number, // if passed, checks all moves in the range (fromLevel, newLevel]
 ): Promise<import("../types/game.types").ActiveMove | null> {
   try {
     // Fast path: usar pokemon_cache para encontrar el movimiento del nivel
@@ -439,36 +441,44 @@ export async function learnMovesOnLevelUp(
       .maybeSingle();
 
     if (cachedPokemon) {
-      const match = (
+      const minLevel = fromLevel != null ? fromLevel + 1 : newLevel;
+
+      // Filter all levels in the range, sorted by level descending
+      const matches = (
         cachedPokemon.level_up_moves as { moveId: number; level: number }[]
-      ).find((m) => m.level === newLevel);
+      )
+        .filter((m) => m.level >= minLevel && m.level <= newLevel)
+        .sort((a, b) => b.level - a.level);
 
-      if (!match) return null;
-      if (pokemon.moves.some((m) => m.moveId === match.moveId)) return null;
+      // Return the first one the Pokemon doesn't know yet
+      for (const match of matches) {
+        if (pokemon.moves.some((m) => m.moveId === match.moveId)) continue;
 
-      const { data: md } = await supabase
-        .from("move_cache")
-        .select("*")
-        .eq("move_id", match.moveId)
-        .maybeSingle();
+        const { data: md } = await supabase
+          .from("move_cache")
+          .select("*")
+          .eq("move_id", match.moveId)
+          .maybeSingle();
 
-      if (!md) return null;
+        if (!md) continue;
 
-      return {
-        moveId: md.move_id,
-        moveName: md.name_es,
-        type: md.type,
-        category: md.category,
-        power: md.power,
-        accuracy: md.accuracy ?? 100,
-        currentPP: md.pp,
-        maxPP: md.pp,
-        priority: md.priority ?? 0,
-        enabled: true,
-        statusEffect: md.ailment
-          ? { condition: md.ailment as any, chance: md.ailment_chance ?? 100 }
-          : undefined,
-      };
+        return {
+          moveId: md.move_id,
+          moveName: md.name_es,
+          type: md.type,
+          category: md.category,
+          power: md.power,
+          accuracy: md.accuracy ?? 100,
+          currentPP: md.pp,
+          maxPP: md.pp,
+          priority: md.priority ?? 0,
+          enabled: true,
+          statusEffect: md.ailment
+            ? { condition: md.ailment as any, chance: md.ailment_chance ?? 100 }
+            : undefined,
+        };
+      }
+      return null;
     }
 
     // Fallback to PokeAPI

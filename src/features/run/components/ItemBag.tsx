@@ -63,15 +63,30 @@ export function ItemBag() {
         const isTMPending = resultLog === "__PENDING_MOVE_LEARN__";
         const pendingMove = (result as any)?.pendingMove ?? null;
 
+        // console.log(`[ItemBag] Applying markers to run:`, runStateMarkers);
         setRun((prev) => {
           const consumesTurn =
             prev.isManualBattle &&
             prev.currentBattle &&
             (itemDef.category === "heal" || itemDef.category === "battle");
 
+          const nextEvoQueue = [
+            ...((prev as any).__checkEvolutionQueue || []),
+            ...(runStateMarkers?.__checkEvolutionQueue || []),
+          ];
+          const nextMoveQueue = [
+            ...((prev as any).__checkMoveLearnQueue || []),
+            ...(runStateMarkers?.__checkMoveLearnQueue || []),
+          ];
+
+          // console.log(`[ItemBag] Next Queues:`, { evo: nextEvoQueue.length, move: nextMoveQueue.length });
+
           return {
             ...prev,
             ...(runStateMarkers ?? {}),
+            // Merge queues instead of overwriting
+            __checkEvolutionQueue: nextEvoQueue,
+            __checkMoveLearnQueue: nextMoveQueue,
             items: newInventory,
             itemUsage: {
               ...prev.itemUsage,

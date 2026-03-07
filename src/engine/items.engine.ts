@@ -39,13 +39,16 @@ export interface UseItemResult {
    *   setRun(prev => ({ ...prev, ...(result.runStateMarkers ?? {}), team: [...] }))
    */
   runStateMarkers?: {
-    __checkEvolutionAt?: {
+    __checkEvolutionQueue?: {
       pokemonUid: string;
       level: number;
       pokemonId: number;
-      _nonce: number;
-    };
-    __checkMoveLearnAt?: { pokemonUid: string; level: number; _nonce: number };
+      fromName?: string;
+      toId?: number;
+      toName?: string;
+      reason?: string;
+    }[];
+    __checkMoveLearnQueue?: { pokemonUid: string; level: number }[];
   };
 }
 
@@ -259,11 +262,13 @@ export async function useItemOnPokemon(
     }
 
     // Set XP to next level and level up
+    // console.log(`[RARE CANDY] Using on ${nextPokemon.name}. Current Level: ${nextPokemon.level}`);
     nextPokemon.xp = xpToNextLevel(nextPokemon.level);
     nextPokemon = levelUpPokemon(nextPokemon);
 
     applied = true;
     resultMsg = `¡${nextPokemon.name} subió al nivel ${nextPokemon.level}!`;
+    // console.log(`[RARE CANDY] New Level: ${nextPokemon.level}. Applied: ${applied}`);
   } else if (itemDef.category === "evo") {
     // Evolution logic
     try {
@@ -282,13 +287,13 @@ export async function useItemOnPokemon(
       };
 
       const possibleEvolutions = findEvolution(chain.chain);
-      console.log(
+      /* console.log(
         `[Evolution] PokemonID: ${pokemon.pokemonId}, Name: ${pokemon.name}, SpeciesName: ${species.name}`,
       );
       console.log(
         `[Evolution] Possible evolutions found:`,
         possibleEvolutions?.length || 0,
-      );
+      ); */
 
       if (!possibleEvolutions || possibleEvolutions.length === 0) {
         return {
@@ -338,16 +343,17 @@ export async function useItemOnPokemon(
         targetEvolution.species.name.slice(1);
 
       runStateMarkers = {
-        __checkEvolutionAt: {
-          pokemonUid: pokemon.uid,
-          pokemonId: pokemon.pokemonId, // Added missing pokemonId
-          level: pokemon.level, // Added level for consistency
-          fromName: pokemon.name,
-          toId: evoId,
-          toName: evoName,
-          reason: itemDef.name,
-          _nonce: Date.now(),
-        },
+        __checkEvolutionQueue: [
+          {
+            pokemonUid: pokemon.uid,
+            pokemonId: pokemon.pokemonId,
+            level: pokemon.level,
+            fromName: pokemon.name,
+            toId: evoId,
+            toName: evoName,
+            reason: itemDef.name,
+          },
+        ],
       };
 
       applied = true;
@@ -459,18 +465,21 @@ export async function useItemOnPokemon(
 
     // Rare Candy automatic markers (if not already set by stones)
     if (itemId === "rare-candy" && !runStateMarkers) {
+      // console.log(`[RARE CANDY] Generating markers for ${nextPokemon.name} (UID: ${nextPokemon.uid})`);
       runStateMarkers = {
-        __checkEvolutionAt: {
-          pokemonUid: nextPokemon.uid,
-          level: nextPokemon.level,
-          pokemonId: nextPokemon.pokemonId,
-          _nonce: Date.now(),
-        },
-        __checkMoveLearnAt: {
-          pokemonUid: nextPokemon.uid,
-          level: nextPokemon.level,
-          _nonce: Date.now(),
-        },
+        __checkEvolutionQueue: [
+          {
+            pokemonUid: nextPokemon.uid,
+            level: nextPokemon.level,
+            pokemonId: nextPokemon.pokemonId,
+          },
+        ],
+        __checkMoveLearnQueue: [
+          {
+            pokemonUid: nextPokemon.uid,
+            level: nextPokemon.level,
+          },
+        ],
       };
     }
 

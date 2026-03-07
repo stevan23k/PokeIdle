@@ -50,6 +50,7 @@ import {
 import { canMegaEvolveSync } from "../../../lib/mega.service";
 
 export function useEngineTick() {
+  // console.log("[useEngineTick] Hook active");
   const { run, setRun, setMeta, notify } = useGame();
   const fetchingRef = useRef(false);
   const turnStateRef = useRef<string>("idle");
@@ -1327,46 +1328,57 @@ export function useEngineTick() {
                 expShareCount,
               );
 
-              let currentActive = updatedTeam.find(
-                (p) => p.uid === bState.playerPokemon.uid,
-              );
-              if (currentActive) {
-                currentActive.xp += xpGain;
-                pushLog(`¡${currentActive.name} ganó ${xpGain} PV!`, "level");
+              nextState.team = updatedTeam.map((p) => {
+                let current = { ...p };
+                const isActive = p.uid === bState.playerPokemon.uid;
+
+                if (isActive) {
+                  current.xp += xpGain;
+                  pushLog(`¡${current.name} ganó ${xpGain} PV!`, "level");
+                }
 
                 while (
-                  currentActive.xp >= xpToNextLevel(currentActive.level) &&
-                  currentActive.level < 100
+                  current.xp >= xpToNextLevel(current.level) &&
+                  current.level < 100
                 ) {
-                  currentActive = levelUpPokemon(currentActive);
+                  current = levelUpPokemon(current);
                   pushLog(
-                    `¡${currentActive.name} subió al nivel ${currentActive.level}!`,
+                    `¡${current.name} subió al nivel ${current.level}!`,
                     "level",
                   );
+                  // console.log(`[IntermediateGym] ${current.name} leveled up to ${current.level}`);
 
                   // Queue move learning
-                  const learnQueue = (nextState as any).__checkMoveLearnQueue || [];
+                  const learnQueue =
+                    (nextState as any).__checkMoveLearnQueue || [];
+                  // console.log(`[IntermediateGym] Queuing move learn for ${current.name}`);
                   (nextState as any).__checkMoveLearnQueue = [
                     ...learnQueue,
                     {
-                      pokemonUid: currentActive.uid,
-                      level: currentActive.level,
+                      pokemonUid: current.uid,
+                      level: current.level,
                     },
                   ];
 
                   // Queue evolution check
-                  const evoQueue = (nextState as any).__checkEvolutionQueue || [];
+                  const evoQueue =
+                    (nextState as any).__checkEvolutionQueue || [];
+                  // console.log(`[IntermediateGym] Queuing evolution for ${current.name}`);
                   (nextState as any).__checkEvolutionQueue = [
                     ...evoQueue,
                     {
-                      pokemonUid: currentActive.uid,
-                      level: currentActive.level,
-                      pokemonId: currentActive.pokemonId,
+                      pokemonUid: current.uid,
+                      level: current.level,
+                      pokemonId: current.pokemonId,
                     },
                   ];
                 }
-              }
-              nextState.team = updatedTeam;
+                return current;
+              });
+
+              const currentActive = nextState.team.find(
+                (p) => p.uid === bState.playerPokemon.uid,
+              );
 
               // BUG FIX: processedAnimRef.current no se limpia en la transición de gym
               processedAnimRef.current = null;
@@ -1467,65 +1479,63 @@ export function useEngineTick() {
           const expShareCount = nextState.items["exp-share"] || 0;
           const { updatedTeam } = distributeTeamXP(
             nextState.team,
-            bState.playerPokemon.uid,
+          bState.playerPokemon.uid,
             xpGain,
             expShareCount,
           );
 
-          let currentActive = updatedTeam.find(
-            (p) => p.uid === bState.playerPokemon.uid,
-          );
-          let pendingLearnMove:
-            | import("../types/game.types").ActiveMove
-            | null = null;
-          let pendingEvoData:
-            | import("../types/game.types").EvolutionData
-            | null = null;
+          nextState.team = updatedTeam.map((p) => {
+            let current = { ...p };
+            const isActive = p.uid === bState.playerPokemon.uid;
 
-          if (currentActive) {
-            currentActive.xp += xpGain;
-            pushLog(`¡${currentActive.name} ganó ${xpGain} PV!`, "level");
+            // console.log(`[Tick] Checking Pokémon: ${current.name} (Active: ${isActive}), Initial XP: ${current.xp}`);
 
-            while (currentActive.xp >= xpToNextLevel(currentActive.level)) {
-              const prevLevel = currentActive.level;
-              const leveled = levelUpPokemon(currentActive);
+            if (isActive) {
+              current.xp += xpGain;
+              pushLog(`¡${current.name} ganó ${xpGain} PV!`, "level");
+              // console.log(`[Tick] ${current.name} gained ${xpGain} XP. New XP: ${current.xp}`);
+            }
+
+            // Check level up for anyone who gained XP
+            while (
+              current.xp >= xpToNextLevel(current.level) &&
+              current.level < 100
+            ) {
+              const leveled = levelUpPokemon(current);
               pushLog(
                 `¡${leveled.name} subió al nivel ${leveled.level}!`,
                 "level",
               );
-              currentActive = leveled;
+              current = leveled;
+              // console.log(`[Tick] ${current.name} leveled up to ${current.level}. Required XP for next: ${xpToNextLevel(current.level)}`);
 
-              // Queue move learning (async — handled after setRun via side effect)
-              // We store the level for post-battle async check
+              // Queue move learning
               if (!nextState.pendingMoveLearn) {
                 const learnQueue = (nextState as any).__checkMoveLearnQueue || [];
+                // console.log(`[Tick] Queuing move learn check for ${current.name} at level ${current.level}`);
                 (nextState as any).__checkMoveLearnQueue = [
                   ...learnQueue,
                   {
-                    pokemonUid: currentActive.uid,
-                    level: currentActive.level,
+                    pokemonUid: current.uid,
+                    level: current.level,
                   },
                 ];
               }
 
-              // Queue evolution check
-              if (!pendingEvoData) {
-                const evoQueue = (nextState as any).__checkEvolutionQueue || [];
-                (nextState as any).__checkEvolutionQueue = [
-                  ...evoQueue,
-                  {
-                    pokemonUid: currentActive.uid,
-                    level: currentActive.level,
-                    pokemonId: currentActive.pokemonId,
-                  },
-                ];
-              }
+              // Queue evolution
+              const evoQueue = (nextState as any).__checkEvolutionQueue || [];
+              // console.log(`[Tick] Queuing evolution check for ${current.name} at level ${current.level}`);
+              (nextState as any).__checkEvolutionQueue = [
+                ...evoQueue,
+                {
+                  pokemonUid: current.uid,
+                  level: current.level,
+                  pokemonId: current.pokemonId,
+                },
+              ];
             }
-          }
-
-          nextState.team = updatedTeam.map((p) =>
-            p.uid === currentActive?.uid ? currentActive : p,
-          );
+            return current;
+          });
 
           // Generate Loot
           nextState.pendingLootSelection = generateLootOptions([], {
@@ -1823,31 +1833,43 @@ export function useEngineTick() {
 
   // ─── Async: Move Learn on Level Up ──────────────────────────────────────
   useEffect(() => {
-    const queue = (run as any).__checkMoveLearnQueue as {
-      pokemonUid: string;
-      level: number;
-    }[];
-    if (!queue || queue.length === 0) return;
+    const queue = (((run as any).__checkMoveLearnQueue || []) as any[]);
+    const legacyMarker = (run as any).__checkMoveLearnAt;
 
-    // Tomar el primer elemento de la cola
-    const [marker, ...rest] = queue;
+    if (queue.length === 0 && !legacyMarker) return;
+
+    // If already showing move learn modal, don't pop yet
+    if (run.pendingMoveLearn) return;
+
+    let marker: any;
+    let nextQueue: any[] = [];
+
+    if (legacyMarker) {
+      marker = legacyMarker;
+      nextQueue = queue;
+    } else {
+      const [m, ...rest] = queue;
+      marker = m;
+      nextQueue = rest;
+    }
 
     // Limpiar el que estamos procesando
     setRun((prev) => {
       const next = { ...prev };
-      if (rest.length === 0) {
+      delete (next as any).__checkMoveLearnAt;
+      if (nextQueue.length === 0) {
         delete (next as any).__checkMoveLearnQueue;
       } else {
-        (next as any).__checkMoveLearnQueue = rest;
+        (next as any).__checkMoveLearnQueue = nextQueue;
       }
       return next;
     });
 
-    const { pokemonUid, level } = marker;
+    const { pokemonUid, level, fromLevel } = marker;
     const pokemon = run.team.find((p) => p.uid === pokemonUid);
     if (!pokemon) return;
 
-    learnMovesOnLevelUp(pokemon, level).then((newMove) => {
+    learnMovesOnLevelUp(pokemon, level, fromLevel).then((newMove) => {
       if (!newMove) return;
       setRun((prev) => {
         // Already has a pending learn — don't overwrite, but keep newMove in mind?
@@ -1896,43 +1918,48 @@ export function useEngineTick() {
         };
       });
     });
-  }, [(run as any).__checkMoveLearnQueue]);
+  }, [
+    (run as any).__checkMoveLearnQueue,
+    (run as any).__checkMoveLearnAt,
+    run.pendingMoveLearn,
+  ]);
 
   // ─── Async: Evolution Check on Level Up ─────────────────────────────────
   useEffect(() => {
-    const queue = (run as any).__checkEvolutionQueue as {
-      pokemonUid: string;
-      level: number;
-      pokemonId: number;
-      toId?: number;
-      toName?: string;
-      reason?: string;
-    }[];
-    if (!queue || queue.length === 0) return;
+    const queue = (((run as any).__checkEvolutionQueue || []) as any[]);
+    const legacyMarker = (run as any).__checkEvolutionAt;
+
+    if (queue.length === 0 && !legacyMarker) return;
 
     // If already showing evolution modal, don't pop yet
     if (run.pendingEvolution) return;
 
-    const [marker, ...rest] = queue;
+    let marker: any;
+    let nextQueue: any[] = [];
 
-    setRun((prev) => {
-      const next = { ...prev };
-      if (rest.length === 0) {
-        delete (next as any).__checkEvolutionQueue;
-      } else {
-        (next as any).__checkEvolutionQueue = rest;
-      }
-      return next;
-    });
+    if (legacyMarker) {
+      marker = legacyMarker;
+      nextQueue = queue;
+    } else {
+      const [m, ...rest] = queue;
+      marker = m;
+      nextQueue = rest;
+    }
 
     const { pokemonUid, level, pokemonId, toId, toName } = marker;
-    console.log(
-      `[Evolution] Checking evolution for ${pokemonUid} (ID: ${pokemonId}) at level ${level}. Explicit Target: ${toName || "None"}`,
-    );
+
+    // console.log(
+    //   `[Evolution] Checking evolution for ${pokemonUid} (ID: ${pokemonId}) at level ${level}. Explicit Target: ${toName || "None"}`,
+    // );
 
     setRun((prev) => {
       const next = { ...prev };
       delete (next as any).__checkEvolutionAt;
+      if (nextQueue.length === 0) {
+        delete (next as any).__checkEvolutionQueue;
+      } else {
+        (next as any).__checkEvolutionQueue = nextQueue;
+      }
       return next;
     });
 
@@ -1953,9 +1980,9 @@ export function useEngineTick() {
 
         const node = findInChain(chain.chain);
         if (!node) {
-          console.log(
-            `[Evolution] Pokemon ${species.name} not found in evolution chain`,
-          );
+          // console.log(
+          //   `[Evolution] Pokemon ${species.name} not found in evolution chain`,
+          // );
           return;
         }
 
@@ -1985,27 +2012,28 @@ export function useEngineTick() {
         }
 
         if (node.evolves_to.length === 0) {
-          console.log(`[Evolution] ${species.name} has no further evolutions.`);
+          // console.log(`[Evolution] ${species.name} has no further evolutions.`);
           return;
         }
 
         for (const evo of node.evolves_to) {
-          const detail = evo.evolution_details.find(
-            (d: any) =>
-              d.trigger.name === "level-up" &&
-              (!d.min_level || d.min_level <= level),
-          );
+          const detail = evo.evolution_details.find((d: any) => {
+            const levelMatch = !d.min_level || d.min_level <= level;
+            const triggerMatch = d.trigger.name === "level-up";
+            const match = triggerMatch && levelMatch;
+            if (!match) {
+              // console.log(
+              //   `[Evolution] ${species.name} -> ${evo.species.name} detail not met or not level-up trigger`,
+              // );
+            }
+            return match;
+          });
 
-          if (!detail) {
-            console.log(
-              `[Evolution] ${species.name} -> ${evo.species.name} detail not met or not level-up trigger`,
-            );
-            continue;
-          }
+          if (!detail) continue;
 
-          console.log(
-            `[Evolution] Found valid evolution: ${species.name} -> ${evo.species.name}`,
-          );
+          // console.log(
+          //   `[Evolution] Found valid evolution: ${species.name} -> ${evo.species.name}`,
+          // );
 
           const parts = evo.species.url.split("/").filter(Boolean);
           const evoId = parseInt(parts[parts.length - 1]);
@@ -2015,17 +2043,17 @@ export function useEngineTick() {
 
           const fromPokemon = run.team.find((p) => p.uid === pokemonUid);
           if (!fromPokemon) {
-            console.log(
-              `[Evolution] Source pokemon ${pokemonUid} not found in team`,
-            );
+            // console.log(
+            //   `[Evolution] Source pokemon ${pokemonUid} not found in team`,
+            // );
             return;
           }
 
           setRun((prev) => {
             if (prev.pendingEvolution) return prev;
-            console.log(
-              `[Evolution] Setting pendingEvolution for ${fromPokemon.name} -> ${evoPokeRes.name}`,
-            );
+            // console.log(
+            //   `[Evolution] Setting pendingEvolution for ${fromPokemon.name} -> ${evoPokeRes.name}`,
+            // );
             return {
               ...prev,
               pendingEvolution: {
@@ -2042,12 +2070,16 @@ export function useEngineTick() {
           break;
         }
       } catch (e) {
-        console.error("[Evolution] Evolution check failed", e);
+        // console.error("[Evolution] Evolution check failed", e);
       }
     };
 
     checkEvolution();
-  }, [(run as any).__checkEvolutionQueue]);
+  }, [
+    (run as any).__checkEvolutionQueue,
+    (run as any).__checkEvolutionAt,
+    run.pendingEvolution,
+  ]);
 
   useEffect(() => {
     const marker = (run as any).__spawnNextGymPokemon;
