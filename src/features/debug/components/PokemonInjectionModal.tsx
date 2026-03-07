@@ -177,7 +177,7 @@ export function PokemonInjectionModal({ onClose }: PokemonInjectionModalProps) {
     <div
       className="fixed inset-0 flex flex-col items-center justify-center p-4 crt-screen"
       style={{
-        zIndex: 9999999,
+        zIndex: 2147483647,
         backgroundColor: "rgba(0,0,0,0.85)",
         backdropFilter: "blur(4px)",
       }}
