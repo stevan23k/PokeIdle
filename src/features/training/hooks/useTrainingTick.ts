@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useGame } from "../../../context/GameContext";
 import { useGameLoop } from "../../../features/run/hooks/useGameLoop";
 import {
@@ -24,6 +24,10 @@ import type { ActiveMove } from "../../../features/run/types/game.types";
 export function useTrainingTick() {
   const { training, setTraining, meta, setMeta } = useGame();
   const fetchingRef = useRef(false);
+  const moveLearnProcessingRef = useRef(false);
+  
+  const trainingRef = useRef(training);
+  useEffect(() => { trainingRef.current = training; }, [training]);
 
   const tick = async () => {
     if (
@@ -230,37 +234,24 @@ export function useTrainingTick() {
         pushLog(`¡${nextPokemon.name} ganó ${xpGained} XP!`, "normal");
 
         let leveledPokemon = { ...nextPokemon, xp: nextPokemon.xp + xpGained };
+        const moveTriggers: any[] = [];
+
         while (
           leveledPokemon.xp >= leveledPokemon.xpToNext &&
           leveledPokemon.level < 100
         ) {
+          const prevLevel = leveledPokemon.level;
           leveledPokemon = levelUpPokemon(leveledPokemon);
           pushLog(
             `¡${leveledPokemon.name} subió al nivel ${leveledPokemon.level}!`,
             "level",
           );
 
-          // Async move learning
-          const currentLvl = leveledPokemon.level;
-          learnMovesOnLevelUp(leveledPokemon, currentLvl).then((newMoves) => {
-            if (newMoves.length > 0) {
-              setTraining((prev) => {
-                let updatedMoves = [...prev.pokemon.moves];
-                for (const move of newMoves) {
-                  // Prevenir duplicados locales (aunque learnMovesOnLevelUp ya debería filtrarlos)
-                  if (!updatedMoves.some(m => m.moveId === move.moveId)) {
-                    updatedMoves.push(move);
-                    if (updatedMoves.length > 4) {
-                      updatedMoves.shift();
-                    }
-                  }
-                }
-                return {
-                  ...prev,
-                  pokemon: { ...prev.pokemon, moves: updatedMoves },
-                };
-              });
-            }
+          // Queue move learn marker
+          moveTriggers.push({
+            pokemonUid: leveledPokemon.uid,
+            level: leveledPokemon.level,
+            fromLevel: prevLevel + 1
           });
         }
 
@@ -283,6 +274,10 @@ export function useTrainingTick() {
           totalBattlesWon: state.totalBattlesWon + 1,
           battleLog: logs.slice(-40),
           pendingLootSelection: generateLootOptions(["ball"], { team: [leveledPokemon], pc: [] }),
+          __checkMoveLearnQueue: [
+            ...(state.__checkMoveLearnQueue || []),
+            ...moveTriggers
+          ]
         };
       }
 
@@ -306,9 +301,79 @@ export function useTrainingTick() {
     });
   };
 
+  // ─── Async: Move Learn Queue ───────────────────────────────────────
+  useEffect(() => {
+    const queue = training.__checkMoveLearnQueue || [];
+    if (queue.length === 0 || moveLearnProcessingRef.current) return;
+
+    // Pop marker
+    const [marker, ...rest] = queue;
+    moveLearnProcessingRef.current = true;
+
+    setTraining(prev => ({
+      ...prev,
+      __checkMoveLearnQueue: rest.length > 0 ? rest : undefined
+    }));
+
+    const { pokemonUid, level, fromLevel, _specificMoveId } = marker;
+    const pokemon = trainingRef.current.pokemon;
+
+    if (!pokemon || pokemon.uid !== pokemonUid) {
+      moveLearnProcessingRef.current = false;
+      return;
+    }
+
+    learnMovesOnLevelUp(pokemon, level, fromLevel ?? level, _specificMoveId).then((newMoves) => {
+      if (newMoves.length === 0) {
+        moveLearnProcessingRef.current = false;
+        return;
+      }
+
+      const firstMove = newMoves[0];
+      const remainingMoves = newMoves.slice(1);
+
+      setTraining(prev => {
+        if (!prev.pokemon || prev.pokemon.uid !== pokemonUid) return prev;
+        const p = { ...prev.pokemon };
+        const nextMoves = [...p.moves];
+
+        // Auto-learn for training (matches useEngineTick)
+        if (!nextMoves.some(m => m.moveId === firstMove.moveId)) {
+          if (nextMoves.length < 4) {
+            nextMoves.push(firstMove);
+          } else {
+            nextMoves[3] = firstMove;
+          }
+        }
+
+        return {
+          ...prev,
+          pokemon: { ...p, moves: nextMoves },
+          battleLog: [
+            ...prev.battleLog,
+            { id: generateUid(), text: `¡${p.name} aprendió ${firstMove.moveName}!`, type: "level" as any }
+          ].slice(-40),
+          __checkMoveLearnQueue: [
+            ...(prev.__checkMoveLearnQueue || []),
+            ...remainingMoves.map(m => ({
+              pokemonUid,
+              level,
+              fromLevel: level,
+              _specificMoveId: m.moveId
+            }))
+          ]
+        };
+      });
+      moveLearnProcessingRef.current = false;
+    }).catch(err => {
+      console.error("[TRAINING MOVE LEARN ERROR]", err);
+      moveLearnProcessingRef.current = false;
+    });
+  }, [training.__checkMoveLearnQueue]);
+
   useGameLoop(
     training.isActive && !training.pendingLootSelection,
-    training.currentBattle ? 1 : 4, // Tick faster when spawning next enemy
+    training.currentBattle ? 1 : 4,
     tick,
   );
 }

@@ -13,4 +13,15 @@ export interface TrainingState {
   totalBattlesWon: number;
   pendingLootSelection: string[] | null;
   items: Record<string, number>; // items collected in CURRENT session
+  __checkMoveLearnQueue?: {
+    pokemonUid: string;
+    level: number;
+    fromLevel?: number;
+    _specificMoveId?: number;
+  }[];
+  __checkEvolutionQueue?: {
+    pokemonUid: string;
+    level: number;
+    pokemonId: number;
+  }[];
 }

@@ -222,6 +222,13 @@ export function StarterSelector() {
         starterId: pendingStarterId,
         starterName: pokemon.name,
         team: [pokemon],
+        __checkMoveLearnQueue: [
+          {
+            pokemonUid: pokemon.uid,
+            level: pokemon.level,
+            fromLevel: 1,
+          },
+        ],
         autoCapture: config.autoCapture,
         autoItems: config.autoItems,
         autoLoot: !config.isManualBattle,

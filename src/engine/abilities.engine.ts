@@ -13,8 +13,8 @@ export function handleStanceChange(
   pokemon: ActivePokemon,
   move: ActiveMove,
 ): { updatedPokemon: ActivePokemon; log?: string } {
-  // Aegislash IDs: 681 (Shield), 10034 (Blade)
-  const isAegislash = pokemon.pokemonId === 681 || pokemon.pokemonId === 10034;
+  // Aegislash IDs: 681 (Shield), 10026 (Blade)
+  const isAegislash = pokemon.pokemonId === 681 || pokemon.pokemonId === 10026;
   if (!isAegislash) return { updatedPokemon: pokemon };
 
   const isKingsShield = move.moveId === 588;
@@ -26,8 +26,8 @@ export function handleStanceChange(
   if (isKingsShield && pokemon.pokemonId !== 681) {
     targetId = 681;
     formSuffix = "Escudo";
-  } else if (isAttack && pokemon.pokemonId !== 10034) {
-    targetId = 10034;
+  } else if (isAttack && pokemon.pokemonId !== 10026) {
+    targetId = 10026;
     formSuffix = "Filo";
   }
 

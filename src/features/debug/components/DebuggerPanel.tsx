@@ -233,11 +233,29 @@ export function DebuggerPanel() {
       oldLevel = pokemon.level;
       lastLevel = pokemon.level;
 
+      const moveTriggers: any[] = [];
+      const evoTriggers: any[] = [];
+
       for (let i = 0; i < times; i++) {
         if (pokemon.level >= 100) break;
         pokemon = { ...pokemon, xp: xpToNextLevel(pokemon.level) };
         pokemon = levelUpPokemon(pokemon);
         lastLevel = pokemon.level;
+      }
+
+      if (lastLevel > oldLevel) {
+        // Un solo marker con el rango completo
+        moveTriggers.push({
+          pokemonUid: uid,
+          level: lastLevel,
+          fromLevel: oldLevel + 1,
+        });
+
+        evoTriggers.push({
+          pokemonUid: uid,
+          level: lastLevel,
+          pokemonId: pokemon.pokemonId,
+        });
       }
 
       leveledPokemon = pokemon;
@@ -270,20 +288,12 @@ export function DebuggerPanel() {
       // Add to queues
       (next as any).__checkMoveLearnQueue = [
         ...((next as any).__checkMoveLearnQueue || []),
-        {
-          pokemonUid: uid,
-          level: lastLevel,
-          fromLevel: oldLevel,
-        }
+        ...moveTriggers,
       ];
 
       (next as any).__checkEvolutionQueue = [
         ...((next as any).__checkEvolutionQueue || []),
-        {
-          pokemonUid: uid,
-          level: lastLevel,
-          pokemonId: pokemon.pokemonId,
-        }
+        ...evoTriggers,
       ];
 
       return next;

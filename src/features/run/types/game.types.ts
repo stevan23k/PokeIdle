@@ -58,6 +58,7 @@ export interface ActiveMove {
     stat: "atk" | "def" | "spa" | "spd" | "spe" | "crit";
     stages: number;
   }[];
+  description?: string;
 }
 
 export interface ActivePokemon {
@@ -274,4 +275,15 @@ export interface RunState {
   _eliteFourTransition?: boolean;
   pinnedItems: string[]; // slug
   inheritanceProgress: Record<number, InheritanceProgress>;
+  __checkMoveLearnQueue?: {
+    pokemonUid: string;
+    level: number;
+    fromLevel?: number;
+    _specificMoveId?: number;
+  }[];
+  __checkEvolutionQueue?: {
+    pokemonUid: string;
+    level: number;
+    pokemonId: number;
+  }[];
 }

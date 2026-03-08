@@ -149,6 +149,7 @@ export async function getPokemonData(
               }
             : undefined,
           selfBoost: COMMON_SELF_BOOSTS[md.move_id] as any,
+          description: md.description_es ?? undefined,
         });
       }
 
@@ -271,7 +272,6 @@ export async function getPokemonData(
       if ((md.power && md.power > 0) || (COMMON_SELF_BOOSTS[md.id])) {
         const spanText =
           md.names.find((n: any) => n.language.name === "es")?.name || md.name;
-
         let statusEffect = undefined;
         if (md.meta && md.meta.ailment && md.meta.ailment.name !== "none") {
           const condition = mapAilment(md.meta.ailment.name);
@@ -282,13 +282,24 @@ export async function getPokemonData(
             };
           }
         }
-
+ 
+        // Extraer descripción — preferir español, caer a inglés
+        const flavorEntries: any[] = md.flavor_text_entries ?? [];
+        const descEs = flavorEntries.find((f: any) => f.language.name === "es")
+          ?.flavor_text ?? null;
+        const descEn = flavorEntries.find((f: any) => f.language.name === "en")
+          ?.flavor_text ?? null;
+        const description = (descEs ?? descEn ?? null)
+          ?.replace(/\n|\f/g, " ")
+          .replace(/\s+/g, " ")
+          .trim() ?? undefined;
+ 
         activeMoves.push({
           moveId: md.id,
           moveName: spanText,
           type: md.type.name,
-          category: md.damage_class.name,
-          power: md.power,
+          category: md.damage_class.name as any,
+          power: md.power ?? 0,
           accuracy: md.accuracy || 100,
           currentPP: md.pp || 10,
           maxPP: md.pp || 10,
@@ -296,6 +307,7 @@ export async function getPokemonData(
           enabled: true,
           statusEffect,
           selfBoost: COMMON_SELF_BOOSTS[md.id] as any,
+          description,
         });
       }
     } catch (e) {
@@ -460,8 +472,47 @@ export async function learnMovesOnLevelUp(
   pokemon: import("../types/game.types").ActivePokemon,
   newLevel: number,
   fromLevel?: number, // if passed, checks all moves in the range (fromLevel, newLevel]
+  specificMoveId?: number, // if passed, only returns this specific move if valid
 ): Promise<import("../types/game.types").ActiveMove[]> {
   try {
+    if (specificMoveId) {
+      const { data: md } = await supabase
+        .from("move_cache")
+        .select("*")
+        .eq("move_id", specificMoveId)
+        .maybeSingle();
+
+      if (md) {
+        // Safety: check if already learned
+        if (pokemon.moves.some(m => m.moveId === md.move_id)) {
+          return [];
+        }
+
+        return [
+          {
+            moveId: md.move_id,
+            moveName: md.name_es,
+            type: md.type,
+            category: md.category as any,
+            power: md.power ?? 0,
+            accuracy: md.accuracy ?? 100,
+            currentPP: md.pp,
+            maxPP: md.pp,
+            priority: md.priority ?? 0,
+            enabled: true,
+            statusEffect: md.ailment
+              ? {
+                  condition: md.ailment as any,
+                  chance: md.ailment_chance ?? 100,
+                }
+              : undefined,
+            selfBoost: COMMON_SELF_BOOSTS[md.move_id] as any,
+            description: md.description_es ?? undefined,
+          },
+        ];
+      }
+      return [];
+    }
     // Fast path: usar pokemon_cache para encontrar el movimiento del nivel
     const { data: cachedPokemon } = await supabase
       .from("pokemon_cache")
@@ -476,13 +527,12 @@ export async function learnMovesOnLevelUp(
       )
         .filter((m) => {
           const minLevel = fromLevel ?? 1;
-          // Si es evolución (fromLevel 1), incluimos nivel 1.
-          // Si es level up normal, excluimos el nivel de partida (minLevel).
-          return minLevel === 1 
-            ? m.level >= 1 && m.level <= newLevel
-            : m.level > minLevel && m.level <= newLevel;
+          // Volvemos a ser inclusivos para evitar saltarnos ataques por error de cálculo
+          return m.level >= minLevel && m.level <= newLevel;
         })
         .sort((a, b) => b.level - a.level);
+
+      console.log(`[LEARN MOVES] pokemon=${pokemon.name} range=[${fromLevel ?? 1}, ${newLevel}] matches=${matches.length}`);
 
       const foundMoves: import("../types/game.types").ActiveMove[] = [];
 
@@ -492,18 +542,18 @@ export async function learnMovesOnLevelUp(
         if (foundMoves.some((m) => m.moveId === match.moveId)) continue;
 
         const { data: md } = await supabase
-          .from("moves")
+          .from("move_cache")
           .select("*")
-          .eq("id", match.moveId)
+          .eq("move_id", match.moveId)
           .maybeSingle();
 
         if (md) {
           foundMoves.push({
-            moveId: md.id,
-            moveName: md.name,
+            moveId: md.move_id,
+            moveName: md.name_es,
             type: md.type,
             category: md.category as any,
-            power: md.power,
+            power: md.power ?? 0,
             accuracy: md.accuracy ?? 100,
             currentPP: md.pp,
             maxPP: md.pp,
@@ -515,7 +565,8 @@ export async function learnMovesOnLevelUp(
                   chance: md.ailment_chance ?? 100,
                 }
               : undefined,
-            selfBoost: COMMON_SELF_BOOSTS[md.id] as any,
+            selfBoost: COMMON_SELF_BOOSTS[md.move_id] as any,
+            description: md.description_es ?? undefined,
           });
         }
       }
@@ -531,13 +582,12 @@ export async function learnMovesOnLevelUp(
         const learnLevel = v.level_learned_at;
         const methodMatch = v.move_learn_method.name === "level-up";
         const minLevel = fromLevel ?? 1;
-        const levelMatch =
-          minLevel === 1 
-            ? learnLevel >= 1 && learnLevel <= newLevel
-            : learnLevel > minLevel && learnLevel <= newLevel;
+        const levelMatch = learnLevel >= minLevel && learnLevel <= newLevel;
         return methodMatch && levelMatch;
       }),
     );
+
+    console.log(`[LEARN MOVES POKEAPI] pokemon=${pokemon.name} range=[${fromLevel ?? 1}, ${newLevel}] candidates=${newMoveCandidates.length}`);
 
     if (newMoveCandidates.length === 0) return [];
 
@@ -564,12 +614,23 @@ export async function learnMovesOnLevelUp(
         }
       }
 
+      // Extraer descripción — preferir español, caer a inglés
+      const flavorEntries: any[] = md.flavor_text_entries ?? [];
+      const descEs = flavorEntries.find((f: any) => f.language.name === "es")
+        ?.flavor_text ?? null;
+      const descEn = flavorEntries.find((f: any) => f.language.name === "en")
+        ?.flavor_text ?? null;
+      const description = (descEs ?? descEn ?? null)
+        ?.replace(/\n|\f/g, " ")
+        .replace(/\s+/g, " ")
+        .trim() ?? undefined;
+
       foundMoves.push({
         moveId: md.id,
         moveName,
         type: md.type.name,
         category: md.damage_class.name as any,
-        power: md.power,
+        power: md.power ?? 0,
         accuracy: md.accuracy || 100,
         currentPP: md.pp || 10,
         maxPP: md.pp || 10,
@@ -577,6 +638,7 @@ export async function learnMovesOnLevelUp(
         enabled: true,
         statusEffect,
         selfBoost: COMMON_SELF_BOOSTS[md.id] as any,
+        description,
       });
     }
 
@@ -643,6 +705,7 @@ export async function getMissingMoves(
           ? { condition: md.ailment as any, chance: md.ailment_chance ?? 100 }
           : undefined,
         selfBoost: COMMON_SELF_BOOSTS[md.move_id] as any,
+        description: md.description_es ?? undefined,
       });
     }
 

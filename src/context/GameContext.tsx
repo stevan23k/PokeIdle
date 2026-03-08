@@ -89,6 +89,8 @@ const defaultTrainingState: TrainingState = {
   totalBattlesWon: 0,
   pendingLootSelection: null,
   items: {},
+  __checkMoveLearnQueue: [],
+  __checkEvolutionQueue: [],
 };
 
 const defaultMeta: MetaState = {

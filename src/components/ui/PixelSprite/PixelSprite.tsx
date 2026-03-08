@@ -48,12 +48,19 @@ export function PixelSprite({
 
   // Reset state whenever the Pokémon or variant changes
   const prevKey = useRef(`${pokemonId}-${variant}-${shiny}`);
+  const prevUrl = useRef<string | null>(null);
   const currentKey = `${pokemonId}-${variant}-${shiny}`;
+
   if (prevKey.current !== currentKey) {
     prevKey.current = currentKey;
     setStage(0);
     setHasFailed(false);
-    setLoaded(false);
+    // Si la URL no cambia (mismo sprite por override), no resetear loaded
+    // para evitar parpadeo cuando la imagen está cacheada
+    if (prevUrl.current !== primaryUrl) {
+      setLoaded(false);
+    }
+    prevUrl.current = primaryUrl;
   }
 
   const getSrc = () => {
@@ -112,6 +119,7 @@ export function PixelSprite({
           alt={alt ?? `Pokémon #${pokemonId}`}
           onLoad={() => {
             setLoaded(true);
+            prevUrl.current = src ?? null;
             onLoad?.();
           }}
           onError={handleError}

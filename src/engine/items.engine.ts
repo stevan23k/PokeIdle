@@ -271,7 +271,7 @@ export async function useItemOnPokemon(
     applied = true;
     resultMsg = `¡${nextPokemon.name} subió al nivel ${nextPokemon.level}!`;
     // console.log(`[RARE CANDY] New Level: ${nextPokemon.level}. Applied: ${applied}`);
-    (nextPokemon as any).__rareCandyFromLevel = oldLevel;
+    (nextPokemon as any).__rareCandyFromLevel = oldLevel + 1;
   } else if (itemDef.category === "evo") {
     // Evolution logic
     try {
@@ -418,6 +418,17 @@ export async function useItemOnPokemon(
           };
       }
 
+      // Extraer descripción — preferir español, caer a inglés
+      const flavorEntries: any[] = md.flavor_text_entries ?? [];
+      const descEs = flavorEntries.find((f: any) => f.language.name === "es")
+        ?.flavor_text ?? null;
+      const descEn = flavorEntries.find((f: any) => f.language.name === "en")
+        ?.flavor_text ?? null;
+      const description = (descEs ?? descEn ?? null)
+        ?.replace(/\n|\f/g, " ")
+        .replace(/\s+/g, " ")
+        .trim() ?? undefined;
+
       const newMove: import("../features/run/types/game.types").ActiveMove = {
         moveId: md.id,
         moveName: spanName,
@@ -431,6 +442,7 @@ export async function useItemOnPokemon(
         enabled: true,
         statusEffect,
         selfBoost: COMMON_SELF_BOOSTS[md.id] as any,
+        description,
       };
 
       const nextInv = { ...inventory, [itemId]: (inventory[itemId] || 0) - 1 };

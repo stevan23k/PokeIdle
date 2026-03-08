@@ -59,7 +59,14 @@ import { canMegaEvolveSync } from "../../../lib/mega.service";
 
 export function useEngineTick() {
   // console.log("[useEngineTick] Hook active");
-  const { run, setRun, setMeta, notify } = useGame();
+  const { run, setRun, training, setTraining, setMeta, notify } = useGame();
+  
+  // Protective refs to always have the freshest data in async callbacks
+  const teamRef = useRef(run.team);
+  const trainingRef = useRef(training);
+
+  useEffect(() => { teamRef.current = run.team; }, [run.team]);
+  useEffect(() => { trainingRef.current = training; }, [training]);
   const fetchingRef = useRef(false);
   const turnStateRef = useRef<string>("idle");
   const processedAnimRef = useRef<string | null>(null);
@@ -68,11 +75,12 @@ export function useEngineTick() {
   const [regionGyms, setRegionGyms] = useState<GymDefinition[]>([]);
   const [regionEliteFour, setRegionEliteFour] = useState<EliteFourDefinition | null>(null);
 
+  // Keep turnStateRef in sync with battle state
   useEffect(() => {
-    getZonesForRegion(run.currentRegion).then(setRegionZones);
-    getGymsForRegion(run.currentRegion).then(setRegionGyms);
-    getEliteFourForRegion(run.currentRegion).then(setRegionEliteFour);
-  }, [run.currentRegion]);
+    if (run.currentBattle?.turnState) {
+      turnStateRef.current = run.currentBattle.turnState;
+    }
+  }, [run.currentBattle?.turnState]);
 
   const tick = async () => {
     if (
@@ -263,7 +271,7 @@ export function useEngineTick() {
             return;
           }
 
-          const requiredBattles = currentZone.trainerCount || 3;
+          const requiredBattles = currentZone.isGym ? (currentZone.trainerCount ?? 0) : (currentZone.trainerCount || 3);
           const isBossTime = run.zoneBattlesWon >= requiredBattles;
           let enemy;
           let isBoss = false;
@@ -272,32 +280,32 @@ export function useEngineTick() {
             | undefined = undefined;
           let battleType: "wild" | "gym" = "wild";
           let gymForBattle: GymDefinition | null = null;
-
+ 
           if (isBossTime) {
             const teamMaxLevel = Math.max(...run.team.map((p) => p.level), 5);
-
+ 
             // ── GYM ZONE ──────────────────────────────────────────────────────────
             if (currentZone.isGym && currentZone.gymId != null) {
               const gym =
                 regionGyms.find((g) => g.id === currentZone.gymId) ?? null;
-
+ 
               if (gym) {
                 gymForBattle = gym;
                 battleType = "gym";
                 activeMechanic =
                   gym.mechanic as import("../types/game.types").GymMechanic;
-
+ 
                 // Sequential spawning starts with the first Pokémon (index 0)
                 // The Ace is the last one in the team array.
                 const spawnSlot = gym.pokemon[0];
                 const spawnLevel = Math.max(spawnSlot.level, teamMaxLevel);
-
+ 
                 let baseEnemy = await getPokemonData(
                   spawnSlot.pokemonId,
                   spawnLevel,
                   false,
                 );
-
+ 
                 const teamAverageBst = calculateTeamBST(run.team);
                 const multiplier = getBossMultiplier(
                   teamAverageBst,
@@ -315,6 +323,11 @@ export function useEngineTick() {
             } else {
               // ── ROUTE BOSS ────────────────────────────────────────────────────────
               const encounter = getWildEncounter(currentZone);
+              if (!encounter) {
+                console.warn("[useEngineTick] No encounter available for boss fallback");
+                fetchingRef.current = false;
+                return;
+              }
               let baseEnemy = await getPokemonData(
                 encounter.pokemonId,
                 teamMaxLevel + 1,
@@ -331,6 +344,11 @@ export function useEngineTick() {
           } else {
             // ── WILD ENCOUNTER ────────────────────────────────────────────────────
             const encounter = getWildEncounter(currentZone);
+            if (!encounter) {
+              console.warn("[useEngineTick] No encounters allowed for zone:", currentZone.id);
+              fetchingRef.current = false;
+              return;
+            }
             const level =
               Math.floor(
                 Math.random() * (encounter.maxLevel - encounter.minLevel + 1),
@@ -351,7 +369,7 @@ export function useEngineTick() {
               currentZoneProgress: 0,
               currentBattle: {
                 type: battleType,
-                phase: "active",
+                phase: battleType === "gym" ? "intro" : "active",
                 turnState: "idle",
                 playerPokemon: activePlayer!,
                 enemyPokemon: enemy,
@@ -524,10 +542,14 @@ export function useEngineTick() {
     // --- ACTIVE BATTLE ---
     // We do functional state update to ensure latest state
     setRun((state) => {
-      // Guard against stale state reads during animation
+      if (!state.currentBattle) return state;
+
+      // Guard against stale state reads during animation or if state already advanced sychronously
       if (
-        turnStateRef.current === "animating" &&
-        state.currentBattle?.turnState === "animating"
+        (turnStateRef.current === "animating" &&
+          state.currentBattle?.turnState === "animating") ||
+        (turnStateRef.current !== state.currentBattle.turnState &&
+          state.currentBattle.turnState === "turn_start")
       ) {
         return state;
       }
@@ -1334,11 +1356,15 @@ export function useEngineTick() {
                 const pMoveIdx = attacker.moves.findIndex(
                   (m: any) => m.moveId === resolvedMove.moveId,
                 );
-                if (pMoveIdx >= 0) {
+                
+                // Add a more robust check to ensure we only deduct PP once per turn count
+                const ppDeductionKey = `pp-${bState.turnCount}-${resolvedMove.moveId}`;
+                if (pMoveIdx >= 0 && processedAnimRef.current !== ppDeductionKey) {
                   attacker.moves[pMoveIdx].currentPP = Math.max(
                     0,
                     attacker.moves[pMoveIdx].currentPP - 1,
                   );
+                  processedAnimRef.current = ppDeductionKey;
                 }
               }
 
@@ -1751,6 +1777,7 @@ export function useEngineTick() {
                   {
                     pokemonUid: current.uid,
                     level: current.level,
+                    fromLevel: current.level,
                   },
                 ];
               }
@@ -2064,6 +2091,9 @@ export function useEngineTick() {
     });
   };
 
+  // Guard for move learn processing to avoid race conditions
+  const moveLearnProcessingRef = useRef(false);
+
   // ─── Async: Move Learn on Level Up ──────────────────────────────────────
   useEffect(() => {
     const queue = (((run as any).__checkMoveLearnQueue || []) as any[]);
@@ -2071,8 +2101,8 @@ export function useEngineTick() {
 
     if (queue.length === 0 && !legacyMarker) return;
 
-    // If already showing move learn modal, don't pop yet
-    if (run.pendingMoveLearn) return;
+    // If already showing move learn modal, or already fetching one, don't pop yet
+    if (run.pendingMoveLearn || moveLearnProcessingRef.current) return;
 
     let marker: any;
     let nextQueue: any[] = [];
@@ -2086,6 +2116,8 @@ export function useEngineTick() {
       nextQueue = rest;
     }
 
+    moveLearnProcessingRef.current = true;
+
     // Limpiar el que estamos procesando
     setRun((prev) => {
       const next = { ...prev };
@@ -2098,83 +2130,155 @@ export function useEngineTick() {
       return next;
     });
 
-    const { pokemonUid, level, fromLevel } = marker;
-    const pokemon = run.team.find((p) => p.uid === pokemonUid);
-    if (!pokemon) return;
+    const { pokemonUid, level, fromLevel, _specificMoveId } = marker;
+    
+    // Find pokemon using refs for fresh state
+    const pokemon = teamRef.current.find((p) => p.uid === pokemonUid) 
+      ?? (trainingRef.current?.pokemon?.uid === pokemonUid ? trainingRef.current.pokemon : null);
 
-    learnMovesOnLevelUp(pokemon, level, fromLevel ?? level).then((newMoves) => {
-      if (newMoves.length === 0) return;
+    if (!pokemon) {
+      moveLearnProcessingRef.current = false;
+      return;
+    }
 
-      setRun((prev) => {
-        const pIndex = prev.team.findIndex((t) => t.uid === pokemonUid);
-        if (pIndex === -1) return prev;
+    // Use specificMoveId if present, otherwise search range
+    learnMovesOnLevelUp(pokemon, level, fromLevel ?? level, _specificMoveId).then((newMoves) => {
+      if (newMoves.length === 0) {
+        moveLearnProcessingRef.current = false;
+        return;
+      }
 
-        let currentPokemon = prev.team[pIndex];
-        let nextBattle = prev.currentBattle;
-        const newLogs = [...prev.battleLog];
-        const movesToAsk: any[] = [];
+      const firstMove = newMoves[0];
+      const remainingMoves = newMoves.slice(1);
 
-        for (const move of newMoves) {
-          if (currentPokemon.moves.length < 4) {
-            currentPokemon = {
-              ...currentPokemon,
-              moves: [...currentPokemon.moves, move],
-            };
-            newLogs.push({
-              id: generateUid(),
-              text: `¡${currentPokemon.name} aprendió ${move.moveName}!`,
-              type: "level" as const,
-            });
-          } else {
-            movesToAsk.push({
-              pokemonUid,
-              pokemonName: currentPokemon.name,
-              newMove: move,
-            });
-          }
-        }
-
-        // Update team
-        const nextTeam = prev.team.map((t) =>
-          t.uid === pokemonUid ? currentPokemon : t,
-        );
-
-        // Update battle if active
-        if (nextBattle && nextBattle.playerPokemon.uid === pokemonUid) {
-          nextBattle = {
-            ...nextBattle,
-            playerPokemon: currentPokemon,
-          };
-        }
-
-        const nextState = {
-          ...prev,
-          team: nextTeam,
-          currentBattle: nextBattle,
-          battleLog: newLogs.slice(-40),
-        };
-
-        if (movesToAsk.length > 0) {
-          if (nextState.pendingMoveLearn) {
-            // Already showing one, add ALL these to the queue
-            nextState.pendingMoveLearnQueue = [
-              ...(nextState.pendingMoveLearnQueue || []),
-              ...movesToAsk,
-            ];
-          } else {
-            // Show the first one, queue the rest
-            nextState.pendingMoveLearn = movesToAsk[0];
-            if (movesToAsk.length > 1) {
-              nextState.pendingMoveLearnQueue = [
-                ...(nextState.pendingMoveLearnQueue || []),
-                ...movesToAsk.slice(1),
-              ];
+      // --- TRAINING MODE AUTO-LEARN ---
+      if (trainingRef.current?.isActive && trainingRef.current.pokemon?.uid === pokemonUid) {
+        setTraining(prev => {
+          if (!prev.pokemon || prev.pokemon.uid !== pokemonUid) return prev;
+          const p = { ...prev.pokemon };
+          const nextMoves = [...p.moves];
+          
+          if (!nextMoves.some(m => m.moveId === firstMove.moveId)) {
+            if (nextMoves.length < 4) {
+              nextMoves.push(firstMove);
+            } else {
+              // Replace last move silently in training if no modal is available/desired
+              // or the player is busy battling.
+              nextMoves[3] = firstMove;
             }
           }
+          
+          return {
+            ...prev,
+            pokemon: { ...p, moves: nextMoves },
+            battleLog: [
+              ...prev.battleLog,
+              { id: generateUid(), text: `¡${p.name} aprendió ${firstMove.moveName}!`, type: "level" as any }
+            ].slice(-40)
+          };
+        });
+
+        // Re-queue remaining moves if any
+        if (remainingMoves.length > 0) {
+          setRun(prev => ({
+            ...prev,
+            __checkMoveLearnQueue: [
+              ...((prev as any).__checkMoveLearnQueue || []),
+              ...remainingMoves.map(m => ({
+                pokemonUid,
+                level,
+                fromLevel: level,
+                _specificMoveId: m.moveId
+              }))
+            ]
+          }));
         }
 
-        return nextState;
+        moveLearnProcessingRef.current = false;
+        return;
+      }
+
+      // --- RUN MODE (Team) ---
+      setRun((prev) => {
+        const pIndex = prev.team.findIndex((t) => t.uid === pokemonUid);
+        if (pIndex === -1) {
+          moveLearnProcessingRef.current = false;
+          return prev;
+        }
+
+        let currentPokemon = { ...prev.team[pIndex] };
+        let nextBattle = prev.currentBattle;
+        const newLogs = [...prev.battleLog];
+
+        if (currentPokemon.moves.length < 4) {
+          // Direct learn if space
+          if (!currentPokemon.moves.some(m => m.moveId === firstMove.moveId)) {
+            currentPokemon.moves = [...currentPokemon.moves, firstMove];
+            newLogs.push({
+              id: generateUid(),
+              text: `¡${currentPokemon.name} aprendió ${firstMove.moveName}!`,
+              type: "level" as const,
+            });
+          }
+
+          // If there are more moves, re-queue them so they process one by one
+          const nextState: any = {
+            ...prev,
+            team: prev.team.map((t) => t.uid === pokemonUid ? currentPokemon : t),
+            battleLog: newLogs.slice(-40),
+          };
+
+          if (nextBattle && nextBattle.playerPokemon.uid === pokemonUid) {
+            nextState.currentBattle = { ...nextBattle, playerPokemon: currentPokemon };
+          } else {
+            nextState.currentBattle = nextBattle;
+          }
+
+          if (remainingMoves.length > 0) {
+            nextState.__checkMoveLearnQueue = [
+              ...((prev as any).__checkMoveLearnQueue || []),
+              ...remainingMoves.map(m => ({
+                pokemonUid,
+                level,
+                fromLevel: level,
+                _specificMoveId: m.moveId
+              }))
+            ];
+          }
+
+          moveLearnProcessingRef.current = false;
+          return nextState;
+        } else {
+          // Modal required
+          const nextState: any = {
+            ...prev,
+            pendingMoveLearn: {
+              pokemonUid,
+              pokemonName: currentPokemon.name,
+              newMove: firstMove,
+            }
+          };
+
+          // Re-queue remaining moves
+          if (remainingMoves.length > 0) {
+            nextState.__checkMoveLearnQueue = [
+              ...((prev as any).__checkMoveLearnQueue || []),
+              ...remainingMoves.map(m => ({
+                pokemonUid,
+                level,
+                fromLevel: level,
+                _specificMoveId: m.moveId
+              }))
+            ];
+          }
+
+          moveLearnProcessingRef.current = false;
+          return nextState;
+        }
       });
+    }).catch(err => {
+      console.error("[MOVE LEARN ERROR]", err);
+      moveLearnProcessingRef.current = false;
     });
   }, [
     (run as any).__checkMoveLearnQueue,

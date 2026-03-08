@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import { useGame } from "../../../context/GameContext";
 import { ITEMS } from "../../../lib/items";
 import type { ActiveMove } from "../types/game.types";
@@ -28,8 +29,85 @@ const TYPE_COLORS: Record<string, string> = {
   fairy: "#EE99AC",
 };
 
+function MovePopover({ move }: { move: ActiveMove }) {
+  const CATEGORY_LABEL: Record<string, string> = {
+    physical: "Físico",
+    special: "Especial",
+    status: "Estado",
+  };
+
+  const CATEGORY_COLOR: Record<string, string> = {
+    physical: "text-orange-400",
+    special: "text-blue-400",
+    status: "text-gray-400",
+  };
+
+  return (
+    <div className="bg-surface-dark border-2 border-border shadow-[4px_4px_0_rgba(0,0,0,0.8)] p-3 w-56 flex flex-col gap-2 backdrop-blur-sm animate-in fade-in duration-150 relative">
+      <div className="flex justify-between items-start gap-2">
+        <span className="font-display text-[0.75rem] text-white tracking-widest uppercase truncate font-bold">
+          {move.moveName}
+        </span>
+        <span className={clsx(
+          "font-display text-[0.55rem] tracking-tight whitespace-nowrap",
+          CATEGORY_COLOR[move.category] ?? "text-gray-400"
+        )}>
+          {CATEGORY_LABEL[move.category] ?? move.category}
+        </span>
+      </div>
+
+      <div className="border-t border-border/40 pt-2 flex flex-col gap-1.5">
+        <div className="flex items-center justify-between">
+          <TypeBadge type={move.type} showLabel size="sm" />
+          <div className="flex gap-2 items-center">
+            <div className="flex flex-col items-end">
+              <span className="text-[0.5rem] text-white/60 leading-none">POW</span>
+              <span className="font-body text-[0.7rem] text-white font-bold">
+                {move.power > 0 ? move.power : "—"}
+              </span>
+            </div>
+            <div className="flex flex-col items-end border-l border-border/30 pl-2">
+              <span className="text-[0.5rem] text-white/60 leading-none">ACC</span>
+              <span className="font-body text-[0.7rem] text-white font-bold">
+                {move.accuracy > 0 ? `${move.accuracy}%` : "—"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center bg-black/30 p-1.5 mt-0.5 rounded-sm">
+          <span className="font-display text-[0.55rem] text-white/80 tracking-wider uppercase">Puntos de Poder</span>
+          <span className={clsx(
+            "font-body text-[0.7rem] font-bold",
+            move.currentPP === 0 ? "text-danger" :
+            move.currentPP <= move.maxPP / 4 ? "text-orange-400" :
+            move.currentPP <= move.maxPP / 2 ? "text-yellow-400" :
+            "text-hp"
+          )}>
+            {move.currentPP}/{move.maxPP}
+          </span>
+        </div>
+
+        {move.description && (
+          <div className="border-t border-border/40 pt-2 mt-0.5">
+            <p className="font-body text-[0.65rem] text-white/90 leading-relaxed font-medium">
+              {move.description}
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-x-4 border-x-transparent border-t-4 border-t-border" />
+    </div>
+  );
+}
+
 export function ManualBattleHUD() {
   const { run, setRun, training, setTraining } = useGame();
+  const [hoveredMove, setHoveredMove] = useState<{
+    move: ActiveMove;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const isTraining = training.isActive;
   const isActive = isTraining || (run.isActive && run.isManualBattle);
@@ -92,46 +170,73 @@ export function ManualBattleHUD() {
         </span>
       </div>
 
-      <div className="flex-1 p-3 grid grid-cols-2 gap-2 overflow-y-auto">
+      <div className="flex-1 p-3 grid grid-cols-2 gap-2 overflow-y-auto custom-scrollbar">
         {battle.playerPokemon.moves.map((move: ActiveMove) => (
-          <Button
+          <div
             key={move.moveId}
-            variant="secondary"
-            disabled={!isPlayerTurn}
-            onClick={() => {
-              if (move.currentPP === 0) {
-                return;
-              }
-              handleMoveSelect(String(move.moveId));
+            className="relative"
+            onMouseEnter={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setHoveredMove({
+                move,
+                x: rect.left + rect.width / 2,
+                y: rect.top,
+              });
             }}
-            className={clsx(
-              "group relative flex-col items-stretch! justify-start! p-2 gap-1 h-full",
-              !isPlayerTurn && "opacity-40 cursor-not-allowed",
-              move.currentPP === 0 && isPlayerTurn && "opacity-50 grayscale cursor-not-allowed hover:animate-[shake_0.4s_ease-in-out]"
-            )}
-            style={{
-              backgroundColor:
-                move.currentPP > 0
-                  ? (TYPE_COLORS[move.type.toLowerCase()] || "#A8A878") + "40"
-                  : undefined,
-            }}
-            isActive={hasQueuedAction && battle.manualActionQueue?.id === String(move.moveId)}
+            onMouseLeave={() => setHoveredMove(null)}
           >
-            <div className="flex justify-between items-center w-full">
-              <span className="font-display text-[0.65rem] uppercase text-foreground truncate max-w-[70%] text-left">
-                {move.moveName}
-              </span>
-              <span className="font-body text-[0.55rem] text-white shrink-0">
-                {move.currentPP}/{move.maxPP}
-              </span>
-            </div>
-            <div className="flex gap-2 items-center w-full mt-auto">
-              <TypeBadge type={move.type} showLabel={false} size="sm" />
-              <MoveCategoryBadge category={move.category} size="xs" />
-            </div>
-          </Button>
+            <Button
+              variant="secondary"
+              disabled={!isPlayerTurn}
+              onClick={() => {
+                if (move.currentPP === 0) {
+                  return;
+                }
+                handleMoveSelect(String(move.moveId));
+              }}
+              className={clsx(
+                "group relative flex-col items-stretch! justify-start! p-2 gap-1 h-full w-full",
+                !isPlayerTurn && "opacity-40 cursor-not-allowed",
+                move.currentPP === 0 && isPlayerTurn && "opacity-50 grayscale cursor-not-allowed hover:animate-[shake_0.4s_ease-in-out]"
+              )}
+              style={{
+                backgroundColor:
+                  move.currentPP > 0
+                    ? (TYPE_COLORS[move.type.toLowerCase()] || "#A8A878") + "40"
+                    : undefined,
+              }}
+              isActive={hasQueuedAction && battle.manualActionQueue?.id === String(move.moveId)}
+            >
+              <div className="flex justify-between items-center w-full">
+                <span className="font-display text-[0.65rem] uppercase text-foreground truncate max-w-[70%] text-left">
+                  {move.moveName}
+                </span>
+                <span className="font-body text-[0.55rem] text-white shrink-0">
+                  {move.currentPP}/{move.maxPP}
+                </span>
+              </div>
+              <div className="flex gap-2 items-center w-full mt-auto">
+                <TypeBadge type={move.type} showLabel={false} size="sm" />
+                <MoveCategoryBadge category={move.category} size="xs" />
+              </div>
+            </Button>
+          </div>
         ))}
       </div>
+
+      {hoveredMove && createPortal(
+        <div
+          className="fixed z-[99999] pointer-events-none"
+          style={{
+            left: hoveredMove.x,
+            top: hoveredMove.y,
+            transform: "translate(-50%, calc(-100% - 8px))",
+          }}
+        >
+          <MovePopover move={hoveredMove.move} />
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

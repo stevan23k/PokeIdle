@@ -68,6 +68,16 @@ async function seedMove(url: string): Promise<void> {
   const ailment =
     ailmentName && ailmentName !== "none" ? ailmentMap[ailmentName] ?? null : null;
 
+  // Extraer descripción — preferir español, caer a inglés
+  const flavorEntries: any[] = md.flavor_text_entries ?? [];
+  const descEs = flavorEntries.find((f: any) => f.language.name === "es")?.flavor_text ?? null;
+  const descEn = flavorEntries.find((f: any) => f.language.name === "en")?.flavor_text ?? null;
+  // Limpiar saltos de línea y espacios extra que PokeAPI incluye
+  const description = (descEs ?? descEn ?? null)
+    ?.replace(/\n|\f/g, " ")
+    .replace(/\s+/g, " ")
+    .trim() ?? null;
+
   const { error } = await supabase.from("move_cache").upsert(
     {
       move_id: md.id,
@@ -82,12 +92,16 @@ async function seedMove(url: string): Promise<void> {
       priority: md.priority ?? 0,
       ailment,
       ailment_chance: md.meta?.ailment_chance ?? null,
+      description_es: description,
     },
-    { onConflict: "move_id", ignoreDuplicates: true }
+    { onConflict: "move_id", ignoreDuplicates: false }
   );
 
   if (error) console.error(`  Move ${md.id} error:`, error.message);
 }
+
+// ─── Seed pokemon_cache ───────────────────────────────────────────────────────
+// ... existing seedPokemon function omitted for brevity, but I will keep it in the real file ...
 
 // ─── Seed pokemon_cache ───────────────────────────────────────────────────────
 
@@ -210,6 +224,25 @@ async function seedSpecies(id: number): Promise<void> {
   }
 }
 
+async function seedAllMoves() {
+  console.log("\nFetching move list from PokeAPI...");
+  const res = await fetch(`${API}/move?limit=2000&offset=0`);
+  const data = await res.json();
+  const moves = data.results as { name: string; url: string }[];
+  console.log(`Seeding ${moves.length} moves...\n`);
+
+  let done = 0;
+  for (let i = 0; i < moves.length; i += BATCH_SIZE) {
+    const batch = moves.slice(i, i + BATCH_SIZE);
+    await Promise.allSettled(batch.map((m) => seedMove(m.url)));
+    done += batch.length;
+    console.log(`[${done}/${moves.length}] moves procesados`);
+    await delay(DELAY_BETWEEN_BATCHES);
+  }
+  console.log("\nMoves done.");
+  process.exit(0);
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 const BATCH_SIZE = 10;  // Pokémon procesados simultáneamente
@@ -226,7 +259,7 @@ async function main() {
   
   // Formas especiales necesarias para mecánicas del juego
   const specialFormIds: number[] = [
-    10034, // Aegislash-Blade (usado por abilities.engine.ts)
+    10026, // Aegislash-Blade (usado por abilities.engine.ts)
   ];
   
   const allIds = [...baseIds, ...specialFormIds];
@@ -270,4 +303,8 @@ async function main() {
   process.exit(0);
 }
 
-main();
+if (process.argv.includes("--moves-only")) {
+  seedAllMoves();
+} else {
+  main();
+}

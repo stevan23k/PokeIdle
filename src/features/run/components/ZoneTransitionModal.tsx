@@ -146,11 +146,16 @@ export function ZoneTransitionModal() {
       const moveTriggers: any[] = [];
 
       for (let i = 0; i < levelsToGain && p.level < 100; i++) {
+        const prevLevel = p.level;
         p = levelUpPokemon(p);
         gained++;
 
         // Queue markers
-        moveTriggers.push({ pokemonUid: p.uid, level: p.level });
+        moveTriggers.push({
+          pokemonUid: p.uid,
+          level: p.level,
+          fromLevel: prevLevel + 1,
+        });
         evoTriggers.push({
           pokemonUid: p.uid,
           level: p.level,

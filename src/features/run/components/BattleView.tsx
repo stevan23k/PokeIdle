@@ -20,6 +20,7 @@ import {
 import type { MegaEvolution } from "../../../lib/mega.service";
 import { generateUid } from "../../../utils/random";
 import { GymLeaderDialog } from "./GymLeaderDialog";
+import { GymConditionModal } from "./GymConditionModal";
 import { getGymsForRegion } from "../../../lib/regions.service";
 import type { GymDefinition } from "../../../lib/regions";
 
@@ -49,6 +50,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
     leaderPokemonId: number;
   } | null>(null);
 
+  const [showConditionModal, setShowConditionModal] = useState(false);
   const [currentGym, setCurrentGym] = useState<GymDefinition | null>(null);
 
   const isTraining = training.isActive;
@@ -194,6 +196,10 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
               leaderName: gym.leaderName ?? "Líder",
               leaderPokemonId: battle.enemyPokemon.pokemonId,
             });
+          } else {
+            // Si no hay diálogo, mostrar la mecánica directamente
+            setRun((prev: any) => ({ ...prev, isPaused: true }));
+            setShowConditionModal(true);
           }
         }
       });
@@ -201,6 +207,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
     if (!battle) {
       setCurrentGym(null);
       setGymDialogState(null);
+      setShowConditionModal(false);
     }
   }, [battle?.type, battle?.phase]);
 
@@ -239,8 +246,37 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
     const variant = gymDialogState?.variant;
     setGymDialogState(null);
     if (variant === "intro") {
-      setRun((prev: any) => ({ ...prev, isPaused: false }));
+      if (battle?.activeMechanic) {
+        setShowConditionModal(true);
+      } else {
+        setRun((prev: any) => {
+          if (!prev.currentBattle) return prev;
+          return {
+            ...prev,
+            isPaused: false,
+            currentBattle: {
+              ...prev.currentBattle,
+              phase: "active",
+            },
+          };
+        });
+      }
     }
+  };
+
+  const handleConditionClose = () => {
+    setShowConditionModal(false);
+    setRun((prev: any) => {
+      if (!prev.currentBattle) return prev;
+      return {
+        ...prev,
+        isPaused: false,
+        currentBattle: {
+          ...prev.currentBattle,
+          phase: "active",
+        },
+      };
+    });
   };
   useEffect(() => {
     const pca = battle?.pendingCaptureAnim;
@@ -708,6 +744,14 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
           lines={gymDialogState.lines}
           variant={gymDialogState.variant}
           onFinish={handleDialogFinish}
+        />
+      )}
+
+      {/* Gym Condition Modal */}
+      {showConditionModal && battle?.activeMechanic && (
+        <GymConditionModal
+          mechanic={battle.activeMechanic}
+          onClose={handleConditionClose}
         />
       )}
     </div>

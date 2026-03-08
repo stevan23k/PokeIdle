@@ -12,8 +12,8 @@ const FRLG_BASE = `${SPRITE_BASE}/pokemon/versions/generation-iii/firered-leafgr
 
 // Mapa de IDs de formas especiales → ID base para sprites
 const FORM_SPRITE_OVERRIDES: Record<number, number> = {
-  10034: 681, // Aegislash-Blade → usar sprite de Aegislash-Shield
-  // Agregar aquí otros si aparecen en el futuro
+  // Aegislash-Shield is 681, Aegislash-Blade is 10026.
+  // We keep overrides empty for now unless we need to redirect a form to a base sprite.
 };
 
 // Pokémon sprite helpers

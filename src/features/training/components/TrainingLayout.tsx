@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { MoveLearningModal } from "../../run/components/MoveLearningModal";
 import { useGame } from "../../../context/GameContext";
 import { BattleView } from "../../run/components/BattleView";
 import { BattleLog } from "../../run/components/BattleLog";
@@ -397,6 +398,8 @@ export function TrainingLayout({
           </div>,
           document.body,
         )}
+
+      <MoveLearningModal />
     </div>
   );
 }
