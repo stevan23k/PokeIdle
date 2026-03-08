@@ -474,7 +474,14 @@ export async function learnMovesOnLevelUp(
       const matches = (
         cachedPokemon.level_up_moves as { moveId: number; level: number }[]
       )
-        .filter((m) => m.level >= (fromLevel ?? 1) && m.level <= newLevel)
+        .filter((m) => {
+          const minLevel = fromLevel ?? 1;
+          // Si es evolución (fromLevel 1), incluimos nivel 1.
+          // Si es level up normal, excluimos el nivel de partida (minLevel).
+          return minLevel === 1 
+            ? m.level >= 1 && m.level <= newLevel
+            : m.level > minLevel && m.level <= newLevel;
+        })
         .sort((a, b) => b.level - a.level);
 
       const foundMoves: import("../types/game.types").ActiveMove[] = [];
@@ -523,8 +530,11 @@ export async function learnMovesOnLevelUp(
       m.version_group_details.some((v: any) => {
         const learnLevel = v.level_learned_at;
         const methodMatch = v.move_learn_method.name === "level-up";
+        const minLevel = fromLevel ?? 1;
         const levelMatch =
-          learnLevel >= (fromLevel ?? 1) && learnLevel <= newLevel;
+          minLevel === 1 
+            ? learnLevel >= 1 && learnLevel <= newLevel
+            : learnLevel > minLevel && learnLevel <= newLevel;
         return methodMatch && levelMatch;
       }),
     );
