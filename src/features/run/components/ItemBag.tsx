@@ -364,17 +364,26 @@ export function ItemBag() {
               <span className="text-[0.6rem] font-display text-white uppercase tracking-widest mb-1 pl-1">
                 Selecciona al objetivo:
               </span>
-              {run.team.map((p) => (
-                <button
-                  key={p.uid}
-                  onClick={() => handleUseItem(p.uid)}
-                  className={clsx(
-                    "flex justify-between items-center p-2 bg-surface border-2 shrink-0 transition-colors",
-                    p.currentHP === 0
-                      ? "border-danger/30 opacity-70 grayscale-[0.8]"
-                      : "border-border hover:border-brand",
-                  )}
-                >
+              {run.team.map((p) => {
+                const item = useTargetModal ? ITEMS[useTargetModal] : null;
+                const isTmIncompatible = item?.category === "tm" && 
+                  tmCompatibility[p.uid] !== undefined && 
+                  tmCompatibility[p.uid] === false;
+
+                return (
+                  <button
+                    key={p.uid}
+                    onClick={() => handleUseItem(p.uid)}
+                    disabled={isTmIncompatible}
+                    className={clsx(
+                      "flex justify-between items-center p-2 bg-surface border-2 shrink-0 transition-colors",
+                      isTmIncompatible
+                        ? "border-red-900/40 opacity-40 cursor-not-allowed grayscale-[0.5]"
+                        : p.currentHP === 0
+                          ? "border-danger/30 opacity-70 grayscale-[0.8]"
+                          : "border-border hover:border-brand",
+                    )}
+                  >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-surface-dark border border-border flex items-center justify-center">
                       <PixelSprite
@@ -429,8 +438,9 @@ export function ItemBag() {
                       </div>
                     )}
                   </div>
-                </button>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           }
         />
