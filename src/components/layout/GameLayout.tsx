@@ -46,6 +46,7 @@ export function GameLayout({ zones }: { zones: Zone[] }) {
     notifications,
     removeNotification,
   } = useGame();
+
   const [currentScreen, setCurrentScreen] = React.useState<
     | "main"
     | "starter"

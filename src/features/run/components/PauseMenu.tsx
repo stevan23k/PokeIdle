@@ -61,9 +61,16 @@ export function PauseMenu({ onReturnToMenu }: Props) {
     }
   };
 
+  const isSystemPause = 
+    (run as any).pendingGymDialogue ||
+    (run as any).pendingGymCondition ||
+    run.pendingEvolution ||
+    run.pendingMoveLearn ||
+    run.pendingLootSelection;
+
   return (
     <>
-      {run.isPaused && (
+      {run.isPaused && !isSystemPause && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
           <Card className="max-w-2xl w-full relative pt-12 pb-8 px-8 shadow-[0_0_50px_rgba(0,0,0,0.5)] border-4 border-border">
             <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-surface-dark px-10 py-2 border-4 border-border shadow-pixel">

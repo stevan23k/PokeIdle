@@ -104,7 +104,6 @@ export function EvolutionModal() {
         heldItem: p.heldItem,
         caughtAt: p.caughtAt,
         caughtLevel: p.caughtLevel,
-        moves: p.moves,
       };
 
       const next = {
@@ -133,7 +132,7 @@ export function EvolutionModal() {
         {
           pokemonUid: pending.pokemonUid,
           level: evolvedPokemon.level,
-          fromLevel: 1, // check all moves from level 1 to current level
+          fromLevel: 1, // check all moves from level 1
         }
       ];
 

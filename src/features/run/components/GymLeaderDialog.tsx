@@ -10,21 +10,7 @@ interface GymLeaderDialogProps {
   variant: "intro" | "victory" | "defeat";
 }
 
-const LEADER_SPRITE_SLUGS: Record<string, string> = {
-  "Brock": "brock",
-  "Misty": "misty",
-  "Lt. Surge": "ltsurge",
-  "Erika": "erika",
-  "Koga": "koga",
-  "Sabrina": "sabrina",
-  "Blaine": "blaine",
-  "Giovanni": "giovanni",
-};
-
-function getLeaderSpriteUrl(leaderName: string): string {
-  const slug = LEADER_SPRITE_SLUGS[leaderName] ?? leaderName.toLowerCase().replace(/\s/g, "");
-  return `https://play.pokemonshowdown.com/sprites/trainers/${slug}.png`;
-}
+import { getLeaderSpriteUrl } from "../../../lib/gymLeaders";
 
 export function GymLeaderDialog({
   leaderName,

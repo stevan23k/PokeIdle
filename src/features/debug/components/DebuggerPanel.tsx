@@ -615,7 +615,7 @@ export function DebuggerPanel() {
                       <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0">
                         {filteredItems.slice(0, 80).map(([id, item]) => (
                           <div key={id} className="flex items-center gap-3 bg-surface-alt border border-border/40 p-2.5 hover:border-brand/60 transition-colors group">
-                            <img src={`/sprites/items/${id}.png`} className="w-8 h-8 rendering-pixelated shrink-0" alt="" onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }} />
+                            <img src={`/sprites/items/${(item as any).spriteSlug || id}.png`} className="w-8 h-8 rendering-pixelated shrink-0" alt="" onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }} />
                             <div className="flex-1 min-w-0">
                               <div className="font-display text-[0.65rem] text-white truncate">{(item as any).name}</div>
                               <div className="font-display text-[0.45rem] text-muted">{id} · Tienes: {run.items[id] || 0}</div>

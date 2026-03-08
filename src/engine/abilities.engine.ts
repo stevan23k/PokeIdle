@@ -6,7 +6,7 @@ import type {
 } from "../features/run/types/game.types";
 
 /**
- * Handles "Stance Change" for Aegislash (IDs 681 and 10034).
+ * Handles "Stance Change" for Aegislash (IDs 681 and 10026).
  * Switches forms based on the move category or if King's Shield (ID 588) is used.
  */
 export function handleStanceChange(

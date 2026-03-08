@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useRef } from "react";
 import { useGame } from "../../../context/GameContext";
 import { PixelSprite } from "../../../components/ui/PixelSprite";
 import { HPBar } from "../../../components/ui/HPBar";
@@ -23,6 +23,7 @@ import { GymLeaderDialog } from "./GymLeaderDialog";
 import { GymConditionModal } from "./GymConditionModal";
 import { getGymsForRegion } from "../../../lib/regions.service";
 import type { GymDefinition } from "../../../lib/regions";
+import { getLeaderSpriteUrl } from "../../../lib/gymLeaders";
 
 export interface BattleViewProps {
   onMoveClick?: (moveId: number) => void;
@@ -52,6 +53,13 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
   const [showConditionModal, setShowConditionModal] = useState(false);
   const [currentGym, setCurrentGym] = useState<GymDefinition | null>(null);
+
+  const [showLeaderSprite, setShowLeaderSprite] = useState(false);
+  const [leaderSpriteOut, setLeaderSpriteOut] = useState(false);
+  const [showEnemyHP, setShowEnemyHP] = useState(true);
+  
+  // Use a ref to avoid double triggering the intro/cancellation due to re-renders
+  const lastGymIntroRef = useRef<string | null>(null);
 
   const isTraining = training.isActive;
   const battle = isTraining
@@ -177,50 +185,115 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
     }
   }, [battle?.phase]);
 
-  // --- Gym Dialog Logic ---
+  // --- Gym Introduction Logic ---
   useEffect(() => {
-    if (battle?.type === "gym" && battle.phase === "intro") {
+    const battleUid = battle?.enemyPokemon?.uid;
+    if (
+      battle?.type === "gym" &&
+      (battle.phase === "intro" || battle.phase === "active") &&
+      battle.turnCount === 0 &&
+      lastGymIntroRef.current !== battleUid
+    ) {
+      lastGymIntroRef.current = battleUid ?? null;
+
+      // SET IMMEDIATELY (Visuals)
+      setShowLeaderSprite(true);
+      setLeaderSpriteOut(false);
+      setShowEnemyHP(false);
+      
+      setRun((prev: any) => ({ 
+        ...prev, 
+        pendingGymDialogue: true, 
+        isPaused: true 
+      }));
+
+      // Timers for sequence
+      const hpTimer = setTimeout(() => setShowEnemyHP(true), 1500);
+      
+      let isEffectActive = true;
+      let dialogTimer: any = null;
+      const startTime = Date.now();
+
       getGymsForRegion(run.currentRegion).then((gyms) => {
-        // Encontrar el gym correspondiente a la zona actual
+        if (!isEffectActive) return;
+
         const gym = gyms.find((g) => {
-          // Buscar por el primer pokémon del gymTeam
           return battle.gymTeam?.[0]?.pokemonId === g.pokemon?.[0]?.pokemonId;
         });
+        
         if (gym) {
           setCurrentGym(gym);
           if (gym.dialogIntro && gym.dialogIntro.length > 0) {
-            setRun((prev: any) => ({ ...prev, pendingGymDialogue: true }));
-            setGymDialogState({
-              lines: gym.dialogIntro,
-              variant: "intro",
-              leaderName: gym.leaderName ?? "Líder",
-              leaderPokemonId: battle.enemyPokemon.pokemonId,
-            });
+            const elapsed = Date.now() - startTime;
+            const remaining = Math.max(0, 2000 - elapsed);
+            
+            dialogTimer = setTimeout(() => {
+              if (!isEffectActive) return;
+              setGymDialogState({
+                lines: gym.dialogIntro as string[],
+                variant: "intro",
+                leaderName: gym.leaderName ?? "Líder",
+                leaderPokemonId: battle.enemyPokemon.pokemonId,
+              });
+            }, remaining); 
           } else {
-            // Si no hay diálogo, mostrar la mecánica directamente
-            setRun((prev: any) => ({ ...prev, pendingGymCondition: true }));
-            setShowConditionModal(true);
+            // No hay diálogo, asegurar que se muestre la vida y se desbloquee
+            setShowEnemyHP(true);
+            if (battle?.activeMechanic) {
+              setRun((prev: any) => ({ ...prev, pendingGymCondition: true }));
+              setShowConditionModal(true);
+            } else {
+              setRun((prev: any) => ({ ...prev, isPaused: false, pendingGymDialogue: false }));
+            }
           }
+        } else {
+           // No se encontró el gimnasio, asegurar limpieza
+           setShowEnemyHP(true);
+           setRun((prev: any) => ({ ...prev, isPaused: false, pendingGymDialogue: false }));
         }
       });
+
+      return () => {
+        isEffectActive = false;
+        clearTimeout(hpTimer);
+        if (dialogTimer) clearTimeout(dialogTimer);
+      };
     }
+  }, [battle?.enemyPokemon?.uid, battle?.type, battle?.phase, run.currentRegion]);
+
+  // --- Utility state/logic cleanup ---
+  useEffect(() => {
     if (!battle) {
       setCurrentGym(null);
       setGymDialogState(null);
       setShowConditionModal(false);
+      setShowLeaderSprite(false);
+      setLeaderSpriteOut(false);
+      setShowEnemyHP(true);
+      lastGymIntroRef.current = null; // Important: Clear ref when battle ends
+      setRun((prev: any) => ({ 
+        ...prev, 
+        pendingGymDialogue: false,
+        pendingGymCondition: false,
+        isPaused: false
+      }));
     }
-  }, [battle?.type, battle?.phase]);
+  }, [!!battle]);
 
+  // --- Gym Victory/Defeat Callbacks ---
   useEffect(() => {
     if (!currentGym || battle?.type !== "gym") return;
 
-    // Victoria: última barra del boss derrotada
-    if (
-      battle.phase === "victory" &&
-      battle.bossCurrentBar === battle.bossMaxBars
-    ) {
+    const isLastGymPokemon =
+      battle.bossCurrentBar === battle.bossMaxBars &&
+      enemyPokemon?.currentHP === 0;
+
+    // Victoria
+    if (battle.phase === "victory" && isLastGymPokemon) {
       if (currentGym.dialogDefeat && currentGym.dialogDefeat.length > 0) {
         setRun((prev: any) => ({ ...prev, pendingGymDialogue: true }));
+        setShowLeaderSprite(true);
+        setLeaderSpriteOut(false);
         setGymDialogState({
           lines: currentGym.dialogDefeat,
           variant: "defeat",
@@ -230,10 +303,12 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       }
     }
 
-    // Derrota del jugador
+    // Derrota
     if (battle.phase === "defeat") {
       if (currentGym.dialogVictory && currentGym.dialogVictory.length > 0) {
         setRun((prev: any) => ({ ...prev, pendingGymDialogue: true }));
+        setShowLeaderSprite(true);
+        setLeaderSpriteOut(false);
         setGymDialogState({
           lines: currentGym.dialogVictory,
           variant: "victory",
@@ -242,29 +317,36 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
         });
       }
     }
-  }, [battle?.phase, battle?.bossCurrentBar]);
+  }, [battle?.phase, battle?.bossCurrentBar, enemyPokemon?.currentHP, currentGym]);
 
   const handleDialogFinish = () => {
     const variant = gymDialogState?.variant;
     setGymDialogState(null);
-    setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
     
     if (variant === "intro") {
+      setLeaderSpriteOut(true);
+      setTimeout(() => setShowLeaderSprite(false), 500);
+      setRun((prev: any) => ({ 
+        ...prev, 
+        isPaused: false,
+        pendingGymDialogue: false
+      }));
+      
+      // Mostrar condición del gym si hay mecánica
       if (battle?.activeMechanic) {
         setRun((prev: any) => ({ ...prev, pendingGymCondition: true }));
         setShowConditionModal(true);
-      } else {
-        setRun((prev: any) => {
-          if (!prev.currentBattle) return prev;
-          return {
-            ...prev,
-            currentBattle: {
-              ...prev.currentBattle,
-              phase: "active",
-            },
-          };
-        });
       }
+    }
+    
+    if (variant === "defeat") {
+      setLeaderSpriteOut(true);
+      setTimeout(() => setShowLeaderSprite(false), 500);
+      setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
+    }
+    
+    if (variant === "victory") {
+      setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
     }
   };
 
@@ -388,7 +470,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
       {/* Enemy Side (Top Right) */}
       <div className="flex-1 relative p-4 flex justify-end items-start z-10 mt-4 mr-4">
-        {enemyPokemon && (
+        {enemyPokemon && (!showLeaderSprite || showEnemyHP) && (
           <div className="flex flex-col items-center relative">
             {/* Floating HP Bar Container above sprite */}
             <div className="flex flex-col items-center gap-1 mb-2 bg-surface-alt/80 p-2 border-2 border-border backdrop-blur-sm shadow-pixel z-20">
@@ -425,7 +507,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                 {battle.isBossBattle && (
                   <div className="flex justify-between items-center mb-0.5">
                     <span className="text-[0.45rem] text-brand-light font-display">
-                      BARRA {battle.bossCurrentBar}/{battle.bossMaxBars}
+                      POKÉMON {battle.bossCurrentBar}/{battle.bossMaxBars}
                     </span>
                   </div>
                 )}
@@ -449,7 +531,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                 "w-40 h-40 sm:w-56 sm:h-56 flex items-end justify-center relative mt-2 shrink-0 transition-transform",
                 ENEMY_SPRITE_POSITION[bgId] ||
                   "translate-y-[60px] -translate-x-[20px]",
-                battle?.turnCount === 0 && "animate-slide-in-enemy",
+                battle?.turnCount === 0 && !showLeaderSprite && "animate-slide-in-enemy",
               )}
             >
               <div
@@ -462,34 +544,49 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                 )}
               >
                 <div className="absolute bottom-2 w-32 sm:w-48 h-10 rounded-[100%] bg-black/50 blur-xs -z-10"></div>
-                <PixelSprite
-                  pokemonId={enemyPokemon.pokemonId}
-                  variant="front"
-                  shiny={enemyPokemon.isShiny}
-                  size={160}
-                  showScanlines={false}
-                  alt={enemyPokemon.name}
-                  onLoad={() => {
-                    if (!battle?.enemyReady) {
-                      setRun((prev: any) => {
-                        if (!prev.currentBattle) return prev;
-                        return {
-                          ...prev,
-                          currentBattle: {
-                            ...prev.currentBattle,
-                            enemyReady: true,
-                          },
-                        };
-                      });
-                    }
-                  }}
-                  className={clsx(
-                    "w-32 h-32 sm:w-48 sm:h-48 drop-shadow-lg",
-                    enemyPokemon.currentHP === 0 &&
-                      "opacity-0 translate-y-8 transition-all duration-500",
-                    enemyHidden && "opacity-0 transition-opacity duration-300",
-                  )}
-                />
+                {showLeaderSprite && (battle?.enemyTrainer?.name || currentGym?.leaderName) ? (
+                  <img
+                    src={getLeaderSpriteUrl(battle?.enemyTrainer?.name || currentGym?.leaderName || "")}
+                    alt={battle?.enemyTrainer?.name || currentGym?.leaderName}
+                    className={clsx(
+                      "w-32 h-32 sm:w-48 sm:h-48 object-contain transition-all duration-500",
+                      !leaderSpriteOut && "animate-gym-leader-intro",
+                      leaderSpriteOut
+                        ? "opacity-0 translate-x-16"
+                        : "opacity-100 translate-x-0",
+                    )}
+                    style={{ imageRendering: "pixelated" }}
+                  />
+                ) : (
+                  <PixelSprite
+                    pokemonId={enemyPokemon.pokemonId}
+                    variant="front"
+                    shiny={enemyPokemon.isShiny}
+                    size={160}
+                    showScanlines={false}
+                    alt={enemyPokemon.name}
+                    onLoad={() => {
+                      if (!battle?.enemyReady) {
+                        setRun((prev: any) => {
+                          if (!prev.currentBattle) return prev;
+                          return {
+                            ...prev,
+                            currentBattle: {
+                              ...prev.currentBattle,
+                              enemyReady: true,
+                            },
+                          };
+                        });
+                      }
+                    }}
+                    className={clsx(
+                      "w-32 h-32 sm:w-48 sm:h-48 drop-shadow-lg",
+                      enemyPokemon.currentHP === 0 &&
+                        "opacity-0 translate-y-8 transition-all duration-500",
+                      enemyHidden && "opacity-0 transition-opacity duration-300",
+                    )}
+                  />
+                )}
                 {/* Pokeball capture animation */}
                 <PokeballCaptureAnimation
                   isActive={captureAnim.active}
@@ -737,7 +834,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       )}
 
       {/* Gym Leader Dialog */}
-      {gymDialogState && battle?.type === "gym" && (
+      {gymDialogState && (
         <GymLeaderDialog
           leaderName={gymDialogState.leaderName}
           leaderPokemonId={gymDialogState.leaderPokemonId}

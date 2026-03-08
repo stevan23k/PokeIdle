@@ -154,6 +154,37 @@
     animation: slideInEnemy 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
 
+  @keyframes gymLeaderIntro {
+    0% {
+      transform: scale(0) translateY(50px);
+      opacity: 0;
+    }
+    40% {
+      transform: scale(1.1) translateY(-30px);
+      opacity: 1;
+    }
+    60% {
+      transform: scale(1) translateY(0);
+    }
+    70% {
+      transform: translateX(-5px);
+    }
+    80% {
+      transform: translateX(5px);
+    }
+    90% {
+      transform: translateX(-2px);
+    }
+    100% {
+      transform: scale(1) translateY(0) translateX(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-gym-leader-intro {
+    animation: gymLeaderIntro 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+
   .pixelate {
     image-rendering: pixelated;
   }
@@ -172,11 +203,13 @@
     left: 0;
     bottom: 0;
     right: 0;
-    background: repeating-linear-gradient(0deg,
-        var(--color-scanline) 0px,
-        var(--color-scanline) 1px,
-        transparent 1px,
-        transparent 3px);
+    background: repeating-linear-gradient(
+      0deg,
+      var(--color-scanline) 0px,
+      var(--color-scanline) 1px,
+      transparent 1px,
+      transparent 3px
+    );
     z-index: 10;
     pointer-events: none;
   }

@@ -70,6 +70,7 @@ export function useEngineTick() {
   const fetchingRef = useRef(false);
   const turnStateRef = useRef<string>("idle");
   const processedAnimRef = useRef<string | null>(null);
+  const processedStateRef = useRef<string | null>(null);
 
   const [regionZones, setRegionZones] = useState<Zone[]>([]);
   const [regionGyms, setRegionGyms] = useState<GymDefinition[]>([]);
@@ -114,10 +115,13 @@ export function useEngineTick() {
       run.pendingMoveLearn ||
       run.pendingEvolution ||
       run.pendingZoneTransition ||
-      run.pendingGymDialogue ||
-      run.pendingGymCondition
-    )
+      (run as any).pendingGymCondition
+    ) {
+      if (run.currentBattle) {
+        // console.log("[useEngineTick] Guard blocked:", { isPaused: run.isPaused, fetching: fetchingRef.current });
+      }
       return;
+    }
 
     const currentZone = regionZones[run.currentZoneIndex];
     if (regionZones.length === 0 || (!currentZone && !run.eliteFourProgress)) {
@@ -131,18 +135,21 @@ export function useEngineTick() {
 
     if (run.team.length > 0 && run.team.every((p) => p.currentHP === 0)) {
       if (run.currentBattle) {
-        setRun((p) => ({
-          ...p,
-          currentBattle: null,
-          battleLog: [
-            ...p.battleLog,
-            {
-              id: generateUid(),
-              text: "Todo el equipo ha sido derrotado...",
-              type: "danger" as any,
-            },
-          ].slice(-40),
-        }));
+        setRun((p) => {
+          console.log("[useEngineTick] Clearing battle due to defeat");
+          return {
+            ...p,
+            currentBattle: null,
+            battleLog: [
+              ...p.battleLog,
+              {
+                id: generateUid(),
+                text: "Todo el equipo ha sido derrotado...",
+                type: "danger" as any,
+              },
+            ].slice(-40),
+          };
+        });
         setMeta((m) => ({
           ...m,
           totalRuns: m.totalRuns + 1,
@@ -398,7 +405,12 @@ export function useEngineTick() {
 
           setRun((prev) => {
             // Safety check: if a battle was already spawned by another tick, don't overwrite it
-            if (prev.currentBattle) return prev;
+            if (prev.currentBattle) {
+              console.log("[useEngineTick] Spawn cancelled - battle already exists");
+              return prev;
+            }
+
+            console.log("[useEngineTick] Spawning Battle:", { type: battleType, boss: isBoss });
 
             return {
               ...prev,
@@ -409,6 +421,16 @@ export function useEngineTick() {
                 turnState: "idle",
                 playerPokemon: activePlayer!,
                 enemyPokemon: enemy,
+                enemyTrainer:
+                  battleType === "gym" && gymForBattle
+                    ? {
+                        name: gymForBattle.leaderName,
+                        class: "Líder de Gimnasio",
+                        icon: "",
+                        team: [],
+                        defeatCount: 0,
+                      }
+                    : undefined,
                 turnCount: 0,
                 isBossBattle: isBoss,
                 activeMechanic: activeMechanic,
@@ -578,20 +600,22 @@ export function useEngineTick() {
     // --- ACTIVE BATTLE ---
     // We do functional state update to ensure latest state
     setRun((state) => {
-      if (!state.currentBattle) return state;
+      if (!state.isActive || !state.currentBattle) return state;
 
-      // Guard against stale state reads during animation or if state already advanced sychronously
-      if (
-        (turnStateRef.current === "animating" &&
-          state.currentBattle?.turnState === "animating") ||
-        (turnStateRef.current !== state.currentBattle.turnState &&
-          state.currentBattle.turnState === "turn_start")
-      ) {
-        return state;
-      }
+      const bState = { ...state.currentBattle };
+      const logs = [...state.battleLog];
 
-      let nextState = { ...state };
-      let logs = [...nextState.battleLog];
+      const actor = bState.turnQueue?.[0] || "";
+      const stateKey = `${bState.turnState}-${bState.turnCount}-${actor}`;
+      
+      // We'll log at the end if we actually returned something new
+      let shouldReturnNewState = false;
+
+      const pushLog = (text: string, type: any = "normal") => {
+        logs.push({ id: generateUid(), text, type });
+      };
+
+      let nextState = { ...state, currentBattle: bState, battleLog: logs };
 
       // --- SYNC TEAM HP ---
       // Ensure the team array always reflects current HP from battle state
@@ -623,13 +647,6 @@ export function useEngineTick() {
         }
         return nextState;
       }
-
-      const bState = {
-        ...nextState.currentBattle,
-      } as import("../types/game.types").BattleState;
-      const pushLog = (text: string, type: any = "normal") => {
-        logs.push({ id: generateUid(), text, type });
-      };
 
       if (!bState) {
         turnStateRef.current = "idle";
@@ -802,7 +819,7 @@ export function useEngineTick() {
             nextState.megaState = resetMegaStateAfterBattle();
           }
 
-          nextState.currentBattle = null;
+          (nextState as any).currentBattle = null;
           nextState.pendingLootSelection = generateLootOptions([], {
             team: nextState.team,
             pc: nextState.pc,
@@ -945,7 +962,7 @@ export function useEngineTick() {
 
 
 
-          nextState.currentBattle = null;
+          (nextState as any).currentBattle = null;
           return nextState;
         } else {
           pushLog(`¡${bState.enemyPokemon.name} se liberó!`, "normal");
@@ -962,9 +979,12 @@ export function useEngineTick() {
       // If idle, we determine if a move has been selected.
       if (!bState.turnState || bState.turnState === "idle") {
         // No proceder hasta que el sprite enemigo haya cargado
+        /* 
         if (!bState.enemyReady && bState.turnCount === 0) {
+          console.log("[useEngineTick] Waiting for enemyReady. showLeaderSprite should be false.");
           return state;
-        }
+        } 
+        */
         // AUTO-MEGA (solo idle, solo si no es manual, solo turno 0 de la batalla)
         if (
           !nextState.isManualBattle &&
@@ -1067,6 +1087,12 @@ export function useEngineTick() {
         bState.enemyCurrentMove = eMove;
         bState.usedManualTurn = usedManualTurn;
 
+        // console.log("[useEngineTick] Action selected:", { 
+        //   pMove: pMove?.moveName, 
+        //   eMove: eMove?.moveName, 
+        //   order: bState.turnQueue 
+        // });
+
         bState.turnState = "turn_start";
         turnStateRef.current = "turn_start";
 
@@ -1099,6 +1125,7 @@ export function useEngineTick() {
           bState.onEntryTriggered = true;
         }
 
+        processedStateRef.current = stateKey;
         nextState.currentBattle = bState;
         nextState.battleLog = logs.slice(-40);
         return nextState;
@@ -1106,7 +1133,8 @@ export function useEngineTick() {
 
       if (bState.turnState === "animating") {
         turnStateRef.current = "animating";
-        return state; // Wait for UI to resolve animation
+        processedStateRef.current = stateKey;
+        return state; 
       }
 
       let nextEnemyHP = bState.enemyPokemon.currentHP;
@@ -1169,6 +1197,14 @@ export function useEngineTick() {
           const usedManual = isPlayer ? bState.usedManualTurn : false;
 
           let resolvedMove = move;
+          
+          // console.log(`[ENGINE] ${isPlayer ? "Player" : "Enemy"} turn logic:`, {
+          //   move: resolvedMove?.moveName,
+          //   hp: attacker.currentHP,
+          //   oppHp: defender.currentHP,
+          //   queue: bState.turnQueue
+          // });
+
           if (isPlayer && !resolvedMove && !usedManual) {
             // Fallback: re-select best move in case playerCurrentMove was lost between ticks
             resolvedMove = chooseBestMove(
@@ -1183,6 +1219,7 @@ export function useEngineTick() {
 
           // If the player used a manual switch or item and didn't select a move, skip attack calc
           if (isPlayer && usedManual && !resolvedMove) {
+            // console.log("[useEngineTick] Player used manual item/switch, skipping attack");
             (bState.turnQueue || []).shift(); // Remove "p"
             if (bState.turnQueue && bState.turnQueue.length > 0) {
               bState.turnState = "turn_start";
@@ -1260,7 +1297,7 @@ export function useEngineTick() {
 
             if (canAttack) {
               // Handle Stance Change (Aegislash)
-              if (attacker.pokemonId === 681 || attacker.pokemonId === 10034) {
+              if (attacker.pokemonId === 681 || attacker.pokemonId === 10026) {
                 const { updatedPokemon, log } = handleStanceChange(
                   attacker,
                   resolvedMove,
@@ -1357,9 +1394,9 @@ export function useEngineTick() {
                         [stat]: newStage,
                       },
                     };
-                    console.log(
-                      `[ENGINE] Player ${bState.playerPokemon.name} boost: ${stat} ${currentStage} -> ${newStage}`,
-                    );
+                    // console.log(
+                    //   `[ENGINE] Player ${bState.playerPokemon.name} boost: ${stat} ${currentStage} -> ${newStage}`,
+                    // );
                     pushLog(
                       `¡${bState.playerPokemon.name} subió su ${stat}!`,
                       "level",
@@ -1380,9 +1417,9 @@ export function useEngineTick() {
                         [stat]: newStage,
                       },
                     };
-                    console.log(
-                      `[ENGINE] Enemy ${bState.enemyPokemon.name} boost: ${stat} ${currentStage} -> ${newStage}`,
-                    );
+                    // console.log(
+                    //   `[ENGINE] Enemy ${bState.enemyPokemon.name} boost: ${stat} ${currentStage} -> ${newStage}`,
+                    // );
                   }
                 }
               }
@@ -1407,6 +1444,7 @@ export function useEngineTick() {
               // Transition to animating, the actual damage will be applied via resolveAnimation by the UI
               bState.turnState = "animating";
               turnStateRef.current = "animating";
+              processedStateRef.current = stateKey; // LOCK HERE
               nextState.currentBattle = bState;
               nextState.battleLog = logs.slice(-40);
               return nextState;
@@ -1417,6 +1455,7 @@ export function useEngineTick() {
           bState.turnQueue = bState.turnQueue ? bState.turnQueue.slice(1) : [];
 
           if (!resolvedMove && isPlayer) {
+            // console.warn("[useEngineTick] Player resolvedMove is null!", { manual: usedManual });
             pushLog(
               `¡${bState.playerPokemon.name} no pudo ejecutar su acción!`,
               "normal",
@@ -1623,6 +1662,7 @@ export function useEngineTick() {
                     {
                       pokemonUid: current.uid,
                       level: current.level,
+                      fromLevel: current.level,
                     },
                   ];
 
@@ -1865,7 +1905,7 @@ export function useEngineTick() {
             nextState.megaState = resetMegaStateAfterBattle();
           }
 
-          nextState.currentBattle = null;
+          (nextState as any).currentBattle = null;
           nextState.battleLog = logs.slice(-40);
           return nextState;
         }
@@ -1902,14 +1942,13 @@ export function useEngineTick() {
           processedAnimRef.current = null;
         }
 
+        processedStateRef.current = stateKey; // LOCK HERE
         nextState.currentBattle = bState;
         nextState.battleLog = logs.slice(-40);
         return nextState;
       }
 
-      // If we reach here, turnQueue is empty, meaning both actors have finished their turn actions
-      // We process end of turn effects, then reset to idle
-
+      // Final turn cleanup
       bState.turnState = "idle";
       turnStateRef.current = "idle";
 
