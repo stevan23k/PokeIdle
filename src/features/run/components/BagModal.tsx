@@ -102,8 +102,7 @@ export function BagModal({ onClose }: BagModalProps) {
             prev.isManualBattle &&
             prev.currentBattle &&
             (itemDef.category === "heal" ||
-              itemDef.category === "battle" ||
-              itemDef.category === "tm");
+              itemDef.category === "battle");
 
           const nextEvoQueue = [
             ...((prev as any).__checkEvolutionQueue || []),

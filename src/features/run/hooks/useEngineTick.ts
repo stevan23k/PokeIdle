@@ -86,6 +86,12 @@ export function useEngineTick() {
     )
       return;
 
+    const currentZone = regionZones[run.currentZoneIndex];
+    if (currentZone?.isGym && regionGyms.length === 0) {
+      // Gyms not loaded yet, wait
+      return;
+    }
+
     if (run.team.length > 0 && run.team.every((p) => p.currentHP === 0)) {
       if (run.currentBattle) {
         setRun((p) => ({
@@ -176,9 +182,6 @@ export function useEngineTick() {
       }
       return;
     }
-
-    const region = { zones: regionZones };
-    const currentZone = region.zones[run.currentZoneIndex];
 
     if (!run.currentBattle) {
       // Progress zone
@@ -305,20 +308,9 @@ export function useEngineTick() {
                 enemy = { ...enemy, name: enemy.name }; // keep original name
                 isBoss = true;
               } else {
-                // Gym data not loaded yet — fall back to wild boss
-                const encounter = getWildEncounter(currentZone);
-                let baseEnemy = await getPokemonData(
-                  encounter.pokemonId,
-                  teamMaxLevel + 1,
-                  false,
-                );
-                const teamAverageBst = calculateTeamBST(run.team);
-                const multiplier = getBossMultiplier(
-                  teamAverageBst,
-                  currentZone.referenceBst || 280,
-                );
-                enemy = scaleGymPokemon(baseEnemy, multiplier, true);
-                isBoss = true;
+                // Gym data not loaded yet — skip this tick, will retry next tick
+                fetchingRef.current = false;
+                return;
               }
             } else {
               // ── ROUTE BOSS ────────────────────────────────────────────────────────
@@ -911,6 +903,10 @@ export function useEngineTick() {
       // For animation state machine:
       // If idle, we determine if a move has been selected.
       if (!bState.turnState || bState.turnState === "idle") {
+        // No proceder hasta que el sprite enemigo haya cargado
+        if (!bState.enemyReady && bState.turnCount === 0) {
+          return state;
+        }
         // AUTO-MEGA (solo idle, solo si no es manual, solo turno 0 de la batalla)
         if (
           !nextState.isManualBattle &&
@@ -1465,8 +1461,9 @@ export function useEngineTick() {
 
           // Logs
           if (move) {
+            const damageText = anim.damage > 0 ? ` causando ${anim.damage} de daño!` : "!";
             pushLog(
-              `${attacker.name} usó ${move.moveName} causando ${anim.damage} de daño!`,
+              `${attacker.name} usó ${move.moveName}${damageText}`,
               isPlayer ? "attack" : "normal",
             );
           }
@@ -2105,7 +2102,7 @@ export function useEngineTick() {
     const pokemon = run.team.find((p) => p.uid === pokemonUid);
     if (!pokemon) return;
 
-    learnMovesOnLevelUp(pokemon, level, fromLevel).then((newMove) => {
+    learnMovesOnLevelUp(pokemon, level, fromLevel ?? level).then((newMove) => {
       if (!newMove) return;
       setRun((prev) => {
         // Already has a pending learn — don't overwrite, but keep newMove in mind?
@@ -2345,6 +2342,7 @@ export function useEngineTick() {
             turnState: "idle",
             turnQueue: [],
             pendingAnimation: null,
+            enemyReady: false, // resetear para el nuevo Pokémon
           },
           battleLog: [
             ...prev.battleLog,

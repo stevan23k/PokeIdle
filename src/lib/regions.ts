@@ -29,6 +29,9 @@ export interface GymDefinition {
   unlockLevel: number;
   referenceBst: number;
   mechanic: GymMechanic;
+  dialogIntro?: string[];
+  dialogVictory?: string[];
+  dialogDefeat?: string[];
 }
 
 export interface Zone {

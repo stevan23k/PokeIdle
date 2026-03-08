@@ -53,7 +53,7 @@ export async function getGymsForRegion(
 
   const { data, error } = await supabase
     .from("gyms")
-    .select("*")
+    .select("id, leader_name, badge_name, type, unlock_level, reference_bst, mechanic, pokemon, reward_items, dialog_intro, dialog_victory, dialog_defeat")
     .eq("region", regionId)
     .order("id", { ascending: true });
 
@@ -78,6 +78,9 @@ export async function getGymsForRegion(
     mechanic: row.mechanic,
     pokemon: row.pokemon ?? [],
     rewardItems: row.reward_items ?? [],
+    dialogIntro: row.dialog_intro ?? [],
+    dialogVictory: row.dialog_victory ?? [],
+    dialogDefeat: row.dialog_defeat ?? [],
   }));
 
   gymCache.set(regionId, gyms);

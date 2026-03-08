@@ -476,7 +476,7 @@ export async function learnMovesOnLevelUp(
       const matches = (
         cachedPokemon.level_up_moves as { moveId: number; level: number }[]
       )
-        .filter((m) => m.level >= minLevel && m.level <= newLevel)
+        .filter((m) => m.level >= (fromLevel ?? 1) && m.level <= newLevel)
         .sort((a, b) => b.level - a.level);
 
       // Return the first one the Pokemon doesn't know yet

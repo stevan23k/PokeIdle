@@ -10,48 +10,58 @@ const SPRITE_BASE =
 
 const FRLG_BASE = `${SPRITE_BASE}/pokemon/versions/generation-iii/firered-leafgreen`;
 
+// Mapa de IDs de formas especiales → ID base para sprites
+const FORM_SPRITE_OVERRIDES: Record<number, number> = {
+  10034: 681, // Aegislash-Blade → usar sprite de Aegislash-Shield
+  // Agregar aquí otros si aparecen en el futuro
+};
+
 // Pokémon sprite helpers
 export const pokemonSprites = {
   // Battle front sprite (enemy) — FR/LG style, fallback to default
   front: (id: number, shiny = false): string => {
+    const spriteId = FORM_SPRITE_OVERRIDES[id] ?? id;
     // FRLG only has up to Deoxys (386)
-    if (id > 386) return pokemonSprites.frontFallback(id, shiny);
+    if (spriteId > 386) return pokemonSprites.frontFallback(spriteId, shiny);
 
     if (shiny) {
-      const local = getShinySpriteSet(id);
+      const local = getShinySpriteSet(spriteId);
       if (local?.front) return `/${local.front}`;
-      return `${FRLG_BASE}/shiny/${id}.png`;
+      return `${FRLG_BASE}/shiny/${spriteId}.png`;
     }
-    return `${FRLG_BASE}/${id}.png`;
+    return `${FRLG_BASE}/${spriteId}.png`;
   },
 
   // Battle back sprite (player) — FR/LG style, fallback to default
   back: (id: number, shiny = false): string => {
+    const spriteId = FORM_SPRITE_OVERRIDES[id] ?? id;
     // FRLG only has up to Deoxys (386)
-    if (id > 386) return pokemonSprites.backFallback(id, shiny);
+    if (spriteId > 386) return pokemonSprites.backFallback(spriteId, shiny);
 
     if (shiny) {
-      const local = getShinySpriteSet(id);
+      const local = getShinySpriteSet(spriteId);
       if (local?.back) return `/${local.back}`;
-      return `${FRLG_BASE}/back/shiny/${id}.png`;
+      return `${FRLG_BASE}/back/shiny/${spriteId}.png`;
     }
-    return `${FRLG_BASE}/back/${id}.png`;
+    return `${FRLG_BASE}/back/${spriteId}.png`;
   },
 
   // Fallback sprites (for Pokémon not in Gen III)
   frontFallback: (id: number, shiny = false): string => {
-    if (shiny) return `${SPRITE_BASE}/pokemon/shiny/${id}.png`;
-    return `${SPRITE_BASE}/pokemon/${id}.png`;
+    const spriteId = FORM_SPRITE_OVERRIDES[id] ?? id;
+    if (shiny) return `${SPRITE_BASE}/pokemon/shiny/${spriteId}.png`;
+    return `${SPRITE_BASE}/pokemon/${spriteId}.png`;
   },
 
   backFallback: (id: number, shiny = false): string => {
+    const spriteId = FORM_SPRITE_OVERRIDES[id] ?? id;
     // Gen 6+ (ID > 649) really lacks 2D back sprites in many sets.
     // Also skip shiny back sprites for any Gen 4+ (ID > 386) to be safe.
-    if (id > 649 || (id > 386 && shiny)) {
-      return pokemonSprites.frontFallback(id, shiny);
+    if (spriteId > 649 || (spriteId > 386 && shiny)) {
+      return pokemonSprites.frontFallback(spriteId, shiny);
     }
-    if (shiny) return `${SPRITE_BASE}/pokemon/back/shiny/${id}.png`;
-    return `${SPRITE_BASE}/pokemon/back/${id}.png`;
+    if (shiny) return `${SPRITE_BASE}/pokemon/back/shiny/${spriteId}.png`;
+    return `${SPRITE_BASE}/pokemon/back/${spriteId}.png`;
   },
 
   // Official artwork (for UI cards, roster, etc.)

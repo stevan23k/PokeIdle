@@ -166,6 +166,7 @@ export interface BattleState {
   enemyCurrentMove?: ActiveMove | null;
   usedManualTurn?: boolean;
   onEntryTriggered?: boolean;
+  enemyReady?: boolean;
 }
 
 export interface MoveLearnData {

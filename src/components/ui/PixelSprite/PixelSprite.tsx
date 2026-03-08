@@ -9,6 +9,7 @@ interface PixelSpriteProps {
   showScanlines?: boolean;
   className?: string;
   alt?: string;
+  onLoad?: () => void;
 }
 
 /**
@@ -29,6 +30,7 @@ export function PixelSprite({
   showScanlines = false,
   className,
   alt,
+  onLoad,
 }: PixelSpriteProps) {
   const primaryUrl =
     variant === "front"
@@ -108,7 +110,10 @@ export function PixelSprite({
           key={src}
           src={src}
           alt={alt ?? `Pokémon #${pokemonId}`}
-          onLoad={() => setLoaded(true)}
+          onLoad={() => {
+            setLoaded(true);
+            onLoad?.();
+          }}
           onError={handleError}
           style={{
             width: size,
