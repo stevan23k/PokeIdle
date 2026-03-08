@@ -6,13 +6,16 @@ type SpeedOption = 0 | 1 | 2 | 4 | "SKIP";
 interface Props {
   speed: SpeedOption;
   onChange: (s: SpeedOption) => void;
+  isBlocked?: boolean;
 }
 
 const SPEEDS: SpeedOption[] = [0, 1, 2, 4, "SKIP"];
 
-export function SpeedControl({ speed, onChange }: Props) {
+export function SpeedControl({ speed, onChange, isBlocked }: Props) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isBlocked) return;
+      
       if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") {
         return; // Do not trigger hotkeys when typing
       }
@@ -39,7 +42,7 @@ export function SpeedControl({ speed, onChange }: Props) {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onChange]);
+  }, [onChange, isBlocked]);
 
   return (
     <div className="flex items-center gap-2 flex-wrap justify-center p-2" aria-label="Control de velocidad">
@@ -59,7 +62,7 @@ export function SpeedControl({ speed, onChange }: Props) {
                 "px-2 py-1 text-[0.6rem] md:text-xs font-display border-2 select-none",
                 isActive 
                   ? "bg-brand border-brand text-white translate-x-[2px] translate-y-[2px]" 
-                  : "bg-surface-alt border-border text-muted pixel-shadow-sm hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[1px_1px_0px_rgba(0,0,0,0.8)]"
+                  : "bg-surface-alt border-border text-muted pixel-shadow-sm hover:translate-x-px hover:translate-y-px hover:shadow-[1px_1px_0px_rgba(0,0,0,0.8)]"
               )}
               title={s === 0 ? "Barra espaciadora" : s === "SKIP" ? "Tecla 4" : `Tecla ${s === 4 ? 3 : s}`}
               aria-pressed={isActive}

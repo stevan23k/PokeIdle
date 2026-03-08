@@ -113,7 +113,9 @@ export function useEngineTick() {
       run.pendingLootSelection ||
       run.pendingMoveLearn ||
       run.pendingEvolution ||
-      run.pendingZoneTransition
+      run.pendingZoneTransition ||
+      run.pendingGymDialogue ||
+      run.pendingGymCondition
     )
       return;
 

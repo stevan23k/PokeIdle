@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Info, X, Zap, Droplets, Mountain, Sprout, Skull, Move, Flame, Globe } from "lucide-react";
 import type { GymMechanic } from "../types/game.types";
@@ -77,6 +77,18 @@ const MECHANIC_INFO: Record<
 };
 
 export function GymConditionModal({ mechanic, onClose }: GymConditionModalProps) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "z" || e.key === "Z" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [onClose]);
+
   const info = MECHANIC_INFO[mechanic];
 
   if (!info) return null;

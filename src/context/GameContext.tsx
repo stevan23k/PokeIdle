@@ -75,6 +75,8 @@ export const defaultRun: RunState = {
   pendingEvolution: null,
   pendingMegaEvolution: null,
   pendingZoneTransition: false,
+  pendingGymDialogue: false,
+  pendingGymCondition: false,
   pinnedItems: [],
   inheritanceProgress: {},
   maxZoneIndex: 0,

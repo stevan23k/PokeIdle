@@ -51,6 +51,34 @@ export function EvolutionModal() {
     };
   }, [pending]);
 
+  // Handle keyboard interaction
+  useEffect(() => {
+    if (!pending) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isZ = e.key === "z" || e.key === "Z";
+      const isB = e.key === "b" || e.key === "B";
+      const isSelect = e.key === "Enter" || e.key === " " || isZ;
+      const isCancel = e.key === "Escape" || isB;
+
+      // Always stop propagation to background components (SpeedControl, etc)
+      if (isSelect || isCancel) {
+        e.stopPropagation();
+      }
+
+      if (phase === "reveal" && isSelect) {
+        e.preventDefault();
+        handleFinish();
+      } else if (phase !== "reveal" && isCancel) {
+        e.preventDefault();
+        handleCancel();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true); // Use capture phase to be EXTRA sure
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [pending, phase, evolvedPoke]);
+
   if (!pending) return null;
 
   const handleFinish = () => {

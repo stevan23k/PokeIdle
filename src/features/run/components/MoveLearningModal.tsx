@@ -11,6 +11,21 @@ export function MoveLearningModal() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const pending = run.pendingMoveLearn;
+
+  React.useEffect(() => {
+    if (!pending) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Block keys from reaching background components
+      if (e.key === " " || e.key === "Enter" || e.key === "Escape" || e.key === "z" || e.key === "Z") {
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [pending]);
+
   if (!pending) return null;
 
   const pokemon = run.team.find((p) => p.uid === pending.pokemonUid);

@@ -189,7 +189,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
         if (gym) {
           setCurrentGym(gym);
           if (gym.dialogIntro && gym.dialogIntro.length > 0) {
-            setRun((prev: any) => ({ ...prev, isPaused: true }));
+            setRun((prev: any) => ({ ...prev, pendingGymDialogue: true }));
             setGymDialogState({
               lines: gym.dialogIntro,
               variant: "intro",
@@ -198,7 +198,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
             });
           } else {
             // Si no hay diálogo, mostrar la mecánica directamente
-            setRun((prev: any) => ({ ...prev, isPaused: true }));
+            setRun((prev: any) => ({ ...prev, pendingGymCondition: true }));
             setShowConditionModal(true);
           }
         }
@@ -220,6 +220,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       battle.bossCurrentBar === battle.bossMaxBars
     ) {
       if (currentGym.dialogDefeat && currentGym.dialogDefeat.length > 0) {
+        setRun((prev: any) => ({ ...prev, pendingGymDialogue: true }));
         setGymDialogState({
           lines: currentGym.dialogDefeat,
           variant: "defeat",
@@ -232,6 +233,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
     // Derrota del jugador
     if (battle.phase === "defeat") {
       if (currentGym.dialogVictory && currentGym.dialogVictory.length > 0) {
+        setRun((prev: any) => ({ ...prev, pendingGymDialogue: true }));
         setGymDialogState({
           lines: currentGym.dialogVictory,
           variant: "victory",
@@ -245,15 +247,17 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
   const handleDialogFinish = () => {
     const variant = gymDialogState?.variant;
     setGymDialogState(null);
+    setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
+    
     if (variant === "intro") {
       if (battle?.activeMechanic) {
+        setRun((prev: any) => ({ ...prev, pendingGymCondition: true }));
         setShowConditionModal(true);
       } else {
         setRun((prev: any) => {
           if (!prev.currentBattle) return prev;
           return {
             ...prev,
-            isPaused: false,
             currentBattle: {
               ...prev.currentBattle,
               phase: "active",
@@ -267,15 +271,11 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
   const handleConditionClose = () => {
     setShowConditionModal(false);
     setRun((prev: any) => {
-      if (!prev.currentBattle) return prev;
-      return {
-        ...prev,
-        isPaused: false,
-        currentBattle: {
-          ...prev.currentBattle,
-          phase: "active",
-        },
-      };
+      const next: any = { ...prev, pendingGymCondition: false };
+      if (next.currentBattle) {
+        next.currentBattle = { ...next.currentBattle, phase: "active" };
+      }
+      return next;
     });
   };
   useEffect(() => {

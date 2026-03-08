@@ -13,6 +13,7 @@ import { CaptureLog } from "../../features/run/components/CaptureLog";
 import { PauseMenu } from "../../features/run/components/PauseMenu";
 import { ManualBattleHUD } from "../../features/run/components/ManualBattleHUD";
 import { Menu } from "lucide-react";
+import { clsx } from "clsx";
 import { EventToast } from "../../components/ui/EventToast";
 import { LootSelectionModal } from "../../features/run/components/LootSelectionModal";
 import { BagModal } from "../../features/run/components/BagModal";
@@ -249,6 +250,16 @@ export function GameLayout({ zones }: { zones: Zone[] }) {
 
     case "game":
     default:
+      const isModalActive = !!(
+        run.pendingEvolution ||
+        run.pendingMoveLearn ||
+        run.pendingLootSelection ||
+        run.pendingZoneTransition ||
+        run.pendingGymDialogue ||
+        run.pendingGymCondition ||
+        run.pendingMegaEvolution
+      );
+
       screenContent = (
         <div className="flex flex-col h-screen min-h-screen max-h-screen bg-surface overflow-hidden">
           <PauseMenu onReturnToMenu={() => setCurrentScreen("main")} />
@@ -260,13 +271,18 @@ export function GameLayout({ zones }: { zones: Zone[] }) {
               <SpeedControl
                 speed={run.speedMultiplier}
                 onChange={(s: any) => setRun((p) => ({ ...p, speedMultiplier: s }))}
+                isBlocked={isModalActive}
               />
             </div>
             <div className="w-64 shrink-0 flex justify-end gap-2">
               <button
-                onClick={() => setRun((p) => ({ ...p, isPaused: true }))}
-                className="flex items-center justify-center p-2 bg-surface-alt border-2 border-border cursor-pointer hover:bg-surface-light hover:text-accent transition-colors"
-                title="Pausar Juego"
+                onClick={() => !isModalActive && setRun((p) => ({ ...p, isPaused: true }))}
+                disabled={isModalActive}
+                className={clsx(
+                  "flex items-center justify-center p-2 bg-surface-alt border-2 border-border transition-colors",
+                  isModalActive ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-surface-light hover:text-accent"
+                )}
+                title={isModalActive ? "Cierra la ventana actual primero" : "Pausar Juego"}
               >
                 <Menu size={16} />
               </button>

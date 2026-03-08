@@ -46,10 +46,12 @@ export function GymLeaderDialog({
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "z" || e.key === "Z" || e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
         handleAdvance();
       }
     };
-    window.addEventListener("keydown", handleKey);
+    window.addEventListener("keydown", handleKey, true); // Use capture phase
     return () => window.removeEventListener("keydown", handleKey);
   }, [currentLine, isTyping, lines]);
 

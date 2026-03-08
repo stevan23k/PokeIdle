@@ -272,6 +272,8 @@ export interface RunState {
   pendingEvolution: EvolutionData | null;
   pendingMegaEvolution: PendingMegaEvolution | null;
   pendingZoneTransition: boolean;
+  pendingGymDialogue: boolean;
+  pendingGymCondition: boolean;
   _eliteFourTransition?: boolean;
   pinnedItems: string[]; // slug
   inheritanceProgress: Record<number, InheritanceProgress>;

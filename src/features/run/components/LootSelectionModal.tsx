@@ -15,6 +15,20 @@ export function LootSelectionModal() {
     : run.pendingLootSelection;
   const isAuto = !isTraining && run.autoLoot;
 
+  useEffect(() => {
+    if (!options || options.length === 0) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Block keys from reaching background components
+      if (e.key === " " || e.key === "Enter" || e.key === "Escape" || e.key === "z" || e.key === "Z") {
+        e.stopPropagation();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [options]);
+
   const handleSelect = (itemId: string) => {
     const item = ITEMS[itemId];
 
