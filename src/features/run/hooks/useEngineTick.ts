@@ -1501,6 +1501,10 @@ export function useEngineTick() {
                 ...bState.playerPokemon,
                 currentHP: nextHP,
               };
+              // IMPORTANT: Sync back to team so death checks see the 0 HP
+              nextState.team = nextState.team.map((p) =>
+                p.uid === bState.playerPokemon.uid ? bState.playerPokemon : p
+              );
             }
 
             // Apply status if any (only if damage wasn't blocked/immune)
