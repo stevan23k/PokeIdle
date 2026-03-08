@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { clsx } from "clsx";
 
 interface GymLeaderDialogProps {
   leaderName: string;
@@ -7,6 +8,22 @@ interface GymLeaderDialogProps {
   lines: string[];
   onFinish: () => void;
   variant: "intro" | "victory" | "defeat";
+}
+
+const LEADER_SPRITE_SLUGS: Record<string, string> = {
+  "Brock": "brock",
+  "Misty": "misty",
+  "Lt. Surge": "ltsurge",
+  "Erika": "erika",
+  "Koga": "koga",
+  "Sabrina": "sabrina",
+  "Blaine": "blaine",
+  "Giovanni": "giovanni",
+};
+
+function getLeaderSpriteUrl(leaderName: string): string {
+  const slug = LEADER_SPRITE_SLUGS[leaderName] ?? leaderName.toLowerCase().replace(/\s/g, "");
+  return `https://play.pokemonshowdown.com/sprites/trainers/${slug}.png`;
 }
 
 export function GymLeaderDialog({
@@ -19,6 +36,13 @@ export function GymLeaderDialog({
   const [currentLine, setCurrentLine] = useState(0);
   const [displayed, setDisplayed] = useState("");
   const [isTyping, setIsTyping] = useState(true);
+  const [spriteVisible, setSpriteVisible] = useState(false);
+
+  useEffect(() => {
+    // Pequeño delay para que la animación de entrada sea visible
+    const t = setTimeout(() => setSpriteVisible(true), 50);
+    return () => clearTimeout(t);
+  }, []);
 
   // Efecto typewriter
   useEffect(() => {
@@ -87,42 +111,63 @@ export function GymLeaderDialog({
       onClick={handleAdvance}
       style={{ cursor: "pointer" }}
     >
-      <div className={`border-4 ${variantColors[variant]} ${variantBg[variant]} bg-surface-dark p-4 shadow-[6px_6px_0_rgba(0,0,0,0.8)]`}>
-        {/* Nombre del líder */}
-        <div className={`font-display text-[0.55rem] tracking-[0.2em] uppercase mb-2 ${
-          variant === "intro" ? "text-brand" : variant === "victory" ? "text-danger" : "text-emerald-400"
-        }`}>
-          {leaderName}
+      <div className={`border-4 ${variantColors[variant]} ${variantBg[variant]} bg-surface-dark shadow-[6px_6px_0_rgba(0,0,0,0.8)] flex flex-col sm:flex-row gap-3 items-end sm:items-stretch`}>
+        
+        {/* Sprite del líder */}
+        <div className="shrink-0 flex items-end justify-center pl-3 pb-3 self-center sm:self-end">
+          <img
+            src={getLeaderSpriteUrl(leaderName)}
+            alt={leaderName}
+            className={clsx(
+              "w-24 h-24 sm:w-32 sm:h-32 object-contain transition-all duration-500",
+              spriteVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+            )}
+            style={{ imageRendering: "pixelated" }}
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
         </div>
 
-        {/* Texto con typewriter */}
-        <p className="font-display text-[0.75rem] text-white leading-relaxed min-h-[2.5rem]">
-          {displayed}
-          {isTyping && <span className="animate-pulse">▋</span>}
-        </p>
-
-        {/* Indicador avanzar */}
-        {!isTyping && (
-          <div className="flex justify-end mt-2">
-            <span className="font-display text-[0.5rem] text-muted animate-bounce tracking-widest">
-              {currentLine < lines.length - 1 ? "Z / CLICK ▶" : "Z / CLICK ▶▶"}
-            </span>
+        {/* Contenido del diálogo */}
+        <div className="flex-1 p-4 flex flex-col gap-2">
+          {/* Nombre del líder */}
+          <div className={`font-display text-[0.55rem] tracking-[0.2em] uppercase ${
+            variant === "intro" ? "text-brand" : variant === "victory" ? "text-danger" : "text-emerald-400"
+          }`}>
+            {leaderName}
           </div>
-        )}
 
-        {/* Barra de progreso de líneas */}
-        <div className="flex gap-1 mt-2">
-          {lines.map((_, i) => (
-            <div
-              key={i}
-              className={`h-0.5 flex-1 transition-colors ${
-                i <= currentLine ? (variant === "intro" ? "bg-brand" : variant === "victory" ? "bg-danger" : "bg-emerald-500") : "bg-border"
-              }`}
-            />
-          ))}
+          {/* Texto con typewriter */}
+          <p className="font-display text-[0.75rem] text-white leading-relaxed min-h-[2.5rem]">
+            {displayed}
+            {isTyping && <span className="animate-pulse">▋</span>}
+          </p>
+
+          {/* Indicador avanzar + barra de progreso */}
+          <div className="flex items-center justify-between gap-2 mt-1">
+            <div className="flex gap-1 flex-1">
+              {lines.map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-0.5 flex-1 transition-colors ${
+                    i <= currentLine
+                      ? variant === "intro" ? "bg-brand"
+                      : variant === "victory" ? "bg-danger"
+                      : "bg-emerald-500"
+                      : "bg-border"
+                  }`}
+                />
+              ))}
+            </div>
+            {!isTyping && (
+              <span className="font-display text-[0.5rem] text-muted animate-bounce tracking-widest shrink-0">
+                {currentLine < lines.length - 1 ? "▶" : "▶▶"}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>,
     document.querySelector(".battle-view-container") || document.body,
   );
 }
+
