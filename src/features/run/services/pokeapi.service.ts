@@ -24,7 +24,10 @@ const API_BASE = "https://pokeapi.co/api/v2";
 
 let _basePokemonPool: number[] | null = null;
 
-export const COMMON_SELF_BOOSTS: Record<number, { stat: string; stages: number }[]> = {
+export const COMMON_SELF_BOOSTS: Record<
+  number,
+  { stat: string; stages: number }[]
+> = {
   14: [{ stat: "atk", stages: 2 }], // Swords Dance (Danza Espada)
   97: [{ stat: "spe", stages: 2 }], // Agility (Agilidad)
   110: [{ stat: "def", stages: 1 }], // Harden (Fortaleza)
@@ -240,7 +243,8 @@ export async function getPokemonData(
   const types = data.types.map((t: any) => t.type.name);
 
   // Extraer ability principal (primera no-oculta)
-  const mainAbility = data.abilities.find((a: any) => !a.is_hidden)?.ability.name ?? null;
+  const mainAbility =
+    data.abilities.find((a: any) => !a.is_hidden)?.ability.name ?? null;
 
   // Extract level-up moves
   const movesToCheck = data.moves.filter((m: any) => {
@@ -272,7 +276,7 @@ export async function getPokemonData(
     try {
       const md = await fetchJson(mw.url);
       // Simplify logic: use damaging moves mostly, OR status moves if they are known self-boosts
-      if ((md.power && md.power > 0) || (COMMON_SELF_BOOSTS[md.id])) {
+      if ((md.power && md.power > 0) || COMMON_SELF_BOOSTS[md.id]) {
         const spanText =
           md.names.find((n: any) => n.language.name === "es")?.name || md.name;
         let statusEffect = undefined;
@@ -285,18 +289,21 @@ export async function getPokemonData(
             };
           }
         }
- 
+
         // Extraer descripción — preferir español, caer a inglés
         const flavorEntries: any[] = md.flavor_text_entries ?? [];
-        const descEs = flavorEntries.find((f: any) => f.language.name === "es")
-          ?.flavor_text ?? null;
-        const descEn = flavorEntries.find((f: any) => f.language.name === "en")
-          ?.flavor_text ?? null;
-        const description = (descEs ?? descEn ?? null)
-          ?.replace(/\n|\f/g, " ")
-          .replace(/\s+/g, " ")
-          .trim() ?? undefined;
- 
+        const descEs =
+          flavorEntries.find((f: any) => f.language.name === "es")
+            ?.flavor_text ?? null;
+        const descEn =
+          flavorEntries.find((f: any) => f.language.name === "en")
+            ?.flavor_text ?? null;
+        const description =
+          (descEs ?? descEn ?? null)
+            ?.replace(/\n|\f/g, " ")
+            .replace(/\s+/g, " ")
+            .trim() ?? undefined;
+
         activeMoves.push({
           moveId: md.id,
           moveName: spanText,
@@ -487,7 +494,7 @@ export async function learnMovesOnLevelUp(
 
       if (md) {
         // Safety: check if already learned
-        if (pokemon.moves.some(m => m.moveId === md.move_id)) {
+        if (pokemon.moves.some((m) => m.moveId === md.move_id)) {
           return [];
         }
 
@@ -535,7 +542,9 @@ export async function learnMovesOnLevelUp(
         })
         .sort((a, b) => b.level - a.level);
 
-      console.log(`[LEARN MOVES] pokemon=${pokemon.name} range=[${fromLevel ?? 1}, ${newLevel}] matches=${matches.length}`);
+      console.log(
+        `[LEARN MOVES] pokemon=${pokemon.name} range=[${fromLevel ?? 1}, ${newLevel}] matches=${matches.length}`,
+      );
 
       const foundMoves: import("../types/game.types").ActiveMove[] = [];
 
@@ -590,7 +599,9 @@ export async function learnMovesOnLevelUp(
       }),
     );
 
-    console.log(`[LEARN MOVES POKEAPI] pokemon=${pokemon.name} range=[${fromLevel ?? 1}, ${newLevel}] candidates=${newMoveCandidates.length}`);
+    console.log(
+      `[LEARN MOVES POKEAPI] pokemon=${pokemon.name} range=[${fromLevel ?? 1}, ${newLevel}] candidates=${newMoveCandidates.length}`,
+    );
 
     if (newMoveCandidates.length === 0) return [];
 
@@ -619,14 +630,17 @@ export async function learnMovesOnLevelUp(
 
       // Extraer descripción — preferir español, caer a inglés
       const flavorEntries: any[] = md.flavor_text_entries ?? [];
-      const descEs = flavorEntries.find((f: any) => f.language.name === "es")
-        ?.flavor_text ?? null;
-      const descEn = flavorEntries.find((f: any) => f.language.name === "en")
-        ?.flavor_text ?? null;
-      const description = (descEs ?? descEn ?? null)
-        ?.replace(/\n|\f/g, " ")
-        .replace(/\s+/g, " ")
-        .trim() ?? undefined;
+      const descEs =
+        flavorEntries.find((f: any) => f.language.name === "es")?.flavor_text ??
+        null;
+      const descEn =
+        flavorEntries.find((f: any) => f.language.name === "en")?.flavor_text ??
+        null;
+      const description =
+        (descEs ?? descEn ?? null)
+          ?.replace(/\n|\f/g, " ")
+          .replace(/\s+/g, " ")
+          .trim() ?? undefined;
 
       foundMoves.push({
         moveId: md.id,
@@ -773,16 +787,53 @@ export async function fetchBasePokemonPool(): Promise<number[]> {
     if (error) throw error;
     if (!data) return [];
 
-    // Filter out Paradox IDs from the base pool to keep them rare (Gacha has 2.3% for them)
+    // Filter out Paradox IDs from the base pool to keep them rare (Gacha has specific rates for them)
     const filtered = data
       .map((d: any) => d.pokemon_id)
-      .filter(id => !PARADOX_IDS.has(id));
+      .filter((id) => !PARADOX_IDS.has(id));
 
     _basePokemonPool = filtered;
     return _basePokemonPool;
   } catch (e) {
-    console.error("[fetchBasePokemonPool] Failed, falling back to a safe list", e);
+    console.error(
+      "[fetchBasePokemonPool] Failed, falling back to a safe list",
+      e,
+    );
     // Fallback to traditional starters if Supabase fails
-    return [1, 4, 7, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495, 498, 501, 650, 653, 656, 722, 725, 728, 810, 813, 816, 906, 909, 912];
+    return [
+      1, 4, 7, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495, 498, 501, 650,
+      653, 656, 722, 725, 728, 810, 813, 816, 906, 909, 912,
+    ];
+  }
+}
+
+export type GachaPools = Record<number, number[]>;
+
+/**
+ * Fetches the tiered gacha pools from Supabase.
+ * Groups Pokémon IDs by their gacha_tier (6, 5, 4, 3).
+ */
+export async function fetchGachaPools(): Promise<GachaPools> {
+  try {
+    const { data, error } = await supabase
+      .from("species_cache")
+      .select("pokemon_id, gacha_tier");
+
+    if (error) throw error;
+    if (!data) return { 3: [], 4: [], 5: [], 6: [] };
+
+    const pools: GachaPools = { 3: [], 4: [], 5: [], 6: [] };
+
+    data.forEach((row: any) => {
+      const tier = row.gacha_tier || 3;
+      if (pools[tier]) {
+        pools[tier].push(row.pokemon_id);
+      }
+    });
+
+    return pools;
+  } catch (e) {
+    console.error("[fetchGachaPools] Failed", e);
+    return { 3: [], 4: [], 5: [], 6: [] };
   }
 }
