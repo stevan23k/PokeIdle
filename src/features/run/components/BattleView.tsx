@@ -1,4 +1,5 @@
 import React, { useCallback, useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useGame } from "../../../context/GameContext";
 import { PixelSprite } from "../../../components/ui/PixelSprite";
 import { HPBar } from "../../../components/ui/HPBar";
@@ -58,8 +59,15 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
   const [leaderSpriteOut, setLeaderSpriteOut] = useState(false);
   const [showEnemyHP, setShowEnemyHP] = useState(true);
   
-  // Use a ref to avoid double triggering the intro/cancellation due to re-renders
-  const lastGymIntroRef = useRef<string | null>(null);
+  const [showBadgeModal, setShowBadgeModal] = useState<{
+    badgeName: string;
+    gymType: string;
+    leaderName: string;
+  } | null>(null);
+
+  // Refs for dialogue tracking
+  const gymIntroDialogShownRef = useRef(false);
+  const gymVictoryDialogShownRef = useRef(false);
 
   const isTraining = training.isActive;
   const battle = isTraining
@@ -187,14 +195,14 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
   // --- Gym Introduction Logic ---
   useEffect(() => {
-    const battleUid = battle?.enemyPokemon?.uid;
     if (
       battle?.type === "gym" &&
-      (battle.phase === "intro" || battle.phase === "active") &&
+      battle.phase === "active" &&
       battle.turnCount === 0 &&
-      lastGymIntroRef.current !== battleUid
+      !gymIntroDialogShownRef.current
     ) {
-      lastGymIntroRef.current = battleUid ?? null;
+      gymIntroDialogShownRef.current = true;
+      gymVictoryDialogShownRef.current = false; // reset para nueva batalla
 
       // SET IMMEDIATELY (Visuals)
       setShowLeaderSprite(true);
@@ -270,7 +278,8 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       setShowLeaderSprite(false);
       setLeaderSpriteOut(false);
       setShowEnemyHP(true);
-      lastGymIntroRef.current = null; // Important: Clear ref when battle ends
+      gymIntroDialogShownRef.current = false;
+      gymVictoryDialogShownRef.current = false;
       setRun((prev: any) => ({ 
         ...prev, 
         pendingGymDialogue: false,
@@ -289,7 +298,12 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       enemyPokemon?.currentHP === 0;
 
     // Victoria
-    if (battle.phase === "victory" && isLastGymPokemon) {
+    if (
+      battle.phase === "victory" &&
+      isLastGymPokemon &&
+      !gymVictoryDialogShownRef.current
+    ) {
+      gymVictoryDialogShownRef.current = true;
       if (currentGym.dialogDefeat && currentGym.dialogDefeat.length > 0) {
         setRun((prev: any) => ({ ...prev, pendingGymDialogue: true }));
         setShowLeaderSprite(true);
@@ -343,6 +357,15 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       setLeaderSpriteOut(true);
       setTimeout(() => setShowLeaderSprite(false), 500);
       setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
+
+      // Mostrar modal de medalla
+      if (currentGym) {
+        setShowBadgeModal({
+          badgeName: currentGym.badgeName ?? "Medalla",
+          gymType: currentGym.type ?? "normal",
+          leaderName: currentGym.leaderName ?? "Líder",
+        });
+      }
     }
     
     if (variant === "victory") {
@@ -851,6 +874,114 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
           onClose={handleConditionClose}
         />
       )}
+
+      {/* Badge Modal */}
+      {showBadgeModal && (
+        <BadgeModal
+          badgeName={showBadgeModal.badgeName}
+          gymType={showBadgeModal.gymType}
+          leaderName={showBadgeModal.leaderName}
+          onClose={() => setShowBadgeModal(null)}
+        />
+      )}
     </div>
+  );
+}
+
+function BadgeModal({
+  badgeName,
+  gymType,
+  leaderName,
+  onClose,
+}: {
+  badgeName: string;
+  gymType: string;
+  leaderName: string;
+  onClose: () => void;
+}) {
+  const TYPE_COLORS: Record<string, string> = {
+    rock: "#B8A038",
+    water: "#6890F0",
+    electric: "#F8D030",
+    grass: "#78C850",
+    poison: "#A040A0",
+    psychic: "#F85888",
+    fire: "#F08030",
+    ground: "#E0C068",
+    normal: "#A8A878",
+  };
+  const color = TYPE_COLORS[gymType] ?? "#A8A878";
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (
+        e.key === "z" ||
+        e.key === "Z" ||
+        e.key === "Enter" ||
+        e.key === " "
+      ) {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKey, true);
+    return () => window.removeEventListener("keydown", handleKey, true);
+  }, [onClose]);
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm animate-in fade-in duration-300">
+      <div
+        className="bg-surface-dark border-4 w-full max-w-sm mx-4 flex flex-col items-center overflow-hidden animate-in zoom-in duration-300"
+        style={{ borderColor: color }}
+      >
+        {/* Header */}
+        <div
+          className="w-full py-3 px-6 flex items-center justify-center"
+          style={{ backgroundColor: color + "22" }}
+        >
+          <span
+            className="font-display text-[0.5rem] tracking-[0.3em] uppercase"
+            style={{ color }}
+          >
+            ¡MEDALLA OBTENIDA!
+          </span>
+        </div>
+
+        {/* Badge icon */}
+        <div className="py-8 flex flex-col items-center gap-4">
+          <div
+            className="w-20 h-20 rounded-full border-4 flex items-center justify-center animate-pulse"
+            style={{
+              borderColor: color,
+              backgroundColor: color + "33",
+              boxShadow: `0 0 30px ${color}66`,
+            }}
+          >
+            <span className="text-4xl">🏅</span>
+          </div>
+          <div className="text-center px-6">
+            <h2
+              className="font-display text-lg tracking-widest uppercase mb-1"
+              style={{ color }}
+            >
+              {badgeName}
+            </h2>
+            <p className="font-body text-[0.6rem] text-muted">
+              Obtenida de {leaderName}
+            </p>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <button
+          onClick={onClose}
+          className="w-full py-4 border-t-4 font-display text-[0.6rem] tracking-[0.2em] uppercase transition-all hover:opacity-80"
+          style={{ borderColor: color, color, backgroundColor: color + "11" }}
+        >
+          Z / CLICK — CONTINUAR
+        </button>
+      </div>
+    </div>,
+    document.body,
   );
 }
