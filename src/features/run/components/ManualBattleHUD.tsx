@@ -48,10 +48,12 @@ function MovePopover({ move }: { move: ActiveMove }) {
         <span className="font-display text-[0.75rem] text-white tracking-widest uppercase truncate font-bold">
           {move.moveName}
         </span>
-        <span className={clsx(
-          "font-display text-[0.55rem] tracking-tight whitespace-nowrap",
-          CATEGORY_COLOR[move.category] ?? "text-gray-400"
-        )}>
+        <span
+          className={clsx(
+            "font-display text-[0.55rem] tracking-tight whitespace-nowrap",
+            CATEGORY_COLOR[move.category] ?? "text-gray-400",
+          )}
+        >
           {CATEGORY_LABEL[move.category] ?? move.category}
         </span>
       </div>
@@ -61,13 +63,17 @@ function MovePopover({ move }: { move: ActiveMove }) {
           <TypeBadge type={move.type} showLabel size="sm" />
           <div className="flex gap-2 items-center">
             <div className="flex flex-col items-end">
-              <span className="text-[0.5rem] text-white/60 leading-none">POW</span>
+              <span className="text-[0.5rem] text-white/60 leading-none">
+                POW
+              </span>
               <span className="font-body text-[0.7rem] text-white font-bold">
                 {move.power > 0 ? move.power : "—"}
               </span>
             </div>
             <div className="flex flex-col items-end border-l border-border/30 pl-2">
-              <span className="text-[0.5rem] text-white/60 leading-none">ACC</span>
+              <span className="text-[0.5rem] text-white/60 leading-none">
+                ACC
+              </span>
               <span className="font-body text-[0.7rem] text-white font-bold">
                 {move.accuracy > 0 ? `${move.accuracy}%` : "—"}
               </span>
@@ -76,14 +82,21 @@ function MovePopover({ move }: { move: ActiveMove }) {
         </div>
 
         <div className="flex justify-between items-center bg-black/30 p-1.5 mt-0.5 rounded-sm">
-          <span className="font-display text-[0.55rem] text-white/80 tracking-wider uppercase">Puntos de Poder</span>
-          <span className={clsx(
-            "font-body text-[0.7rem] font-bold",
-            move.currentPP === 0 ? "text-danger" :
-            move.currentPP <= move.maxPP / 4 ? "text-orange-400" :
-            move.currentPP <= move.maxPP / 2 ? "text-yellow-400" :
-            "text-hp"
-          )}>
+          <span className="font-display text-[0.55rem] text-white/80 tracking-wider uppercase">
+            Puntos de Poder
+          </span>
+          <span
+            className={clsx(
+              "font-body text-[0.7rem] font-bold",
+              move.currentPP === 0
+                ? "text-danger"
+                : move.currentPP <= move.maxPP / 4
+                  ? "text-orange-400"
+                  : move.currentPP <= move.maxPP / 2
+                    ? "text-yellow-400"
+                    : "text-hp",
+            )}
+          >
             {move.currentPP}/{move.maxPP}
           </span>
         </div>
@@ -119,8 +132,8 @@ export function ManualBattleHUD() {
 
   if (!battle || !pokemon || battle.phase !== "active") {
     return (
-      <div className="h-44 border-2 border-border bg-surface-dark crt-screen relative flex items-center justify-center p-3 overflow-hidden">
-        <span className="font-display text-[0.6rem] text-white tracking-widest uppercase animate-pulse">
+      <div className="h-44 border-2 border-border bg-slate-200 crt-screen relative flex items-center justify-center p-3 overflow-hidden">
+        <span className="font-display text-[0.6rem] text-foreground tracking-widest uppercase animate-pulse">
           Esperando Combate...
         </span>
       </div>
@@ -129,8 +142,8 @@ export function ManualBattleHUD() {
 
   const hasQueuedAction = !!battle.manualActionQueue;
 
-  const isPlayerTurn = 
-    battle.turnState === "idle" && 
+  const isPlayerTurn =
+    battle.turnState === "idle" &&
     !hasQueuedAction &&
     (!battle.turnQueue || battle.turnQueue.length === 0);
 
@@ -161,9 +174,9 @@ export function ManualBattleHUD() {
   };
 
   return (
-    <div className="h-44 border-2 border-border bg-surface-dark crt-screen relative flex flex-col overflow-hidden">
-      <div className="bg-surface border-b border-border px-2 py-1.5 z-10 sticky top-0 flex items-center justify-between">
-        <span className="font-display text-[0.55rem] text-white tracking-widest uppercase drop-shadow-sm">
+    <div className="h-44 border-2 border-border bg-slate-200 crt-screen relative flex flex-col overflow-hidden">
+      <div className="bg-slate-300 border-b border-border px-2 py-1.5 z-10 sticky top-0 flex items-center justify-between">
+        <span className="font-display text-[0.55rem] text-foreground tracking-widest uppercase drop-shadow-sm">
           {!isPlayerTurn
             ? "ESPERANDO..."
             : "¿QUÉ DEBE HACER " + battle.playerPokemon.name + "?"}
@@ -197,7 +210,9 @@ export function ManualBattleHUD() {
               className={clsx(
                 "group relative flex-col items-stretch! justify-start! p-2 gap-1 h-full w-full",
                 !isPlayerTurn && "opacity-40 cursor-not-allowed",
-                move.currentPP === 0 && isPlayerTurn && "opacity-50 grayscale cursor-not-allowed hover:animate-[shake_0.4s_ease-in-out]"
+                move.currentPP === 0 &&
+                  isPlayerTurn &&
+                  "opacity-50 grayscale cursor-not-allowed hover:animate-[shake_0.4s_ease-in-out]",
               )}
               style={{
                 backgroundColor:
@@ -205,7 +220,10 @@ export function ManualBattleHUD() {
                     ? (TYPE_COLORS[move.type.toLowerCase()] || "#A8A878") + "40"
                     : undefined,
               }}
-              isActive={hasQueuedAction && battle.manualActionQueue?.id === String(move.moveId)}
+              isActive={
+                hasQueuedAction &&
+                battle.manualActionQueue?.id === String(move.moveId)
+              }
             >
               <div className="flex justify-between items-center w-full">
                 <span className="font-display text-[0.65rem] uppercase text-foreground truncate max-w-[70%] text-left">
@@ -224,19 +242,20 @@ export function ManualBattleHUD() {
         ))}
       </div>
 
-      {hoveredMove && createPortal(
-        <div
-          className="fixed z-[99999] pointer-events-none"
-          style={{
-            left: hoveredMove.x,
-            top: hoveredMove.y,
-            transform: "translate(-50%, calc(-100% - 8px))",
-          }}
-        >
-          <MovePopover move={hoveredMove.move} />
-        </div>,
-        document.body
-      )}
+      {hoveredMove &&
+        createPortal(
+          <div
+            className="fixed z-[99999] pointer-events-none"
+            style={{
+              left: hoveredMove.x,
+              top: hoveredMove.y,
+              transform: "translate(-50%, calc(-100% - 8px))",
+            }}
+          >
+            <MovePopover move={hoveredMove.move} />
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

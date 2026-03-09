@@ -61,7 +61,7 @@ export function PauseMenu({ onReturnToMenu }: Props) {
     }
   };
 
-  const isSystemPause = 
+  const isSystemPause =
     (run as any).pendingGymDialogue ||
     (run as any).pendingGymCondition ||
     run.pendingEvolution ||
@@ -80,57 +80,77 @@ export function PauseMenu({ onReturnToMenu }: Props) {
             </div>
 
             <div className="flex flex-col gap-6 mt-4">
-              <Card variant="alt" noPadding className="p-6 bg-surface-dark/50 border-2 border-border/50">
+              <Card
+                variant="alt"
+                noPadding
+                className="p-6 bg-surface-dark/50 border-2 border-border/50"
+              >
                 <h3 className="font-display text-xs text-brand tracking-[0.2em] uppercase mb-6 flex items-center gap-3 border-b border-border/30 pb-3">
                   <span className="text-lg">🏃</span> RESUMEN DE LA AVENTURA
                 </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12 font-body text-xs text-white uppercase tracking-wider">
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-12 font-body text-xs text-foreground uppercase tracking-wider">
                   <div className="flex justify-between items-center border-b border-border/10 pb-1">
-                    <span className="text-[0.6rem] text-muted-foreground opacity-70">TIEMPO DE JUEGO:</span>
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">
+                      TIEMPO DE JUEGO:
+                    </span>
                     <span className="font-display text-[0.6rem] text-accent">
                       {formatDuration(Date.now() - run.startedAt)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-b border-border/10 pb-1">
-                    <span className="text-[0.6rem] text-muted-foreground opacity-70">ZONA ACTUAL:</span>
-                    <span className="font-display text-[0.6rem] text-white">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">
+                      ZONA ACTUAL:
+                    </span>
+                    <span className="font-display text-[0.6rem] text-foreground">
                       {currentZone?.name || "???"}
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-b border-border/10 pb-1">
-                    <span className="text-[0.6rem] text-muted-foreground opacity-70">MEDALLAS:</span>
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">
+                      MEDALLAS:
+                    </span>
                     <span className="font-display text-[0.6rem] text-accent">
                       {run.gymsBadges.length}/8
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-b border-border/10 pb-1">
-                    <span className="text-[0.6rem] text-muted-foreground opacity-70">POKÉDÓLARES:</span>
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">
+                      POKÉDÓLARES:
+                    </span>
                     <span className="font-display text-[0.6rem] text-success">
                       ${run.money}
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-b border-border/10 pb-1">
-                    <span className="text-[0.6rem] text-muted-foreground opacity-70">POKÉMON CAPTURADOS:</span>
-                    <span className="font-display text-[0.6rem] text-white">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">
+                      POKÉMON CAPTURADOS:
+                    </span>
+                    <span className="font-display text-[0.6rem] text-foreground">
                       {run.totalCaptured}
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-b border-border/10 pb-1">
-                    <span className="text-[0.6rem] text-muted-foreground opacity-70">BATALLAS GANADAS:</span>
-                    <span className="font-display text-[0.6rem] text-white">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">
+                      BATALLAS GANADAS:
+                    </span>
+                    <span className="font-display text-[0.6rem] text-foreground">
                       {run.totalBattlesWon}
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-b border-border/10 pb-1">
-                    <span className="text-[0.6rem] text-muted-foreground opacity-70">POKÉMON DEBILITADOS:</span>
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">
+                      POKÉMON DEBILITADOS:
+                    </span>
                     <span className="font-display text-[0.6rem] text-danger">
                       {run.totalFainted}
                     </span>
                   </div>
                   <div className="flex justify-between items-center border-b border-border/10 pb-1">
-                    <span className="text-[0.6rem] text-muted-foreground opacity-70">NIVEL MÁXIMO:</span>
-                    <span className="font-display text-[0.6rem] text-white">
+                    <span className="text-[0.6rem] text-muted-foreground opacity-70">
+                      NIVEL MÁXIMO:
+                    </span>
+                    <span className="font-display text-[0.6rem] text-foreground">
                       {Math.max(...run.team.map((p) => p.level), 0)}
                     </span>
                   </div>
@@ -139,9 +159,9 @@ export function PauseMenu({ onReturnToMenu }: Props) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Button
-                  variant="primary"
+                  variant="secondary"
                   onClick={togglePause}
-                  className="py-6 text-sm font-display tracking-widest shadow-pixel hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                  className="py-6 text-base font-display shadow-pixel hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all bg-[#d0dbd4] border-[#0e1418] text-[#141a1c]"
                 >
                   REANUDAR AVENTURA
                 </Button>
@@ -149,7 +169,7 @@ export function PauseMenu({ onReturnToMenu }: Props) {
                 <Button
                   variant="secondary"
                   onClick={handleExit}
-                  className="py-6 text-sm font-display tracking-widest shadow-pixel hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all"
+                  className="py-6 text-base font-display shadow-pixel hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all bg-[#d0dbd4] border-[#0e1418] text-[#141a1c]"
                 >
                   GUARDAR Y SALIR
                 </Button>
@@ -157,9 +177,9 @@ export function PauseMenu({ onReturnToMenu }: Props) {
 
               <div className="mt-4 pt-4 border-t-2 border-border/30">
                 <Button
-                  variant="danger"
+                  variant="secondary"
                   onClick={() => setShowConfirm(true)}
-                  className="w-full py-4 text-[0.6rem] font-display tracking-widest opacity-80 hover:opacity-100 transition-opacity"
+                  className="w-full py-4 text-[0.7rem] font-display text-danger border-danger/50 hover:border-danger hover:bg-danger/10 transition-all bg-[#d0dbd4]"
                 >
                   RENDIRSE Y REINICIAR RUN
                 </Button>

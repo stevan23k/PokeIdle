@@ -126,7 +126,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
             >
               {pokemon.name}
             </h3>
-            <span className="text-white text-[0.65rem] font-body">
+            <span className="text-foreground text-[0.65rem] font-body">
               Nv.{pokemon.level}
             </span>
           </div>
@@ -164,7 +164,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[0.65rem] font-body text-white">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[0.65rem] font-body text-foreground">
             <div className="flex justify-between">
               <span>PS</span>
               <span className="text-foreground">{pokemon.stats.hp}</span>
@@ -195,7 +195,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
 
           {/* Held Item */}
           <div className="flex items-center gap-2 border-t border-border pt-2 relative">
-            <span className="font-display text-[0.5rem] text-white tracking-wider">
+            <span className="font-display text-[0.5rem] text-foreground tracking-wider">
               OBJETO:
             </span>
             {pokemon.heldItem && ITEMS[pokemon.heldItem] ? (
@@ -214,14 +214,14 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
                 </span>
               </Button>
             ) : (
-              <span className="font-body text-[0.55rem] text-white italic">
+              <span className="font-body text-[0.55rem] text-foreground italic">
                 Sin objeto equipado
               </span>
             )}
             {showUnequipPopover && pokemon.heldItem && (
               <div className="absolute left-0 bottom-full mb-1 bg-surface-dark border-2 border-border p-2 shadow-pixel z-10 flex flex-col gap-1">
                 <Button
-                  variant="danger"
+                  variant="secondary"
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -247,7 +247,7 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
                     }
                     setShowUnequipPopover(false);
                   }}
-                  className="w-full tracking-wider"
+                  className="w-full tracking-wider text-[#141a1c] border-[#0e1418] bg-[#d0dbd4] hover:bg-[#c0c8c0] transition-colors text-shadow-none"
                 >
                   DESEQUIPAR
                 </Button>
@@ -259,13 +259,13 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
             !isActive &&
             pokemon.currentHP > 0 && (
               <Button
-                variant="primary"
+                variant="secondary"
                 size="sm"
                 onClick={handleSwitchRequest}
-                className="mt-1 w-full gap-2"
+                className="mt-1 w-full gap-2 bg-[#d0dbd4] border-[#0e1418] text-[#141a1c] hover:bg-[#c0c8c0] transition-all"
               >
-                <span className="animate-pulse">▶</span> CAMBIAR A{" "}
-                {pokemon.name} <span className="animate-pulse">◀</span>
+                <span className="animate-pulse">▶</span> EQUIPO{" "}
+                <span className="animate-pulse">◀</span>
               </Button>
             )}
 
@@ -284,17 +284,21 @@ export function PokemonCard({ pokemon, isActive, onMoveToPC }: Props) {
           )}
 
           {!isActive && (
-              <Button
-                variant="danger"
-                size="sm"
-                className="mt-1 w-full tracking-wider"
-                disabled={run.team.length <= 1}
-                title={run.team.length <= 1 ? "No puedes liberar a tu único Pokémon" : "Liberar"}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowReleaseConfirm(true);
-                }}
-              >
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-1 w-full tracking-wider text-[#141a1c] border-[#0e1418] bg-[#d0dbd4] hover:bg-[#c0c8c0] transition-colors"
+              disabled={run.team.length <= 1}
+              title={
+                run.team.length <= 1
+                  ? "No puedes liberar a tu único Pokémon"
+                  : "Liberar"
+              }
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowReleaseConfirm(true);
+              }}
+            >
               Liberar
             </Button>
           )}

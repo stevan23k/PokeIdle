@@ -15,7 +15,9 @@ import { canLearnTM } from "../services/pokeapi.service";
 export function ItemBag() {
   const { run, setRun, setMeta, notify } = useGame();
   const [useTargetModal, setUseTargetModal] = useState<string | null>(null);
-  const [tmCompatibility, setTmCompatibility] = useState<Record<string, boolean>>({});
+  const [tmCompatibility, setTmCompatibility] = useState<
+    Record<string, boolean>
+  >({});
   const [loadingCompatibility, setLoadingCompatibility] = useState(false);
 
   if (!run.isActive) return null;
@@ -33,11 +35,11 @@ export function ItemBag() {
     if (itemDef.category === "tm") {
       const compatible = tmCompatibility[pokemon.uid];
       if (compatible === false) {
-        notify({ 
-          message: `${pokemon.name} no puede aprender ${itemDef.name}.`, 
-          type: "defeat", 
-          icon: "❌", 
-          duration: 2500 
+        notify({
+          message: `${pokemon.name} no puede aprender ${itemDef.name}.`,
+          type: "defeat",
+          icon: "❌",
+          duration: 2500,
         });
         return; // ← salir SIN consumir el item
       }
@@ -288,7 +290,7 @@ export function ItemBag() {
                       <span className="font-display text-[0.5rem] tracking-wider truncate text-foreground">
                         {item.name}
                       </span>
-                      <span className="font-body text-[0.55rem] font-bold text-white">
+                      <span className="font-body text-[0.55rem] font-bold text-foreground">
                         x{qty}
                       </span>
                     </div>
@@ -322,11 +324,17 @@ export function ItemBag() {
                             if (item.category === "tm") {
                               setLoadingCompatibility(true);
                               const results: Record<string, boolean> = {};
-                              const moveId = item.effect.type === "teach" ? item.effect.moveId : 0;
+                              const moveId =
+                                item.effect.type === "teach"
+                                  ? item.effect.moveId
+                                  : 0;
                               await Promise.all(
                                 run.team.map(async (p) => {
-                                  results[p.uid] = await canLearnTM(p.pokemonId, moveId);
-                                })
+                                  results[p.uid] = await canLearnTM(
+                                    p.pokemonId,
+                                    moveId,
+                                  );
+                                }),
                               );
                               setTmCompatibility(results);
                               setLoadingCompatibility(false);
@@ -364,15 +372,16 @@ export function ItemBag() {
           cancelText="Cancelar"
           message={
             <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto px-1 pt-1 -mx-2">
-              <span className="text-[0.6rem] font-display text-white uppercase tracking-widest mb-1 pl-1">
+              <span className="text-[0.6rem] font-display text-foreground uppercase tracking-widest mb-1 pl-1">
                 Selecciona al objetivo:
               </span>
               {run.team.map((p) => {
                 const item = useTargetModal ? ITEMS[useTargetModal] : null;
-                const isTmIncompatible = item?.category === "tm" && (
-                  loadingCompatibility || 
-                  (tmCompatibility[p.uid] !== undefined && tmCompatibility[p.uid] === false)
-                );
+                const isTmIncompatible =
+                  item?.category === "tm" &&
+                  (loadingCompatibility ||
+                    (tmCompatibility[p.uid] !== undefined &&
+                      tmCompatibility[p.uid] === false));
 
                 return (
                   <button
@@ -388,60 +397,62 @@ export function ItemBag() {
                           : "border-border hover:border-brand",
                     )}
                   >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-surface-dark border border-border flex items-center justify-center">
-                      <PixelSprite
-                        pokemonId={p.pokemonId}
-                        variant="front"
-                        shiny={p.isShiny}
-                        size={40}
-                        showScanlines={false}
-                        alt={p.name}
-                      />
-                      {/* Compatibility Badge */}
-                      {tmCompatibility[p.uid] !== undefined && (
-                        <div className={clsx(
-                          "absolute top-0 right-0 text-[0.4rem] font-display px-1 py-0.5 border z-10",
-                          tmCompatibility[p.uid]
-                            ? "bg-emerald-900/90 border-emerald-500 text-emerald-400"
-                            : "bg-red-900/90 border-red-800 text-red-100 opacity-60"
-                        )}>
-                          {tmCompatibility[p.uid] ? "✓" : "✗"}
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-surface-dark border border-border flex items-center justify-center">
+                        <PixelSprite
+                          pokemonId={p.pokemonId}
+                          variant="front"
+                          shiny={p.isShiny}
+                          size={40}
+                          showScanlines={false}
+                          alt={p.name}
+                        />
+                        {/* Compatibility Badge */}
+                        {tmCompatibility[p.uid] !== undefined && (
+                          <div
+                            className={clsx(
+                              "absolute top-0 right-0 text-[0.4rem] font-display px-1 py-0.5 border z-10",
+                              tmCompatibility[p.uid]
+                                ? "bg-emerald-900/90 border-emerald-500 text-emerald-400"
+                                : "bg-red-900/90 border-red-800 text-red-100 opacity-60",
+                            )}
+                          >
+                            {tmCompatibility[p.uid] ? "✓" : "✗"}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="font-display text-[0.55rem] tracking-wider text-left max-w-[120px] truncate">
+                          {p.name}
+                        </span>
+                        <span className="font-body text-xs text-foreground font-bold">
+                          Nv.{p.level}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <div
+                        className={clsx(
+                          "font-body text-[0.6rem] font-bold",
+                          p.currentHP === 0 ? "text-danger" : "text-hp",
+                        )}
+                      >
+                        {Math.floor(p.currentHP)} / {p.maxHP} PS
+                      </div>
+                      {p.status && (
+                        <span className="font-display text-[0.4rem] bg-danger text-white px-1 leading-tight">
+                          {p.status}
+                        </span>
+                      )}
+                      {p.heldItem && (
+                        <div className="flex items-center gap-1 opacity-80 mt-1">
+                          <ItemSprite item={ITEMS[p.heldItem]} size={12} />
+                          <span className="font-display text-[0.4rem] text-accent tracking-tighter">
+                            {ITEMS[p.heldItem]?.name}
+                          </span>
                         </div>
                       )}
                     </div>
-                    <div className="flex flex-col items-start gap-1">
-                      <span className="font-display text-[0.55rem] tracking-wider text-left max-w-[120px] truncate">
-                        {p.name}
-                      </span>
-                      <span className="font-body text-xs text-white font-bold">
-                        Nv.{p.level}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <div
-                      className={clsx(
-                        "font-body text-[0.6rem] font-bold",
-                        p.currentHP === 0 ? "text-danger" : "text-hp",
-                      )}
-                    >
-                      {Math.floor(p.currentHP)} / {p.maxHP} PS
-                    </div>
-                    {p.status && (
-                      <span className="font-display text-[0.4rem] bg-danger text-white px-1 leading-tight">
-                        {p.status}
-                      </span>
-                    )}
-                    {p.heldItem && (
-                      <div className="flex items-center gap-1 opacity-80 mt-1">
-                        <ItemSprite item={ITEMS[p.heldItem]} size={12} />
-                        <span className="font-display text-[0.4rem] text-accent tracking-tighter">
-                          {ITEMS[p.heldItem]?.name}
-                        </span>
-                      </div>
-                    )}
-                  </div>
                   </button>
                 );
               })}

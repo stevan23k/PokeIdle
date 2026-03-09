@@ -11,7 +11,7 @@ import { calculateCaptureChance } from "../../../engine/capture.engine";
 import { clsx } from "clsx";
 import { X, Search, Star, SortAsc, SortDesc } from "lucide-react";
 import { Button } from "../../../components/ui/Button";
-import { Card } from "../../../components/ui/Card";
+import { PixelWindow } from "../../../components/ui/GBAUI";
 
 interface BagModalProps {
   onClose: () => void;
@@ -101,8 +101,7 @@ export function BagModal({ onClose }: BagModalProps) {
           const consumesTurn =
             prev.isManualBattle &&
             prev.currentBattle &&
-            (itemDef.category === "heal" ||
-              itemDef.category === "battle");
+            (itemDef.category === "heal" || itemDef.category === "battle");
 
           const nextEvoQueue = [
             ...((prev as any).__checkEvolutionQueue || []),
@@ -325,49 +324,45 @@ export function BagModal({ onClose }: BagModalProps) {
   const hoverItemDef = hoverItem ? ITEMS[hoverItem] : null;
 
   return createPortal(
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9999,
-        backgroundColor: "rgba(0,0,0,0.85)",
-        backdropFilter: "blur(4px)",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "1rem",
-      }}
-      className="crt-screen"
-    >
-      <Card
-        className="w-full max-w-4xl h-[85vh] flex flex-col relative shadow-[10px_10px_0_rgba(0,0,0,0.5)]"
-        noPadding
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-300 pointer-events-none">
+      <PixelWindow
+        title="MOCHILA POKÉIDLE"
+        className="w-full h-full max-h-[85vh] max-w-5xl shadow-[8px_8px_0_rgba(0,0,0,0.5)] flex flex-col pointer-events-auto"
+        contentPadding="0"
+        fullHeight
       >
-        <button
-          onClick={onClose}
-          className="absolute -top-4 -right-4 w-10 h-10 bg-danger border-4 border-black text-white flex items-center justify-center hover:bg-red-500 hover:-translate-y-1 transition-transform z-10 shadow-pixel"
-        >
-          <X size={20} />
-        </button>
+        <div className="absolute top-1 right-2 flex gap-1 z-10">
+          <button
+            onClick={onClose}
+            className="text-white hover:brightness-110 flex items-center justify-center transition-all border-b-2 border-r-2 border-[#0e1418] border-t-2 border-t-white/30 border-l-2 border-l-white/30 shadow-[2px_2px_0_rgba(0,0,0,0.5)] active:translate-y-0.5 active:shadow-none"
+            style={{ background: "#a42c2c", width: "24px", height: "24px" }}
+            title="Cerrar"
+          >
+            <X size={14} />
+          </button>
+        </div>
 
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        <div className="flex-1 flex flex-row overflow-hidden bg-[#d0dbd4]">
           {/* SIDEBAR FOR CATEGORIES */}
-          <div className="w-full md:w-48 border-b md:border-b-0 md:border-r border-border bg-surface-alt flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto">
-            <div className="p-4 border-b border-border hidden md:block">
-              <h2 className="font-display text-brand text-lg">MOCHILA</h2>
-              <p className="font-body text-xs text-muted">Gestión de Objetos</p>
+          <div
+            className="w-20 sm:w-40 border-r border-[#0e1418] flex flex-col h-full shrink-0 overflow-y-auto custom-scrollbar"
+            style={{ background: "#4a5a52" }}
+          >
+            <div className="p-2 border-b border-[#0e1418] hidden sm:block bg-[#d0dbd4]">
+              <h2 className="font-display text-[#141a1c] text-[0.55rem] tracking-widest leading-relaxed">
+                MOCHILA
+              </h2>
             </div>
-            <div className="flex md:flex-col">
+            <div className="flex flex-col flex-1 pb-16">
               {categories.map((cat) => (
                 <button
                   key={cat.id}
                   onClick={() => setActiveTab(cat.id as any)}
                   className={clsx(
-                    "px-4 py-3 text-left font-display text-[0.6rem] tracking-widest transition-colors border-b border-border/30 whitespace-nowrap",
+                    "w-full text-left px-2 sm:px-4 py-3 font-display text-[0.45rem] sm:text-[0.55rem] tracking-widest border-b border-[#0e1418] flex items-center gap-2 transition-colors overflow-hidden text-ellipsis",
                     activeTab === cat.id
-                      ? "bg-surface-light text-brand border-l-4 border-l-brand"
-                      : "text-muted hover:bg-surface hover:text-white border-l-4 border-transparent",
+                      ? "bg-[#d0dbd4] text-[#141a1c] border-l-4 border-l-[#d86818]"
+                      : "text-[#d0dbd4] hover:bg-[#2a3a32] border-l-4 border-l-transparent",
                   )}
                 >
                   {cat.label}
@@ -377,20 +372,20 @@ export function BagModal({ onClose }: BagModalProps) {
           </div>
 
           {/* MAIN CONTENT */}
-          <div className="flex-1 flex flex-col min-0 bg-surface">
+          <div className="flex-1 flex flex-col min-w-0 bg-[#d0dbd4]">
             {/* TOOLBAR */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 border-b border-border bg-surface-dark shrink-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 border-b border-[#0e1418] bg-[#d0dbd4] shrink-0">
               <div className="flex-1 w-full relative">
                 <Search
                   size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[#4c5c54]"
                 />
                 <input
                   type="text"
                   placeholder="Buscar objeto..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-surface border border-border pl-9 pr-3 py-1.5 font-body text-sm text-foreground focus:border-brand focus:outline-none placeholder:text-muted/50"
+                  className="w-full bg-[#f8f8e8] border border-[#0e1418] pl-9 pr-3 py-1.5 font-body text-sm text-[#141a1c] focus:border-[#d86818] focus:outline-none shadow-[inset_2px_2px_0_rgba(0,0,0,0.1)] placeholder:text-[#4c5c54]/70"
                 />
               </div>
               <div className="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
@@ -428,10 +423,10 @@ export function BagModal({ onClose }: BagModalProps) {
             </div>
 
             {/* ITEM GRID */}
-            <div className="flex-1 overflow-y-auto p-4 content-start custom-scrollbar">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div className="flex-1 overflow-y-auto p-2 sm:p-4 content-start custom-scrollbar bg-[#4a5a52]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                 {filteredAndSortedItems.length === 0 ? (
-                  <div className="col-span-full text-center py-10 font-body text-muted italic">
+                  <div className="col-span-full text-center py-10 font-body text-[#d0dbd4]/70 italic text-xs">
                     No se encontraron objetos en esta sección.
                   </div>
                 ) : (
@@ -445,15 +440,15 @@ export function BagModal({ onClose }: BagModalProps) {
                         key={id}
                         onMouseEnter={() => setHoverItem(id)}
                         onMouseLeave={() => setHoverItem(null)}
-                        className="bg-surface-alt border border-border p-3 flex flex-col items-center gap-2 group hover:border-brand transition-colors relative"
+                        className="bg-[#d0dbd4] border-2 border-[#0e1418] shadow-[4px_4px_0_#2a3a32] p-2 flex flex-col items-center gap-2 group hover:border-[#d86818] transition-colors relative"
                       >
                         <button
                           onClick={() => togglePin(id)}
                           className={clsx(
                             "absolute top-1 right-1 p-1 transition-colors",
                             isPinned
-                              ? "text-[#FFD700]"
-                              : "text-muted hover:text-[#FFD700] opacity-0 group-hover:opacity-100",
+                              ? "text-[#d86818]"
+                              : "text-[#4c5c54] hover:text-[#d86818] opacity-0 group-hover:opacity-100",
                           )}
                         >
                           <Star
@@ -470,10 +465,10 @@ export function BagModal({ onClose }: BagModalProps) {
                           />
                         </div>
                         <div className="text-center w-full">
-                          <div className="font-display text-[0.55rem] tracking-wider truncate mb-1 text-foreground">
+                          <div className="font-display text-[0.55rem] tracking-wider truncate mb-1 text-[#141a1c]">
                             {item.name}
                           </div>
-                          <div className="font-body text-[0.65rem] font-bold text-muted bg-surface-dark py-0.5 rounded px-2 inline-block">
+                          <div className="font-body text-[0.65rem] font-bold text-[#f8f8e8] bg-[#0e1418] py-0.5 rounded px-2 inline-block shadow-[inset_1px_1px_0_rgba(255,255,255,0.2)]">
                             x{qty as number}
                           </div>
                         </div>
@@ -513,23 +508,27 @@ export function BagModal({ onClose }: BagModalProps) {
             </div>
 
             {/* HOVER DETAILS */}
-            <div className="h-24 md:h-32 shrink-0 border-t border-border bg-surface-alt p-4 flex items-center gap-4">
+            <div className="h-20 sm:h-24 md:h-32 shrink-0 border-t border-[#0e1418] bg-[#d0dbd4] p-2 sm:p-4 flex items-center gap-2 sm:gap-4">
               {hoverItemDef ? (
                 <>
-                  <div className="w-16 h-16 shrink-0 bg-surface flex items-center justify-center border border-border shadow-inner">
-                    <ItemSprite item={hoverItemDef} size={48} />
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 shrink-0 bg-[#d0dbd4] flex items-center justify-center border-2 border-[#0e1418] shadow-[inset_2px_2px_0_rgba(0,0,0,0.1)]">
+                    <ItemSprite
+                      item={hoverItemDef}
+                      size={32}
+                      className="sm:size-48"
+                    />
                   </div>
                   <div className="flex-1 min-w-0 flex flex-col justify-center">
-                    <h3 className="font-display text-sm text-brand tracking-widest mb-1">
+                    <h3 className="font-display text-[0.6rem] sm:text-xs md:text-sm text-[#141a1c] tracking-widest mb-0.5 sm:mb-1 truncate">
                       {hoverItemDef.name}
                     </h3>
-                    <p className="font-body text-xs text-muted leading-relaxed line-clamp-3">
+                    <p className="font-body text-[0.6rem] sm:text-xs text-[#4c5c54] leading-relaxed line-clamp-2 md:line-clamp-3">
                       {hoverItemDef.description}
                     </p>
                   </div>
                 </>
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted italic font-body text-xs">
+                <div className="w-full h-full flex items-center justify-center text-[#4c5c54] italic font-body text-[0.6rem] sm:text-xs">
                   Pasa el ratón sobre un objeto para ver sus detalles.
                 </div>
               )}
@@ -611,7 +610,7 @@ export function BagModal({ onClose }: BagModalProps) {
             }
           />
         )}
-      </Card>
+      </PixelWindow>
     </div>,
     document.body,
   );

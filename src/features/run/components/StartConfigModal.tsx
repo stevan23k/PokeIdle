@@ -1,8 +1,7 @@
 import React from "react";
 import { createPortal } from "react-dom";
-import { MousePointer2, Cpu, X, Play } from "lucide-react";
-import { Button } from "../../../components/ui/Button";
-import { Card } from "../../../components/ui/Card";
+import { MousePointer2, Cpu, X } from "lucide-react";
+import { PixelWindow, GBAButton, C } from "../../../components/ui/GBAUI";
 
 interface StartConfigModalProps {
   onSelect: (config: {
@@ -35,19 +34,57 @@ export function StartConfigModal({
       }}
       className="crt-screen"
     >
-      <Card className="w-full max-w-2xl relative animate-in fade-in zoom-in duration-200">
+      <PixelWindow
+        title="CONFIG"
+        style={{ width: "100%", maxWidth: "600px", position: "relative" }}
+        className="animate-in fade-in zoom-in duration-200"
+      >
         <button
           onClick={onCancel}
-          className="absolute -top-4 -right-4 w-10 h-10 bg-danger border-4 border-black text-white flex items-center justify-center hover:bg-red-500 hover:-translate-y-1 transition-transform z-10 shadow-pixel"
+          style={{
+            position: "absolute",
+            top: "-16px",
+            right: "-16px",
+            width: "40px",
+            height: "40px",
+            background: C.red,
+            border: `4px solid ${C.border}`,
+            color: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10,
+            cursor: "pointer",
+            boxShadow: `2px 2px 0 ${C.shadow}`,
+          }}
         >
           <X size={20} />
         </button>
 
-        <h2 className="font-display text-xl md:text-2xl text-brand mb-2 text-center tracking-widest uppercase drop-shadow-md">
-          CONFIGURACIÓN DE RUN
+        <h2
+          style={{
+            fontFamily: "'Press Start 2P',monospace",
+            fontSize: "14px",
+            color: C.text,
+            marginBottom: "8px",
+            textAlign: "center",
+            letterSpacing: "0.1em",
+          }}
+        >
+          CONFIGURACIÓN
         </h2>
-        <p className="font-body text-[0.7rem] text-muted text-center mb-10 uppercase tracking-widest border-b border-dashed border-border/30 pb-4">
-          STARTER: <span className="text-white font-bold">{starterName}</span>
+        <p
+          style={{
+            fontFamily: "'Press Start 2P',monospace",
+            fontSize: "8px",
+            color: C.textMuted,
+            textAlign: "center",
+            marginBottom: "40px",
+            paddingBottom: "16px",
+            borderBottom: `2px dashed ${C.gray}`,
+          }}
+        >
+          STARTER: <span style={{ color: C.blue }}>{starterName}</span>
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -60,30 +97,79 @@ export function StartConfigModal({
                 autoItems: true,
               })
             }
-            className="group flex flex-col items-center p-8 bg-surface border-4 border-border hover:border-success transition-all hover:-translate-y-2 hover:shadow-[0_12px_0_rgba(34,197,94,0.3)]"
+            className="group flex flex-col items-center p-6 bg-surface border-4 transition-all"
+            style={{
+              background: C.win,
+              border: `4px solid ${C.border}`,
+              boxShadow: `4px 4px 0 ${C.border}`,
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = C.green)}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
           >
-            <div className="w-20 h-20 bg-surface-dark border-2 border-border flex items-center justify-center mb-6 group-hover:border-success group-hover:text-success transition-colors group-hover:scale-110">
-              <Cpu size={40} />
+            <div
+              style={{
+                width: "60px",
+                height: "60px",
+                background: C.bgDark,
+                border: `2px solid ${C.border}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: "20px",
+              }}
+            >
+              <Cpu size={32} color="white" />
             </div>
-            <h3 className="font-display text-base text-foreground mb-3 group-hover:text-success transition-colors tracking-widest">
+            <h3
+              style={{
+                fontFamily: "'Press Start 2P',monospace",
+                fontSize: "10px",
+                color: C.text,
+                marginBottom: "16px",
+                letterSpacing: "0.1em",
+              }}
+            >
               MODO IDLE
             </h3>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-[0.65rem] text-muted uppercase font-body">
-                <span className="w-1.5 h-1.5 bg-success rounded-full" />
-                <span>COMBATES AUTO</span>
-              </div>
-              <div className="flex items-center gap-2 text-[0.65rem] text-muted uppercase font-body">
-                <span className="w-1.5 h-1.5 bg-success rounded-full" />
-                <span>CAPTURA AUTO (ON)</span>
-              </div>
-              <div className="flex items-center gap-2 text-[0.65rem] text-muted uppercase font-body">
-                <span className="w-1.5 h-1.5 bg-success rounded-full" />
-                <span>CURACIÓN AUTO (ON)</span>
-              </div>
+            <div className="space-y-4 w-full">
+              {[
+                { label: "COMBATES AUTO" },
+                { label: "CAPTURA (ON)" },
+                { label: "CURACIÓN (ON)" },
+              ].map((f) => (
+                <div
+                  key={f.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontFamily: "'Press Start 2P',monospace",
+                    fontSize: "6.5px",
+                    color: C.textMuted,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      background: C.green,
+                      border: `1px solid ${C.border}`,
+                    }}
+                  />
+                  <span>{f.label}</span>
+                </div>
+              ))}
             </div>
-            <span className="mt-6 text-[0.55rem] text-success font-bold tracking-[0.2em] italic uppercase">
-              Progrés Rápido
+            <span
+              style={{
+                marginTop: "24px",
+                fontSize: "7px",
+                fontFamily: "'Press Start 2P',monospace",
+                color: C.green,
+              }}
+            >
+              PROGRESO RÁPIDO
             </span>
           </button>
 
@@ -96,48 +182,116 @@ export function StartConfigModal({
                 autoItems: false,
               })
             }
-            className="group flex flex-col items-center p-8 bg-surface border-4 border-border hover:border-brand transition-all hover:-translate-y-2 hover:shadow-[0_12px_0_rgba(204,0,0,0.3)]"
+            className="group flex flex-col items-center p-6 bg-surface border-4 transition-all"
+            style={{
+              background: C.win,
+              border: `4px solid ${C.border}`,
+              boxShadow: `4px 4px 0 ${C.border}`,
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.borderColor = C.blueLight)
+            }
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
           >
-            <div className="w-20 h-20 bg-surface-dark border-2 border-border flex items-center justify-center mb-6 group-hover:border-brand group-hover:text-brand transition-colors group-hover:scale-110">
-              <MousePointer2 size={40} />
+            <div
+              style={{
+                width: "60px",
+                height: "60px",
+                background: C.bgDark,
+                border: `2px solid ${C.border}`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: "20px",
+              }}
+            >
+              <MousePointer2 size={32} color="white" />
             </div>
-            <h3 className="font-display text-base text-foreground mb-3 group-hover:text-brand transition-colors tracking-widest">
+            <h3
+              style={{
+                fontFamily: "'Press Start 2P',monospace",
+                fontSize: "10px",
+                color: C.text,
+                marginBottom: "16px",
+                letterSpacing: "0.1em",
+              }}
+            >
               MODO MANUAL
             </h3>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-[0.65rem] text-muted uppercase font-body">
-                <span className="w-1.5 h-1.5 bg-brand rounded-full" />
-                <span>TOTAL CONTROL</span>
-              </div>
-              <div className="flex items-center gap-2 text-[0.65rem] text-muted uppercase font-body">
-                <span className="w-1.5 h-1.5 bg-brand rounded-full" />
-                <span>CAPTURA MANUAL</span>
-              </div>
-              <div className="flex items-center gap-2 text-[0.65rem] text-muted uppercase font-body">
-                <span className="w-1.5 h-1.5 bg-brand rounded-full" />
-                <span>GESTIÓN MANUAL</span>
-              </div>
+            <div className="space-y-4 w-full">
+              {[
+                { label: "TOTAL CONTROL" },
+                { label: "CAPTURA MANUAL" },
+                { label: "GESTIÓN MANUAL" },
+              ].map((f) => (
+                <div
+                  key={f.label}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    fontFamily: "'Press Start 2P',monospace",
+                    fontSize: "6.5px",
+                    color: C.textMuted,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: "6px",
+                      height: "6px",
+                      background: C.blueLight,
+                      border: `1px solid ${C.border}`,
+                    }}
+                  />
+                  <span>{f.label}</span>
+                </div>
+              ))}
             </div>
-            <span className="mt-6 text-[0.55rem] text-brand font-bold tracking-[0.2em] italic uppercase">
-              Exp. Clásica
+            <span
+              style={{
+                marginTop: "24px",
+                fontSize: "7px",
+                fontFamily: "'Press Start 2P',monospace",
+                color: C.blueLight,
+              }}
+            >
+              EXPERIENCIA CLÁSICA
             </span>
           </button>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-dashed border-border/50 flex flex-col items-center gap-6">
-          <p className="font-body text-[0.6rem] text-muted text-center italic max-w-md leading-relaxed">
-            "Podrás cambiar el estilo de juego en cualquier momento usando los
-            interruptores del menú de zona."
-          </p>
-          <Button
-            variant="ghost"
-            onClick={onCancel}
-            className="text-muted hover:text-danger uppercase tracking-[0.3em] flex items-center gap-2"
+        <div
+          style={{
+            marginTop: "32px",
+            paddingTop: "24px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: "20px",
+            borderTop: `2px dashed ${C.border}`,
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "'Press Start 2P',monospace",
+              fontSize: "6px",
+              color: C.textMuted,
+              textAlign: "center",
+              lineHeight: "1.8",
+              maxWidth: "400px",
+            }}
           >
-            <X size={14} /> CANCELAR
-          </Button>
+            Podrás cambiar el estilo de juego en cualquier momento desde tu
+            mochila.
+          </p>
+          <GBAButton onClick={onCancel} variant="secondary">
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <X size={10} /> CANCELAR
+            </div>
+          </GBAButton>
         </div>
-      </Card>
+      </PixelWindow>
     </div>,
     document.body,
   );

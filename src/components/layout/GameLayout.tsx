@@ -176,15 +176,21 @@ export function GameLayout({ zones }: { zones: Zone[] }) {
           </p>
           <div className="grid grid-cols-2 gap-y-4 gap-x-2 mt-4 font-display text-[0.6rem] text-muted tracking-widest leading-none">
             <span>STARTER:</span>
-            <span className="text-foreground text-right">{run.starterName}</span>
+            <span className="text-foreground text-right">
+              {run.starterName}
+            </span>
             <span>TIEMPO:</span>
             <span className="text-foreground text-right">
               {Math.floor((Date.now() - run.startedAt) / 60000)} MIN
             </span>
             <span>CAPTURAS:</span>
-            <span className="text-foreground text-right">{run.totalCaptured}</span>
+            <span className="text-foreground text-right">
+              {run.totalCaptured}
+            </span>
             <span>VICTORIAS:</span>
-            <span className="text-foreground text-right">{run.totalBattlesWon}</span>
+            <span className="text-foreground text-right">
+              {run.totalBattlesWon}
+            </span>
           </div>
 
           <button
@@ -220,7 +226,9 @@ export function GameLayout({ zones }: { zones: Zone[] }) {
       break;
 
     case "stats":
-      screenContent = <GlobalStatsView onBack={() => setCurrentScreen("main")} />;
+      screenContent = (
+        <GlobalStatsView onBack={() => setCurrentScreen("main")} />
+      );
       break;
 
     case "gacha":
@@ -242,7 +250,9 @@ export function GameLayout({ zones }: { zones: Zone[] }) {
       break;
 
     case "training-select":
-      screenContent = <TrainingSelector onBack={() => setCurrentScreen("main")} />;
+      screenContent = (
+        <TrainingSelector onBack={() => setCurrentScreen("main")} />
+      );
       break;
 
     case "training":
@@ -271,26 +281,36 @@ export function GameLayout({ zones }: { zones: Zone[] }) {
             <div className="flex justify-center flex-1">
               <SpeedControl
                 speed={run.speedMultiplier}
-                onChange={(s: any) => setRun((p) => ({ ...p, speedMultiplier: s }))}
+                onChange={(s: any) =>
+                  setRun((p) => ({ ...p, speedMultiplier: s }))
+                }
                 isBlocked={isModalActive}
               />
             </div>
             <div className="w-64 shrink-0 flex justify-end gap-2">
               <button
-                onClick={() => !isModalActive && setRun((p) => ({ ...p, isPaused: true }))}
+                onClick={() =>
+                  !isModalActive && setRun((p) => ({ ...p, isPaused: true }))
+                }
                 disabled={isModalActive}
                 className={clsx(
                   "flex items-center justify-center p-2 bg-surface-alt border-2 border-border transition-colors",
-                  isModalActive ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-surface-light hover:text-accent"
+                  isModalActive
+                    ? "opacity-50 cursor-not-allowed"
+                    : "cursor-pointer hover:bg-surface-light hover:text-accent",
                 )}
-                title={isModalActive ? "Cierra la ventana actual primero" : "Pausar Juego"}
+                title={
+                  isModalActive
+                    ? "Cierra la ventana actual primero"
+                    : "Pausar Juego"
+                }
               >
                 <Menu size={16} />
               </button>
             </div>
           </header>
 
-          <div className="h-screen max-h-screen bg-black text-foreground flex flex-col md:flex-row overflow-hidden w-full relative">
+          <div className="h-screen max-h-screen bg-border text-foreground flex flex-col md:flex-row overflow-hidden w-full relative p-1 gap-1">
             <LootSelectionModal />
             <MoveLearningModal />
             <EvolutionModal />
@@ -306,7 +326,7 @@ export function GameLayout({ zones }: { zones: Zone[] }) {
               ))}
             </div>
 
-            <div className="flex-1 md:w-[320px] md:max-w-[320px] border-r border-border bg-surface overflow-y-auto hidden md:flex flex-col">
+            <div className="flex-1 md:w-[320px] md:max-w-[320px] border-2 border-border bg-slate-200 overflow-y-auto hidden md:flex flex-col">
               <RegionMap zones={zones} />
               <TeamRoster />
             </div>
@@ -316,27 +336,45 @@ export function GameLayout({ zones }: { zones: Zone[] }) {
               {run.isManualBattle && <ManualBattleHUD />}
             </div>
 
-            <div className="flex-1 md:w-[320px] md:max-w-[320px] border-l border-border bg-surface overflow-hidden hidden md:flex flex-col">
+            <div className="flex-1 md:w-[320px] md:max-w-[320px] border-2 border-border bg-surface overflow-hidden hidden md:flex flex-col">
               <div className="flex-none flex flex-col border-b-2 border-border bg-surface">
                 <ZoneView />
                 <ItemBag />
                 <div className="bg-surface-dark border-t-2 border-border p-3 px-4 flex items-center shadow-inner min-h-[48px]">
                   <div className="flex flex-wrap items-center gap-4">
                     {Object.entries(run.items)
-                      .filter(([id, qty]) => (qty as number) > 0 && ITEMS[id]?.category === "ball")
+                      .filter(
+                        ([id, qty]) =>
+                          (qty as number) > 0 && ITEMS[id]?.category === "ball",
+                      )
                       .map(([id, qty]) => (
-                        <div key={id} className="flex items-center gap-1.5 grayscale-[0.2] hover:grayscale-0 transition-all group" title={ITEMS[id]?.name}>
-                          <img src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${id}.png`} alt={id} className="w-6 h-6 rendering-pixelated group-hover:scale-110 transition-transform" />
-                          <span className="font-display text-[0.7rem] text-foreground font-bold">x{qty as number}</span>
+                        <div
+                          key={id}
+                          className="flex items-center gap-1.5 grayscale-[0.2] hover:grayscale-0 transition-all group"
+                          title={ITEMS[id]?.name}
+                        >
+                          <img
+                            src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/${id}.png`}
+                            alt={id}
+                            className="w-6 h-6 rendering-pixelated group-hover:scale-110 transition-transform"
+                          />
+                          <span className="font-display text-[0.7rem] text-foreground font-bold">
+                            x{qty as number}
+                          </span>
                         </div>
                       ))}
-                    {Object.entries(run.items).filter(([id, qty]) => (qty as number) > 0 && ITEMS[id]?.category === "ball").length === 0 && (
-                      <span className="font-body text-[0.6rem] text-muted italic uppercase tracking-tighter">Sin Poké Balls disponibles</span>
+                    {Object.entries(run.items).filter(
+                      ([id, qty]) =>
+                        (qty as number) > 0 && ITEMS[id]?.category === "ball",
+                    ).length === 0 && (
+                      <span className="font-body text-[0.6rem] text-muted italic uppercase tracking-tighter">
+                        Sin Poké Balls disponibles
+                      </span>
                     )}
                   </div>
                 </div>
               </div>
-              <div className="flex-1 min-h-0 flex flex-col bg-surface-dark/30">
+              <div className="flex-1 min-h-0 flex flex-col bg-surface-dark">
                 <BattleLog />
               </div>
             </div>

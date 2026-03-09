@@ -2,6 +2,9 @@
 
 ## 🔴 Alta Prioridad (Gameplay Core)
 
+descripcion a los ataques que aprenden
+Pokecoin por Aprender movimientos huevo o adquirir naturaleza
+
 ### 1. Recordador de Movimientos
 
 En la tienda del `ZoneTransitionModal`, permitir recuperar movimientos que el Pokémon debería saber a su nivel actual pero no tiene.

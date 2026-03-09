@@ -2,8 +2,7 @@ import React, { useState, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useGame } from "../../../context/GameContext";
 import { ITEMS } from "../../../lib/items";
-import { Button } from "../../../components/ui/Button";
-import { Card } from "../../../components/ui/Card";
+import { PixelWindow, GBAButton, C } from "../../../components/ui/GBAUI";
 import { PixelSprite } from "../../../components/ui/PixelSprite";
 import { levelUpPokemon, xpToNextLevel } from "../../../engine/xp.engine";
 import {
@@ -122,7 +121,10 @@ const QUICK_ITEMS: { id: string; label: string; qty: number; img: string }[] = [
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <span className="font-display text-[0.5rem] tracking-[0.2em] text-brand uppercase border-b border-brand/30 pb-0.5 w-full block mb-1">
+    <span
+      className="font-display text-[0.5rem] tracking-[0.2em] uppercase border-b pb-0.5 w-full block mb-1"
+      style={{ color: C.red, borderColor: C.red }}
+    >
       {children}
     </span>
   );
@@ -130,11 +132,19 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex justify-between items-center py-0.5 border-b border-border/20">
-      <span className="font-display text-[0.5rem] text-muted tracking-tighter">
+    <div
+      className="flex justify-between items-center py-0.5 border-b"
+      style={{ borderColor: C.border }}
+    >
+      <span
+        className="font-display text-[0.5rem] tracking-tighter"
+        style={{ color: C.textMuted }}
+      >
         {label}
       </span>
-      <span className="font-display text-[0.5rem] text-white">{value}</span>
+      <span className="font-display text-[0.5rem]" style={{ color: C.text }}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -152,29 +162,24 @@ function DbgButton({
   className?: string;
   disabled?: boolean;
 }) {
-  const colors = {
-    default:
-      "bg-surface-alt border-border text-white hover:border-brand hover:text-brand",
-    danger:
-      "bg-danger/10 border-danger/50 text-danger hover:border-danger hover:bg-danger/20",
-    success:
-      "bg-green-900/20 border-green-600/50 text-green-400 hover:border-green-500",
-    accent:
-      "bg-accent/10 border-accent/50 text-accent hover:border-accent hover:bg-accent/20",
+  const vMap: Record<
+    string,
+    "primary" | "secondary" | "danger" | "success" | "accent"
+  > = {
+    default: "secondary",
+    danger: "danger",
+    success: "success",
+    accent: "accent",
   };
   return (
-    <button
+    <GBAButton
       onClick={onClick}
       disabled={disabled}
-      className={clsx(
-        "border-2 px-2 py-1 font-display text-[0.55rem] tracking-widest uppercase transition-all",
-        "disabled:opacity-40 disabled:cursor-not-allowed",
-        colors[variant],
-        className,
-      )}
+      variant={vMap[variant]}
+      className={className}
     >
       {children}
-    </button>
+    </GBAButton>
   );
 }
 
@@ -427,8 +432,14 @@ export function DebuggerPanel() {
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-4 left-4 z-999999 w-12 h-12 bg-brand border-4 border-black text-white flex items-center justify-center hover:-translate-y-1 transition-transform shadow-pixel group"
+          className="fixed bottom-4 left-4 z-999999 w-12 h-12 flex items-center justify-center hover:-translate-y-1 transition-transform group"
           title="Abrir Debugger"
+          style={{
+            background: C.red,
+            border: `4px solid ${C.border}`,
+            color: "white",
+            boxShadow: `4px 4px 0 ${C.shadow}`,
+          }}
         >
           <div className="flex flex-col items-center">
             <Zap size={16} />
@@ -437,33 +448,67 @@ export function DebuggerPanel() {
         </button>
       ) : (
         <div className="fixed inset-0 z-999999 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <Card
-            className="w-full max-w-5xl h-[90vh] flex flex-col relative shadow-[10px_10px_0_rgba(0,0,0,0.5)]"
-            noPadding
+          <PixelWindow
+            title="SYSTEM DEBUGGER"
+            className="w-full max-w-5xl h-[80vh]"
+            fullHeight={true}
+            contentPadding={0}
           >
             <button
               onClick={() => setIsOpen(false)}
-              className="absolute -top-4 -right-4 w-12 h-12 bg-brand border-4 border-black text-white flex items-center justify-center hover:bg-red-500 hover:-translate-y-1 transition-transform z-10 shadow-pixel"
+              style={{
+                position: "absolute",
+                top: "8px",
+                right: "8px",
+                width: "40px",
+                height: "40px",
+                background: C.red,
+                border: `4px solid ${C.border}`,
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 10,
+                cursor: "pointer",
+                boxShadow: `2px 2px 0 ${C.shadow}`,
+              }}
             >
               <X size={24} />
             </button>
 
             {/* ── Header ────────────────────────────────────────────────────────── */}
-            <div className="p-4 border-b-4 border-border bg-surface-alt bg-striped flex justify-between items-center shrink-0">
+            <div
+              className="p-4 border-b-4 flex justify-between items-center shrink-0"
+              style={{ background: C.bg, borderColor: C.border }}
+            >
               <div className="flex items-center gap-2">
-                <Zap size={20} className="text-brand animate-pulse" />
-                <h2 className="font-display text-brand text-xl tracking-widest">
+                <Zap
+                  size={20}
+                  className="animate-pulse"
+                  style={{ color: C.red }}
+                />
+                <h2
+                  className="font-display text-xl tracking-widest"
+                  style={{ color: C.red }}
+                >
                   DEBUGGER v2.5
                 </h2>
               </div>
               <div className="flex items-center gap-3">
-                <span className={clsx(
-                  "px-3 py-1 text-[0.6rem] font-bold tracking-[0.2em] border-2 shadow-pixel-sm",
-                  run.isActive ? "bg-green-900/20 border-green-500 text-green-400" : "bg-red-900/20 border-red-500 text-red-400"
-                )}>
+                <span
+                  className={clsx(
+                    "px-3 py-1 text-[0.6rem] font-bold tracking-[0.2em] border-2 shadow-pixel-sm",
+                    run.isActive
+                      ? "bg-green-900/20 border-green-500 text-green-400"
+                      : "bg-red-900/20 border-red-500 text-red-400",
+                  )}
+                >
                   {run.isActive ? "RUN STATUS: ACTIVE" : "RUN STATUS: NULL"}
                 </span>
-                <span className="text-[0.45rem] tracking-widest text-muted font-bold px-2 py-1 bg-black/20 border border-border/40">
+                <span
+                  className="text-[0.45rem] tracking-widest font-bold px-2 py-1 bg-black/20 border border-border/40"
+                  style={{ color: C.text }}
+                >
                   SESSION: {run.runId?.slice(0, 8) || "NULL"}
                 </span>
               </div>
@@ -471,20 +516,36 @@ export function DebuggerPanel() {
 
             <div className="flex-1 flex flex-row overflow-hidden">
               {/* ── Sidebar ──────────────────────────────────────────────────── */}
-              <div className="w-48 bg-surface-alt border-r border-border flex flex-col shrink-0 overflow-y-auto custom-scrollbar">
-                <div className="p-4 border-b border-border mb-2">
-                  <h3 className="font-display text-muted text-[0.65rem] tracking-[0.2em] uppercase">HERRAMIENTAS</h3>
+              <div
+                className="w-48 border-r flex flex-col shrink-0 overflow-y-auto custom-scrollbar"
+                style={{ background: C.bgDark, borderColor: C.border }}
+              >
+                <div
+                  className="p-4 border-b mb-2"
+                  style={{ borderColor: C.border }}
+                >
+                  <h3
+                    className="font-display text-[0.65rem] tracking-[0.2em] uppercase"
+                    style={{ color: C.textMuted }}
+                  >
+                    HERRAMIENTAS
+                  </h3>
                 </div>
                 {TABS.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
                     className={clsx(
-                      "flex items-center gap-3 px-4 py-3 transition-colors text-left font-display text-[0.6rem] tracking-widest uppercase",
-                      activeTab === tab.id
-                        ? "bg-brand text-white border-l-4 border-l-white"
-                        : "text-muted hover:bg-surface hover:text-white border-l-4 border-transparent",
+                      "flex items-center gap-3 px-4 py-3 transition-colors text-left font-display text-[0.6rem] tracking-widest uppercase border-l-4",
+                      activeTab === tab.id ? "" : "border-transparent",
                     )}
+                    style={{
+                      background:
+                        activeTab === tab.id ? C.shadow : "transparent",
+                      borderLeftColor:
+                        activeTab === tab.id ? "white" : "transparent",
+                      color: activeTab === tab.id ? "white" : C.win,
+                    }}
                   >
                     {tab.icon}
                     {tab.label}
@@ -497,54 +558,102 @@ export function DebuggerPanel() {
               </div>
 
               {/* ── Content Area ──────────────────────────────────────────────── */}
-              <div className="flex-1 flex flex-col min-w-0 bg-surface">
+              <div
+                className="flex-1 flex flex-col min-w-0"
+                style={{ background: C.win }}
+              >
                 {/* ── Sub-Header (Search or Title) ────────────────── */}
-                <div className="p-3 border-b border-border bg-surface-dark shrink-0 flex items-center justify-between">
-                  {(activeTab === "items" || activeTab === "estado") ? (
+                <div
+                  className="p-3 border-b shrink-0 flex items-center justify-between"
+                  style={{ background: C.bg, borderColor: C.border }}
+                >
+                  {activeTab === "items" || activeTab === "estado" ? (
                     <div className="relative w-full">
-                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                      <Search
+                        size={14}
+                        className="absolute left-3 top-1/2 -translate-y-1/2"
+                        style={{ color: C.textMuted }}
+                      />
                       <input
                         type="text"
                         placeholder={`Buscar en ${activeTab.toUpperCase()}...`}
                         value={activeTab === "items" ? itemSearch : stateSearch}
-                        onChange={(e) => activeTab === "items" ? setItemSearch(e.target.value) : setStateSearch(e.target.value)}
-                        className="w-full bg-surface border border-border pl-9 pr-3 py-1.5 font-display text-[0.65rem] text-foreground focus:border-brand focus:outline-none placeholder:text-muted/50"
+                        onChange={(e) =>
+                          activeTab === "items"
+                            ? setItemSearch(e.target.value)
+                            : setStateSearch(e.target.value)
+                        }
+                        className="w-full border pl-9 pr-3 py-1.5 font-display text-[0.65rem] focus:outline-none"
+                        style={{
+                          background: C.win,
+                          color: C.text,
+                          borderColor: C.border,
+                        }}
                       />
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-4 bg-brand" />
-                      <span className="font-display text-[0.7rem] text-brand tracking-[0.3em] uppercase">
-                        {TABS.find(t => t.id === activeTab)?.label}
+                      <div
+                        className="w-1.5 h-4"
+                        style={{ background: C.red }}
+                      />
+                      <span
+                        className="font-display text-[0.7rem] tracking-[0.3em] uppercase"
+                        style={{ color: C.red }}
+                      >
+                        {TABS.find((t) => t.id === activeTab)?.label}
                       </span>
                     </div>
                   )}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-surface custom-scrollbar min-h-0">
+                <div className="flex-1 overflow-hidden p-4 flex flex-col gap-4 min-h-0">
                   {/* ════════════════════════════════════════════════════════════
                     TAB: GENERAL
                   ════════════════════════════════════════════════════════════ */}
                   {activeTab === "general" && (
-                    <>
+                    <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1 min-h-0">
                       <SectionLabel>Sesión</SectionLabel>
-                      <div className="bg-black/40 border border-border p-2 flex flex-col gap-0.5">
-                        <StatRow label="Run ID" value={run.runId?.slice(0, 12) || "—"} />
+                      <div
+                        className="p-2 flex flex-col gap-0.5 border"
+                        style={{ background: C.bgDark, borderColor: C.border }}
+                      >
+                        <StatRow
+                          label="Run ID"
+                          value={run.runId?.slice(0, 12) || "—"}
+                        />
                         <StatRow label="Región" value={run.currentRegion} />
                         <StatRow label="Zona" value={run.currentZoneIndex} />
-                        <StatRow label="Progreso zona" value={`${run.currentZoneProgress}%`} />
-                        <StatRow label="Batallas ganadas" value={run.totalBattlesWon} />
+                        <StatRow
+                          label="Progreso zona"
+                          value={`${run.currentZoneProgress}%`}
+                        />
+                        <StatRow
+                          label="Batallas ganadas"
+                          value={run.totalBattlesWon}
+                        />
                         <StatRow label="Dinero" value={`$${run.money}`} />
-                        <StatRow label="Equipo" value={`${run.team.length}/6`} />
+                        <StatRow
+                          label="Equipo"
+                          value={`${run.team.length}/6`}
+                        />
                         <StatRow label="PC" value={run.pc.length} />
                         <StatRow label="Badges" value={run.gymsBadges.length} />
-                        <StatRow label="Speed mult." value={run.speedMultiplier} />
+                        <StatRow
+                          label="Speed mult."
+                          value={run.speedMultiplier}
+                        />
                       </div>
 
                       <SectionLabel>Economía</SectionLabel>
                       <div className="grid grid-cols-3 gap-1.5">
                         {[100, 1000, 10000, 100000].map((n) => (
-                          <DbgButton key={n} onClick={() => setRunField({ money: run.money + n })}>
+                          <DbgButton
+                            key={n}
+                            onClick={() =>
+                              setRunField({ money: run.money + n })
+                            }
+                          >
                             +{n >= 1000 ? `${n / 1000}k` : n} $
                           </DbgButton>
                         ))}
@@ -552,40 +661,116 @@ export function DebuggerPanel() {
 
                       <SectionLabel>Control Maestro</SectionLabel>
                       <div className="grid grid-cols-2 gap-1.5">
-                        <DbgButton onClick={healAll} variant="success">❤️ Curar equipo</DbgButton>
-                        <DbgButton onClick={killBattle} variant="danger" disabled={!run.currentBattle}>💥 Terminar batalla</DbgButton>
-                        <DbgButton onClick={() => (window as any).openPokeInjection?.()} variant="accent" className="col-span-2">🧬 Abrir Inyector</DbgButton>
+                        <DbgButton onClick={healAll} variant="success">
+                          ❤️ Curar equipo
+                        </DbgButton>
+                        <DbgButton
+                          onClick={killBattle}
+                          variant="danger"
+                          disabled={!run.currentBattle}
+                        >
+                          💥 Terminar batalla
+                        </DbgButton>
+                        <DbgButton
+                          onClick={() => (window as any).openPokeInjection?.()}
+                          variant="accent"
+                          className="col-span-2"
+                        >
+                          🧬 Abrir Inyector
+                        </DbgButton>
                       </div>
-                    </>
+                    </div>
                   )}
 
                   {/* ════════════════════════════════════════════════════════════
                     TAB: EQUIPO
                   ════════════════════════════════════════════════════════════ */}
                   {activeTab === "equipo" && (
-                    <div className="flex flex-col gap-2 pr-1">
+                    <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pr-1 min-h-0">
                       {run.team.map((p) => (
-                        <div key={p.uid} className="bg-surface-alt border-2 border-border p-2.5 flex items-center gap-3">
-                          <div className="w-12 h-12 shrink-0 flex items-center justify-center bg-black/20 border border-border/40">
-                            <PixelSprite pokemonId={p.pokemonId} variant="front" size={48} alt={p.name} shiny={p.isShiny} />
+                        <div
+                          key={p.uid}
+                          className="border-2 p-2.5 flex items-center gap-3"
+                          style={{ background: C.win, borderColor: C.border }}
+                        >
+                          <div
+                            className="w-12 h-12 shrink-0 flex items-center justify-center border"
+                            style={{
+                              background: C.shadow,
+                              borderColor: C.border,
+                            }}
+                          >
+                            <PixelSprite
+                              pokemonId={p.pokemonId}
+                              variant="front"
+                              size={48}
+                              alt={p.name}
+                              shiny={p.isShiny}
+                            />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1">
-                              <span className="text-white text-[0.65rem] truncate uppercase font-display">{p.name}</span>
-                              {p.isShiny && <Sparkles size={10} className="text-accent" />}
+                              <span
+                                className="text-[0.65rem] truncate uppercase font-display"
+                                style={{ color: C.text }}
+                              >
+                                {p.name}
+                              </span>
+                              {p.isShiny && (
+                                <Sparkles size={10} className="text-accent" />
+                              )}
                             </div>
-                            <div className="text-muted text-[0.5rem] font-mono">NV.{p.level} · {p.currentHP}/{p.maxHP} HP</div>
-                            <div className="w-full bg-black/40 h-1.5 mt-1 border border-border/20">
-                              <div className="h-full bg-brand" style={{ width: `${(p.currentHP / p.maxHP) * 100}%` }} />
+                            <div
+                              className="text-[0.5rem] font-mono"
+                              style={{ color: C.text }}
+                            >
+                              NV.{p.level} · {p.currentHP}/{p.maxHP} HP
+                            </div>
+                            <div
+                              className="w-full h-1.5 mt-1 border"
+                              style={{
+                                background: C.shadow,
+                                borderColor: C.border,
+                              }}
+                            >
+                              <div
+                                className="h-full"
+                                style={{
+                                  width: `${(p.currentHP / p.maxHP) * 100}%`,
+                                  background: C.green,
+                                }}
+                              />
                             </div>
                           </div>
                           <div className="flex gap-1 shrink-0">
-                            <DbgButton onClick={() => applyRareCandy(p.uid, 1)} disabled={p.level >= 100 || (run.items["rare-candy"] || 0) < 1}>+1</DbgButton>
-                            <DbgButton onClick={() => applyRareCandy(p.uid, 10)} disabled={p.level >= 100 || (run.items["rare-candy"] || 0) < 10}>+10</DbgButton>
+                            <DbgButton
+                              onClick={() => applyRareCandy(p.uid, 1)}
+                              disabled={
+                                p.level >= 100 ||
+                                (run.items["rare-candy"] || 0) < 1
+                              }
+                            >
+                              +1
+                            </DbgButton>
+                            <DbgButton
+                              onClick={() => applyRareCandy(p.uid, 10)}
+                              disabled={
+                                p.level >= 100 ||
+                                (run.items["rare-candy"] || 0) < 10
+                              }
+                            >
+                              +10
+                            </DbgButton>
                           </div>
                         </div>
                       ))}
-                      <DbgButton onClick={() => addItem("rare-candy", 50)} variant="accent" className="mt-2 w-full">🍬 Añadir 50 Rare Candies</DbgButton>
+                      <DbgButton
+                        onClick={() => addItem("rare-candy", 50)}
+                        variant="accent"
+                        className="mt-2 w-full"
+                      >
+                        🍬 Añadir 50 Rare Candies
+                      </DbgButton>
                     </div>
                   )}
 
@@ -595,17 +780,29 @@ export function DebuggerPanel() {
                   {activeTab === "items" && (
                     <div className="flex flex-col gap-4 flex-1 min-h-0">
                       <SectionLabel>Acceso Rápido</SectionLabel>
-                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-1.5 shrink-0">
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 shrink-0">
                         {QUICK_ITEMS.map((qi) => (
                           <button
                             key={qi.id}
                             onClick={() => addItem(qi.id, qi.qty)}
-                            className="bg-surface-alt border border-border p-2 flex items-center gap-2 hover:border-brand transition-colors group"
+                            className="border p-3 flex items-center gap-3 transition-colors group shadow-sm hover:-translate-y-0.5"
+                            style={{ background: C.win, borderColor: C.border }}
                           >
-                            <img src={`/sprites/items/${qi.img}.png`} className="w-6 h-6 rendering-pixelated" alt="" />
+                            <img
+                              src={`/sprites/items/${qi.img}.png`}
+                              className="w-10 h-10 rendering-pixelated drop-shadow-sm"
+                              alt=""
+                            />
                             <div className="flex flex-col items-start min-w-0">
-                              <span className="text-[0.5rem] text-white truncate w-full uppercase font-display">{qi.label}</span>
-                              <span className="text-[0.45rem] text-brand">+{qi.qty}</span>
+                              <span
+                                className="text-[0.6rem] truncate w-full uppercase font-display"
+                                style={{ color: C.text }}
+                              >
+                                {qi.label}
+                              </span>
+                              <span className="text-[0.55rem] text-brand font-bold mt-1">
+                                +{qi.qty}
+                              </span>
                             </div>
                           </button>
                         ))}
@@ -614,15 +811,38 @@ export function DebuggerPanel() {
                       <SectionLabel>Resultados de búsqueda</SectionLabel>
                       <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0">
                         {filteredItems.slice(0, 80).map(([id, item]) => (
-                          <div key={id} className="flex items-center gap-3 bg-surface-alt border border-border/40 p-2.5 hover:border-brand/60 transition-colors group">
-                            <img src={`/sprites/items/${(item as any).spriteSlug || id}.png`} className="w-8 h-8 rendering-pixelated shrink-0" alt="" onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0'; }} />
+                          <div
+                            key={id}
+                            className="flex items-center gap-3 border p-2.5 transition-colors group"
+                            style={{ background: C.win, borderColor: C.border }}
+                          >
+                            <img
+                              src={`/sprites/items/${(item as any).spriteSlug || id}.png`}
+                              className="w-8 h-8 rendering-pixelated shrink-0"
+                              alt=""
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.opacity =
+                                  "0";
+                              }}
+                            />
                             <div className="flex-1 min-w-0">
-                              <div className="font-display text-[0.65rem] text-white truncate">{(item as any).name}</div>
-                              <div className="font-display text-[0.45rem] text-muted">{id} · Tienes: {run.items[id] || 0}</div>
+                              <div
+                                className="font-display text-[0.65rem] truncate"
+                                style={{ color: C.text }}
+                              >
+                                {(item as any).name}
+                              </div>
+                              <div className="font-display text-[0.45rem] text-muted">
+                                {id} · Tienes: {run.items[id] || 0}
+                              </div>
                             </div>
                             <div className="flex gap-1 shrink-0">
-                              <DbgButton onClick={() => addItem(id, 1)}>+1</DbgButton>
-                              <DbgButton onClick={() => addItem(id, 10)}>+10</DbgButton>
+                              <DbgButton onClick={() => addItem(id, 1)}>
+                                +1
+                              </DbgButton>
+                              <DbgButton onClick={() => addItem(id, 10)}>
+                                +10
+                              </DbgButton>
                             </div>
                           </div>
                         ))}
@@ -639,17 +859,26 @@ export function DebuggerPanel() {
                     TAB: PROGRESO
                   ════════════════════════════════════════════════════════════ */}
                   {activeTab === "progreso" && (
-                    <>
+                    <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1 min-h-0">
                       <SectionLabel>Gimnasios / Badges</SectionLabel>
                       <div className="grid grid-cols-4 gap-2">
                         {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
                           <button
                             key={num}
                             onClick={() => toggleBadge(num)}
-                            className={clsx(
-                              "aspect-square border-2 flex items-center justify-center transition-all",
-                              run.gymsBadges.includes(num) ? "bg-brand/20 border-brand text-brand" : "bg-black/20 border-border text-muted opacity-40"
-                            )}
+                            className="aspect-square border-2 flex items-center justify-center transition-all"
+                            style={{
+                              background: run.gymsBadges.includes(num)
+                                ? C.shadow
+                                : C.bgDark,
+                              borderColor: run.gymsBadges.includes(num)
+                                ? C.red
+                                : C.border,
+                              color: run.gymsBadges.includes(num)
+                                ? C.red
+                                : C.textMuted,
+                              opacity: run.gymsBadges.includes(num) ? 1 : 0.4,
+                            }}
                           >
                             <Trophy size={20} />
                           </button>
@@ -662,44 +891,80 @@ export function DebuggerPanel() {
                           <button
                             key={zone.id || idx}
                             onClick={() => teleportToZone(idx)}
-                            className={clsx(
-                              "px-3 py-2 border-2 text-[0.55rem] text-left transition-colors flex justify-between items-center",
-                              run.currentZoneIndex === idx ? "bg-brand border-white text-white" : "bg-surface-alt border-border text-muted hover:border-brand"
-                            )}
+                            className="px-3 py-2 border-2 text-[0.55rem] text-left transition-colors flex justify-between items-center"
+                            style={{
+                              background:
+                                run.currentZoneIndex === idx ? C.red : C.win,
+                              borderColor:
+                                run.currentZoneIndex === idx
+                                  ? "white"
+                                  : C.border,
+                              color:
+                                run.currentZoneIndex === idx
+                                  ? "white"
+                                  : C.textMuted,
+                            }}
                           >
-                            <span className="truncate">{idx}. {zone.name} {zone.isGym ? "🏛️" : ""}</span>
-                            {run.currentZoneIndex === idx && <Zap size={10} className="animate-pulse" />}
+                            <span className="truncate">
+                              {idx}. {zone.name} {zone.isGym ? "🏛️" : ""}
+                            </span>
+                            {run.currentZoneIndex === idx && (
+                              <Zap size={10} className="animate-pulse" />
+                            )}
                           </button>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
 
                   {/* ════════════════════════════════════════════════════════════
                     TAB: MEGA
                   ════════════════════════════════════════════════════════════ */}
                   {activeTab === "mega" && (
-                    <>
+                    <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1 min-h-0">
                       <SectionLabel>Status</SectionLabel>
                       <div className="grid grid-cols-1 gap-2">
-                        <DbgButton onClick={toggleMegaBracelet} variant={run.hasMegaBracelet ? "success" : "default"}>
-                          {run.hasMegaBracelet ? "✅ MEGA BRACELET: ACTIVE" : "❌ MEGA BRACELET: INACTIVE"}
+                        <DbgButton
+                          onClick={toggleMegaBracelet}
+                          variant={run.hasMegaBracelet ? "success" : "default"}
+                        >
+                          {run.hasMegaBracelet
+                            ? "✅ MEGA BRACELET: ACTIVE"
+                            : "❌ MEGA BRACELET: INACTIVE"}
                         </DbgButton>
-                        <DbgButton onClick={giveAllMegaStones} variant="accent">💎 DAR TODAS LAS MEGA STONES</DbgButton>
+                        <DbgButton onClick={giveAllMegaStones} variant="accent">
+                          💎 DAR TODAS LAS MEGA STONES
+                        </DbgButton>
                       </div>
 
                       <SectionLabel>Engine Control</SectionLabel>
                       <div className="grid grid-cols-2 gap-2">
-                        <DbgButton onClick={warmMegaCache}>🔥 WARM CACHE</DbgButton>
-                        <DbgButton onClick={resetMegaState} variant="danger">🔄 RESET STATE</DbgButton>
+                        <DbgButton onClick={warmMegaCache}>
+                          🔥 WARM CACHE
+                        </DbgButton>
+                        <DbgButton onClick={resetMegaState} variant="danger">
+                          🔄 RESET STATE
+                        </DbgButton>
                       </div>
 
-                      <div className="bg-black/40 border border-border p-3 mt-2 flex flex-col gap-1">
-                        <StatRow label="isMegaActive" value={run.megaState?.isMega ? "TRUE" : "FALSE"} />
-                        <StatRow label="megaName" value={run.megaState?.megaName || "—"} />
-                        <StatRow label="originalId" value={run.megaState?.originalPokemonId ?? "—"} />
+                      <div
+                        className="p-3 mt-2 flex flex-col gap-1 border"
+                        style={{ background: C.bgDark, borderColor: C.border }}
+                      >
+                        <StatRow
+                          label="isMegaActive"
+                          value={run.megaState?.isMega ? "TRUE" : "FALSE"}
+                        />
+                        <StatRow
+                          label="megaName"
+                          value={run.megaState?.megaName || "—"}
+                        />
+                        <StatRow
+                          label="originalId"
+                          value={run.megaState?.originalPokemonId ?? "—"}
+                        />
                       </div>
-                    </>
+                    </div>
                   )}
 
                   {/* ════════════════════════════════════════════════════════════
@@ -709,28 +974,63 @@ export function DebuggerPanel() {
                     <div className="flex-1 flex flex-col min-h-0 gap-3">
                       <div className="flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2">
-                          <Code2 size={14} className="text-brand" />
-                          <h3 className="font-display text-brand text-[0.7rem] tracking-[0.2em] uppercase">SYSTEM INSPECTOR</h3>
+                          <Code2 size={14} style={{ color: C.red }} />
+                          <h3
+                            className="font-display text-[0.7rem] tracking-[0.2em] uppercase"
+                            style={{ color: C.red }}
+                          >
+                            SYSTEM INSPECTOR
+                          </h3>
                         </div>
-                        <DbgButton onClick={() => setJsonExpanded(!jsonExpanded)} variant={jsonExpanded ? "accent" : "default"}>
+                        <DbgButton
+                          onClick={() => setJsonExpanded(!jsonExpanded)}
+                          variant={jsonExpanded ? "accent" : "default"}
+                        >
                           {jsonExpanded ? "COLAPSAR" : "EXPANDIR TODO"}
                         </DbgButton>
                       </div>
 
-                      <pre className="flex-1 bg-black/60 border-2 border-border p-4 text-[0.5rem] text-green-400 font-mono overflow-auto custom-scrollbar leading-tight whitespace-pre-wrap break-all shadow-inner">
+                      <pre
+                        className="flex-1 border-2 p-4 text-[0.5rem] font-mono overflow-auto custom-scrollbar leading-tight whitespace-pre-wrap break-all shadow-inner"
+                        style={{
+                          background: C.bgDark,
+                          borderColor: C.border,
+                          color: C.green,
+                        }}
+                      >
                         {stateJson}
                       </pre>
 
                       <div className="grid grid-cols-2 gap-2 shrink-0">
-                        <DbgButton onClick={() => { navigator.clipboard.writeText(JSON.stringify(run, null, 2)); notify_("Copiado", "📋"); }}>📋 COPIAR JSON</DbgButton>
-                        <DbgButton onClick={() => setRunField({ pendingEvolution: null, pendingMoveLearn: null, pendingZoneTransition: false })} variant="danger">🧹 LIMPIAR PENDIENTES</DbgButton>
+                        <DbgButton
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              JSON.stringify(run, null, 2),
+                            );
+                            notify_("Copiado", "📋");
+                          }}
+                        >
+                          📋 COPIAR JSON
+                        </DbgButton>
+                        <DbgButton
+                          onClick={() =>
+                            setRunField({
+                              pendingEvolution: null,
+                              pendingMoveLearn: null,
+                              pendingZoneTransition: false,
+                            })
+                          }
+                          variant="danger"
+                        >
+                          🧹 LIMPIAR PENDIENTES
+                        </DbgButton>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
             </div>
-          </Card>
+          </PixelWindow>
         </div>
       )}
     </>

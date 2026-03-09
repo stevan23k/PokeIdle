@@ -10,24 +10,32 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = "", variant = "primary", size = "md", isActive, ...props }, ref) => {
-    let baseStyles = "inline-flex items-center justify-center font-display uppercase transition-all duration-75 active:translate-y-1";
+  (
+    { className = "", variant = "primary", size = "md", isActive, ...props },
+    ref,
+  ) => {
+    let baseStyles =
+      "inline-flex items-center justify-center font-display uppercase transition-all duration-75 active:translate-y-1";
     let variantStyles = "";
     let sizeStyles = "";
 
     // Variants
     switch (variant) {
       case "primary":
-        variantStyles = "bg-brand text-foreground pixel-border-brand pixel-shadow hover:bg-brand-dark active:pixel-shadow-active";
+        variantStyles =
+          "bg-brand text-[#141a1c] pixel-border-brand pixel-shadow hover:bg-brand-dark active:pixel-shadow-active";
         break;
       case "secondary":
-        variantStyles = "bg-surface-light text-foreground pixel-border pixel-shadow hover:bg-surface-alt active:pixel-shadow-active";
+        variantStyles =
+          "bg-surface-light text-foreground pixel-border pixel-shadow hover:bg-surface-alt active:pixel-shadow-active";
         break;
       case "danger":
-        variantStyles = "bg-danger text-foreground pixel-border-danger pixel-shadow hover:brightness-110 active:pixel-shadow-active";
+        variantStyles =
+          "bg-danger text-[#141a1c] pixel-border-danger pixel-shadow hover:brightness-110 active:pixel-shadow-active";
         break;
       case "ghost":
-        variantStyles = "bg-transparent text-muted hover:text-foreground hover:bg-surface-light active:translate-y-0";
+        variantStyles =
+          "bg-transparent text-muted hover:text-foreground hover:bg-surface-light active:translate-y-0";
         baseStyles = baseStyles.replace("active:translate-y-1", ""); // Ghost doesn't press down with shadow
         break;
     }
@@ -53,7 +61,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variantStyles = variantStyles.replace("active:pixel-shadow-active", "");
     }
 
-    const activeStyles = isActive && variant !== "ghost" ? "translate-y-1 pixel-shadow-active" : "";
+    const activeStyles =
+      isActive && variant !== "ghost"
+        ? "translate-y-1 pixel-shadow-active"
+        : "";
 
     return (
       <button
@@ -62,7 +73,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {...props}
       />
     );
-  }
+  },
 );
 
 Button.displayName = "Button";

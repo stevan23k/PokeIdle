@@ -13,7 +13,7 @@ export function TeamRoster() {
         <h2 className="font-display text-brand text-[0.65rem] tracking-wider shrink-0">
           MI EQUIPO
         </h2>
-        
+
         <button
           onClick={() => (window as any).openBag?.()}
           className="flex items-center gap-2 shrink-0 p-1 px-3 bg-surface-alt border-2 border-border hover:border-brand hover:bg-surface-light transition-all group relative focus:outline-none shadow-[2px_2px_0_rgba(0,0,0,0.1)] active:translate-x-0.5 active:translate-y-0.5"
@@ -21,7 +21,10 @@ export function TeamRoster() {
         >
           <img
             src="/sprites/Bag.png"
-            onError={(e) => { e.currentTarget.src = "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png" }}
+            onError={(e) => {
+              e.currentTarget.src =
+                "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png";
+            }}
             alt="Bag Sprite"
             className="w-6 h-6 md:w-8 md:h-8 rendering-pixelated filter group-hover:drop-shadow-[0_0_4px_rgba(255,0,0,0.5)]"
           />
@@ -30,7 +33,7 @@ export function TeamRoster() {
           </span>
         </button>
 
-        <span className="font-body text-white text-xs font-bold shrink-0 ml-auto hidden sm:block">
+        <span className="font-body text-foreground text-xs font-bold shrink-0 ml-auto hidden sm:block">
           {run.team.length}/6
         </span>
       </div>
@@ -50,14 +53,14 @@ export function TeamRoster() {
 
         {run.team.length < 6 && run.team.length > 0 && (
           <div className="mt-2 p-2 border border-dashed border-border/40 rounded-sm">
-            <p className="font-body text-[0.6rem] text-white italic text-center leading-tight">
+            <p className="font-body text-[0.6rem] text-foreground italic text-center leading-tight">
               Captura Pokémon en batalla para completar tu equipo
             </p>
           </div>
         )}
 
         {run.team.length === 0 && (
-          <div className="text-center p-6 border-2 border-dashed border-border text-white font-body text-xs bg-surface-alt">
+          <div className="text-center p-6 border-2 border-dashed border-border text-foreground font-body text-xs bg-surface-alt">
             No tienes Pokémon en tu equipo.
           </div>
         )}

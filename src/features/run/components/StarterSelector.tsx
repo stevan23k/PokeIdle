@@ -9,20 +9,38 @@ import { calculateStats, NATURES } from "../../../engine/stats.engine";
 import { clsx } from "clsx";
 import { Play, Sparkles } from "lucide-react";
 import { StartConfigModal } from "./StartConfigModal";
-import { Button } from "../../../components/ui/Button";
+import { PixelWindow, GBAButton, C } from "../../../components/ui/GBAUI";
 
 const STAT_LABELS = ["HP", "ATK", "DEF", "SPE", "SPD", "SPA"];
 
 const CORE_STARTER_IDS = [
-  1, 4, 7,           // Gen 1
-  152, 155, 158,     // Gen 2
-  252, 255, 258,     // Gen 3
-  387, 390, 393,     // Gen 4
-  495, 498, 501,     // Gen 5
-  650, 653, 656,     // Gen 6
-  722, 725, 728,     // Gen 7
-  810, 813, 816,     // Gen 8
-  906, 909, 912      // Gen 9
+  1,
+  4,
+  7, // Gen 1
+  152,
+  155,
+  158, // Gen 2
+  252,
+  255,
+  258, // Gen 3
+  387,
+  390,
+  393, // Gen 4
+  495,
+  498,
+  501, // Gen 5
+  650,
+  653,
+  656, // Gen 6
+  722,
+  725,
+  728, // Gen 7
+  810,
+  813,
+  816, // Gen 8
+  906,
+  909,
+  912, // Gen 9
 ];
 const RadarChart = ({
   stats,
@@ -136,16 +154,20 @@ export function StarterSelector() {
     if (!gen) return;
 
     // Standard starters for this generation
-    const coreIds = CORE_STARTER_IDS.filter(id => id >= gen.range[0] && id <= gen.range[1]);
+    const coreIds = CORE_STARTER_IDS.filter(
+      (id) => id >= gen.range[0] && id <= gen.range[1],
+    );
 
     // Pokémon the user has already unlocked for this generation
     const unlockedIds = meta.unlockedStarters
-      .filter(s => s.id >= gen.range[0] && s.id <= gen.range[1])
-      .map(s => s.id);
-    
+      .filter((s) => s.id >= gen.range[0] && s.id <= gen.range[1])
+      .map((s) => s.id);
+
     // Combine both unique lists and sort by Pokedex ID
-    const combined = Array.from(new Set([...coreIds, ...unlockedIds])).sort((a, b) => a - b);
-    
+    const combined = Array.from(new Set([...coreIds, ...unlockedIds])).sort(
+      (a, b) => a - b,
+    );
+
     setValidIds(combined);
   }, [selectedGen, meta.unlockedStarters]);
 
@@ -248,35 +270,32 @@ export function StarterSelector() {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-color-surface flex flex-col items-center justify-start overflow-y-auto p-4 sm:p-8 crt-screen"
-      style={{ backgroundColor: "var(--color-surface)" }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-start overflow-y-auto p-4 sm:p-8 crt-screen"
+      style={{ backgroundColor: C.bg }}
     >
       <div className="w-full max-w-6xl z-10 flex flex-col lg:flex-row relative lg:gap-8 items-start justify-center pt-8">
         {/* Main Selection Panel */}
         <div className="w-full lg:w-3/4 flex flex-col">
-          <h1 className="font-display text-2xl md:text-3xl text-center text-brand mb-2 drop-shadow-[4px_4px_0_rgba(0,0,0,0.8)]">
+          <h1
+            className="font-display text-2xl md:text-3xl text-center mb-2 drop-shadow-[4px_4px_0_rgba(0,0,0,0.8)]"
+            style={{ color: C.red }}
+          >
             PokéIdle
           </h1>
           <h2 className="font-display text-[0.6rem] md:text-xs text-center text-white mb-8 tracking-[0.3em] opacity-80">
             ROGUELIKE TRAINER
           </h2>
 
-          <div className="bg-surface-alt border-4 border-border p-6 md:p-8 mb-8 pixel-shadow">
-            <h3 className="font-display text-xs md:text-sm text-center text-accent mb-4 tracking-widest drop-shadow-[0_0_5px_rgba(255,215,0,0.3)]">
-              ELIGE TU STARTER
-            </h3>
-
+          <PixelWindow title="ELIGE TU STARTER" className="mb-8">
             <div className="flex flex-wrap items-center justify-center gap-2 mb-6">
               {GENERATIONS.map((gen) => (
-                <Button
+                <GBAButton
                   key={gen.id}
                   variant={selectedGen === gen.id ? "primary" : "secondary"}
-                  size="sm"
                   onClick={() => setSelectedGen(gen.id)}
-                  className="px-3"
                 >
                   {gen.name}
-                </Button>
+                </GBAButton>
               ))}
             </div>
 
@@ -361,13 +380,10 @@ export function StarterSelector() {
                 );
               })()}
             </div>
-          </div>
+          </PixelWindow>
 
           {meta.runHistory.length > 0 && (
-            <div className="bg-surface border-4 border-border p-5 md:p-6 mb-8 pixel-shadow">
-              <h3 className="font-display text-xs text-muted mb-4 tracking-widest">
-                HISTORIAL DE PARTIDAS
-              </h3>
+            <PixelWindow title="HISTORIAL" className="mb-8">
               <div className="flex flex-col gap-3">
                 {meta.runHistory.slice(0, 3).map((hist, i) => (
                   <div
@@ -405,24 +421,32 @@ export function StarterSelector() {
                 ))}
               </div>
               {meta.bestRun && (
-                <div className="mt-4 text-center font-display text-[0.6rem] text-accent drop-shadow-[0_0_5px_rgba(255,215,0,0.3)]">
+                <div
+                  className="mt-4 text-center font-display text-[0.6rem]"
+                  style={{
+                    color: C.yellow,
+                    textShadow: `2px 2px 0 ${C.border}`,
+                  }}
+                >
                   MEJOR RUN: {meta.bestRun.badges} MEDALLAS
                 </div>
               )}
-            </div>
+            </PixelWindow>
           )}
         </div>
 
         {/* Genetics Aside */}
         <aside className="w-full lg:w-1/4 flex flex-col mt-8 lg:mt-0">
           {selectedStarterData ? (
-            <div className="bg-surface border-4 border-border p-5 pixel-shadow flex flex-col top-0 lg:top-24 sticky">
-              <h3 className="font-display text-xs text-brand mb-4 tracking-widest text-center border-b-2 border-border pb-2">
-                POTENCIAL GENÉTICO (NV. 5)
-              </h3>
-
+            <PixelWindow
+              title="GENÉTICA"
+              className="flex flex-col top-0 lg:top-24 sticky"
+            >
               <div className="flex flex-col items-center gap-2 mb-4">
-                <div className="relative p-4 bg-surface-dark border-2 border-border shadow-inner group transition-colors">
+                <div
+                  className="relative p-4 border-2 shadow-inner group transition-colors"
+                  style={{ background: C.bgDark, borderColor: C.border }}
+                >
                   <PixelSprite
                     pokemonId={selectedId || 0}
                     variant="front"
@@ -431,22 +455,22 @@ export function StarterSelector() {
                   />
                   {useShiny && (
                     <Sparkles
-                      className="absolute top-2 right-2 text-accent animate-pulse"
+                      className="absolute top-2 right-2 animate-pulse"
+                      style={{ color: C.yellow }}
                       size={14}
                       fill="currentColor"
                     />
                   )}
                 </div>
                 {selectedStarterData.isShiny && (
-                  <Button
+                  <GBAButton
                     variant={useShiny ? "primary" : "secondary"}
-                    size="sm"
                     onClick={() => setUseShiny(!useShiny)}
-                    className="flex items-center gap-2 uppercase"
+                    className="flex items-center justify-center gap-2 uppercase"
                   >
                     <Sparkles size={10} fill={useShiny ? "white" : "none"} />
-                    {useShiny ? "Apariencia: Shiny" : "Apariencia: Normal"}
-                  </Button>
+                    {useShiny ? "SHINY" : "NORMAL"}
+                  </GBAButton>
                 )}
               </div>
 
@@ -556,29 +580,27 @@ export function StarterSelector() {
 
               {/* Start button — below the stat chart and nature selector */}
               {selectedId && (
-                <Button
-                  variant="primary"
-                  size="lg"
-                  onClick={() => handleStart(selectedId)}
-                  disabled={loading}
-                  className="mt-4 w-full flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    "PREPARANDO..."
-                  ) : (
-                    <>
-                      EMPEZAR <Play size={14} fill="currentColor" />
-                    </>
-                  )}
-                </Button>
+                <div className="mt-4">
+                  <GBAButton
+                    variant="success"
+                    onClick={() => handleStart(selectedId)}
+                    disabled={loading}
+                    fullWidth
+                  >
+                    {loading ? "PREPARANDO..." : "EMPEZAR ▶"}
+                  </GBAButton>
+                </div>
               )}
-            </div>
+            </PixelWindow>
           ) : (
-            <div className="bg-surface-dark border-4 border-border/50 p-5 flex flex-col border-dashed items-center justify-center opacity-50 min-h-[300px] lg:mt-24">
-              <span className="font-display text-[0.6rem] text-muted text-center tracking-widest">
+            <PixelWindow className="opacity-50 min-h-[300px] lg:mt-24">
+              <span
+                className="font-display text-[0.6rem] text-center tracking-widest block"
+                style={{ color: C.textMuted }}
+              >
                 SELECCIONA UN POKÉMON PARA VER SU GENÉTICA
               </span>
-            </div>
+            </PixelWindow>
           )}
         </aside>
       </div>

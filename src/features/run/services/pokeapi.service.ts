@@ -817,7 +817,8 @@ export async function fetchGachaPools(): Promise<GachaPools> {
   try {
     const { data, error } = await supabase
       .from("species_cache")
-      .select("pokemon_id, gacha_tier");
+      .select("pokemon_id, gacha_tier")
+      .is("evolves_from_id", null);
 
     if (error) throw error;
     if (!data) return { 3: [], 4: [], 5: [], 6: [] };

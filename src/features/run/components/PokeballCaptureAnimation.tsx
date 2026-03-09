@@ -4,9 +4,9 @@ interface PokeballCaptureAnimationProps {
   isActive: boolean;
   captured: boolean | null;
   ballId?: string;
-  onHideEnemy?: () => void;   // called when enemy should disappear (ball about to land)
-  onShowEnemy?: () => void;   // called when enemy reappears (failed capture)
-  onComplete?: () => void;    // called when full animation is done
+  onHideEnemy?: () => void; // called when enemy should disappear (ball about to land)
+  onShowEnemy?: () => void; // called when enemy reappears (failed capture)
+  onComplete?: () => void; // called when full animation is done
 }
 
 // Timeline:
@@ -16,7 +16,15 @@ interface PokeballCaptureAnimationProps {
 // 1500ms    → bouncing (2-3 bounces + shake, ~900ms)
 // 2400ms    → resolve: resting (caught) OR breaking (failed → show enemy after 1s delay)
 
-type Phase = "idle" | "throwing" | "absorbing" | "falling" | "bouncing" | "resting" | "breaking" | "done";
+type Phase =
+  | "idle"
+  | "throwing"
+  | "absorbing"
+  | "falling"
+  | "bouncing"
+  | "resting"
+  | "breaking"
+  | "done";
 
 export function PokeballCaptureAnimation({
   isActive,
@@ -38,10 +46,12 @@ export function PokeballCaptureAnimation({
     const timers: ReturnType<typeof setTimeout>[] = [];
 
     // 600ms: ball reaches enemy → flash + hide enemy
-    timers.push(setTimeout(() => {
-      setPhase("absorbing");
-      onHideEnemy?.();
-    }, 600));
+    timers.push(
+      setTimeout(() => {
+        setPhase("absorbing");
+        onHideEnemy?.();
+      }, 600),
+    );
 
     // 1000ms: ball starts falling
     timers.push(setTimeout(() => setPhase("falling"), 1000));
@@ -50,21 +60,30 @@ export function PokeballCaptureAnimation({
     timers.push(setTimeout(() => setPhase("bouncing"), 1500));
 
     // 2400ms: resolve based on result
-    timers.push(setTimeout(() => {
-      if (captured === true) {
-        setPhase("resting");
-        // battle ends naturally — component unmounts
-      } else if (captured === false) {
-        setPhase("breaking");
-        // 1s delay before showing enemy again
-        timers.push(setTimeout(() => {
-          onShowEnemy?.();
-          setPhase("done");
-          onComplete?.();
-        }, 1000));
-      }
-      // captured === null: result not yet known, stay bouncing
-    }, 2400));
+    timers.push(
+      setTimeout(() => {
+        if (captured === true) {
+          setPhase("resting");
+          timers.push(
+            setTimeout(() => {
+              setPhase("done");
+              onComplete?.();
+            }, 2000),
+          ); // tiempo suficiente para ver el texto ¡CAPTURADO!
+        } else if (captured === false) {
+          setPhase("breaking");
+          // 1s delay before showing enemy again
+          timers.push(
+            setTimeout(() => {
+              onShowEnemy?.();
+              setPhase("done");
+              onComplete?.();
+            }, 1000),
+          );
+        }
+        // captured === null: result not yet known, stay bouncing
+      }, 2400),
+    );
 
     return () => timers.forEach(clearTimeout);
   }, [isActive]);
@@ -75,6 +94,11 @@ export function PokeballCaptureAnimation({
     const t = setTimeout(() => {
       if (captured === true) {
         setPhase("resting");
+        const t2 = setTimeout(() => {
+          setPhase("done");
+          onComplete?.();
+        }, 2000);
+        return () => clearTimeout(t2);
       } else {
         setPhase("breaking");
         const t2 = setTimeout(() => {
@@ -91,7 +115,9 @@ export function PokeballCaptureAnimation({
   if (phase === "idle" || phase === "done") return null;
 
   // Ball should stay at ground position after throw
-  const ballAtGround = ["falling", "bouncing", "resting", "breaking"].includes(phase);
+  const ballAtGround = ["falling", "bouncing", "resting", "breaking"].includes(
+    phase,
+  );
 
   return (
     <>
@@ -146,14 +172,16 @@ export function PokeballCaptureAnimation({
 
       <div className="absolute inset-0 pointer-events-none z-30">
         <div className="relative w-full h-full">
-
           {/* Absorb flash */}
           {phase === "absorbing" && (
             <div
               className="absolute bg-white rounded-full"
               style={{
                 animation: "pb-absorb-flash 0.4s ease-out forwards",
-                top: "15%", left: "15%", right: "15%", bottom: "15%",
+                top: "15%",
+                left: "15%",
+                right: "15%",
+                bottom: "15%",
               }}
             />
           )}
@@ -168,16 +196,25 @@ export function PokeballCaptureAnimation({
               width: 32,
               height: 32,
               // Keep ball at ground position when not throwing
-              transform: ballAtGround && phase !== "falling" && phase !== "bouncing" && phase !== "breaking"
-                ? "translateY(55px)"
-                : undefined,
+              transform:
+                ballAtGround &&
+                phase !== "falling" &&
+                phase !== "bouncing" &&
+                phase !== "breaking"
+                  ? "translateY(55px)"
+                  : undefined,
               animation:
-                phase === "throwing"  ? "pb-throw 0.6s cubic-bezier(0.2, 0.8, 0.4, 1) forwards" :
-                phase === "falling"   ? "pb-fall 0.5s ease-in forwards" :
-                phase === "bouncing"  ? "pb-bounce 0.9s ease-out forwards, pb-shake 1s ease-in-out 0.5s forwards" :
-                phase === "resting"   ? "pb-shake 0.6s ease-in-out, pb-rest-pulse 1.2s ease-in-out 0.6s infinite" :
-                phase === "breaking"  ? "pb-break 0.5s ease-in forwards" :
-                "none",
+                phase === "throwing"
+                  ? "pb-throw 0.6s cubic-bezier(0.2, 0.8, 0.4, 1) forwards"
+                  : phase === "falling"
+                    ? "pb-fall 0.5s ease-in forwards"
+                    : phase === "bouncing"
+                      ? "pb-bounce 0.9s ease-out forwards, pb-shake 1s ease-in-out 0.5s forwards"
+                      : phase === "resting"
+                        ? "pb-shake 0.6s ease-in-out, pb-rest-pulse 1.2s ease-in-out 0.6s infinite"
+                        : phase === "breaking"
+                          ? "pb-break 0.5s ease-in forwards"
+                          : "none",
             }}
           >
             <img
@@ -186,7 +223,10 @@ export function PokeballCaptureAnimation({
               width={32}
               height={32}
               style={{ imageRendering: "pixelated", display: "block" }}
-              onError={(e) => { (e.target as HTMLImageElement).src = "/sprites/items/poke-ball.png"; }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src =
+                  "/sprites/items/poke-ball.png";
+              }}
             />
           </div>
 

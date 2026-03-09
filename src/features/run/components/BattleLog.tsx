@@ -22,7 +22,7 @@ export function BattleLog() {
   return (
     <div className="h-44 border-2 border-border bg-surface-dark crt-screen relative flex flex-col overflow-hidden">
       <div className="bg-surface border-b border-border px-2 py-1.5 z-10 sticky top-0 flex items-center justify-between">
-        <span className="font-display text-[0.55rem] text-white tracking-[0.2em] uppercase drop-shadow-sm">
+        <span className="font-display text-[0.55rem] text-foreground tracking-[0.2em] uppercase drop-shadow-sm">
           REGISTRO DE BATALLA
         </span>
       </div>
@@ -32,12 +32,12 @@ export function BattleLog() {
         className="flex-1 overflow-y-auto p-3 pr-4 flex flex-col gap-2 z-10 relative scroll-smooth"
       >
         {logs.length === 0 && (
-          <div className="text-center text-white/50 font-body text-[0.6rem] italic mt-2 uppercase tracking-widest">
+          <div className="text-center text-foreground/50 font-body text-[0.6rem] italic mt-2 uppercase tracking-widest">
             Esperando eventos...
           </div>
         )}
         {logs.map((entry) => {
-          let colorClass = "text-white/70";
+          let colorClass = "text-foreground/80";
 
           switch (entry.type) {
             case "attack":
@@ -55,7 +55,7 @@ export function BattleLog() {
                 "text-accent-blue drop-shadow-[0_0_2px_rgba(74,144,217,0.5)]";
               break;
             case "not-very":
-              colorClass = "text-white/40";
+              colorClass = "text-foreground/50";
               break;
             case "capture":
               colorClass =

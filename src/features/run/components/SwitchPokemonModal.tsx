@@ -47,7 +47,7 @@ export function SwitchPokemonModal({ onSelect }: Props) {
 
                 <div className="flex-1 min-w-0 flex flex-col gap-1">
                   <div className="flex justify-between items-end">
-                    <span className="font-display text-[0.65rem] text-white truncate uppercase">
+                    <span className="font-display text-[0.65rem] text-foreground truncate uppercase">
                       {pokemon.name}
                     </span>
                     <span className="font-body text-[0.6rem] text-brand-light font-bold">

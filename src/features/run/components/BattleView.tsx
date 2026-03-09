@@ -58,7 +58,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
   const [showLeaderSprite, setShowLeaderSprite] = useState(false);
   const [leaderSpriteOut, setLeaderSpriteOut] = useState(false);
   const [showEnemyHP, setShowEnemyHP] = useState(true);
-  
+
   const [showBadgeModal, setShowBadgeModal] = useState<{
     badgeName: string;
     gymType: string;
@@ -147,7 +147,8 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
               fromName: prev.currentBattle.playerPokemon.name,
               toId: mega.mega_pokemon_id,
               toName: mega.mega_name,
-              megaName: logMessage.split("¡")[1]?.split(" ha")[0] ?? mega.mega_name,
+              megaName:
+                logMessage.split("¡")[1]?.split(" ha")[0] ?? mega.mega_name,
             },
           };
         });
@@ -195,7 +196,11 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
   // --- Gym Introduction Logic ---
   useEffect(() => {
-    if (run.pendingGymIntro && battle?.type === "gym" && !gymIntroDialogShownRef.current) {
+    if (
+      run.pendingGymIntro &&
+      battle?.type === "gym" &&
+      !gymIntroDialogShownRef.current
+    ) {
       gymIntroDialogShownRef.current = true;
       gymVictoryDialogShownRef.current = false; // reset para nueva batalla
 
@@ -203,17 +208,17 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       setShowLeaderSprite(true);
       setLeaderSpriteOut(false);
       setShowEnemyHP(false);
-      
+
       // Limpiar el flag del engine inmediatamente y activar guard de diálogo
-      setRun((prev: any) => ({ 
-        ...prev, 
+      setRun((prev: any) => ({
+        ...prev,
         pendingGymIntro: false,
-        pendingGymDialogue: true, 
+        pendingGymDialogue: true,
       }));
 
       // Timers for sequence
       const hpTimer = setTimeout(() => setShowEnemyHP(true), 1500);
-      
+
       let isEffectActive = true;
       let dialogTimer: any = null;
       const startTime = Date.now();
@@ -224,13 +229,13 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
         const gym = gyms.find((g) => {
           return battle.gymTeam?.[0]?.pokemonId === g.pokemon?.[0]?.pokemonId;
         });
-        
+
         if (gym) {
           setCurrentGym(gym);
           if (gym.dialogIntro && gym.dialogIntro.length > 0) {
             const elapsed = Date.now() - startTime;
             const remaining = Math.max(0, 2000 - elapsed);
-            
+
             dialogTimer = setTimeout(() => {
               if (!isEffectActive) return;
               setGymDialogState({
@@ -239,7 +244,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                 leaderName: gym.leaderName ?? "Líder",
                 leaderPokemonId: battle.enemyPokemon.pokemonId,
               });
-            }, remaining); 
+            }, remaining);
           } else {
             // No hay diálogo, asegurar que se muestre la vida y se desbloquee
             setShowEnemyHP(true);
@@ -251,9 +256,9 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
             }
           }
         } else {
-           // No se encontró el gimnasio, asegurar limpieza
-           setShowEnemyHP(true);
-           setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
+          // No se encontró el gimnasio, asegurar limpieza
+          setShowEnemyHP(true);
+          setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
         }
       });
 
@@ -273,8 +278,8 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       setShowLeaderSprite(false);
       setLeaderSpriteOut(false);
       setShowEnemyHP(true);
-      setRun((prev: any) => ({ 
-        ...prev, 
+      setRun((prev: any) => ({
+        ...prev,
         pendingGymDialogue: false,
         pendingGymCondition: false,
         pendingGymIntro: false,
@@ -324,27 +329,32 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
         });
       }
     }
-  }, [battle?.phase, battle?.bossCurrentBar, enemyPokemon?.currentHP, currentGym]);
+  }, [
+    battle?.phase,
+    battle?.bossCurrentBar,
+    enemyPokemon?.currentHP,
+    currentGym,
+  ]);
 
   const handleDialogFinish = () => {
     const variant = gymDialogState?.variant;
     setGymDialogState(null);
-    
+
     if (variant === "intro") {
       setLeaderSpriteOut(true);
       setTimeout(() => setShowLeaderSprite(false), 500);
-      setRun((prev: any) => ({ 
-        ...prev, 
-        pendingGymDialogue: false
+      setRun((prev: any) => ({
+        ...prev,
+        pendingGymDialogue: false,
       }));
-      
+
       // Mostrar condición del gym si hay mecánica
       if (battle?.activeMechanic) {
         setRun((prev: any) => ({ ...prev, pendingGymCondition: true }));
         setShowConditionModal(true);
       }
     }
-    
+
     if (variant === "defeat") {
       setLeaderSpriteOut(true);
       setTimeout(() => setShowLeaderSprite(false), 500);
@@ -359,7 +369,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
         });
       }
     }
-    
+
     if (variant === "victory") {
       setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
     }
@@ -383,11 +393,11 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       return;
     }
     if (pca.captured === null) {
-      // Throw started — show animation, result pending
+      // Flujo manual: throw iniciado, resultado pendiente
       setCaptureAnim({ active: true, captured: null });
     } else {
-      // Result arrived — update captured flag
-      setCaptureAnim((prev) => ({ ...prev, captured: pca.captured }));
+      // Auto-captura o resultado directo: activar animación con resultado ya conocido
+      setCaptureAnim({ active: true, captured: pca.captured });
     }
   }, [battle?.pendingCaptureAnim]);
 
@@ -495,7 +505,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                 </div>
               )}
               <div className="flex items-center gap-2 justify-between w-full">
-                <span className="font-display text-xs truncate max-w-[140px] drop-shadow-md text-white">
+                <span className="font-display text-xs truncate max-w-[140px] drop-shadow-sm text-foreground">
                   {enemyPokemon.name}
                 </span>
                 <div className="flex gap-1 ml-1">
@@ -546,7 +556,9 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                 "w-40 h-40 sm:w-56 sm:h-56 flex items-end justify-center relative mt-2 shrink-0 transition-transform",
                 ENEMY_SPRITE_POSITION[bgId] ||
                   "translate-y-[60px] -translate-x-[20px]",
-                battle?.turnCount === 0 && !showLeaderSprite && "animate-slide-in-enemy",
+                battle?.turnCount === 0 &&
+                  !showLeaderSprite &&
+                  "animate-slide-in-enemy",
               )}
             >
               <div
@@ -559,9 +571,14 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                 )}
               >
                 <div className="absolute bottom-2 w-32 sm:w-48 h-10 rounded-[100%] bg-black/50 blur-xs -z-10"></div>
-                {showLeaderSprite && (battle?.enemyTrainer?.name || currentGym?.leaderName) ? (
+                {showLeaderSprite &&
+                (battle?.enemyTrainer?.name || currentGym?.leaderName) ? (
                   <img
-                    src={getLeaderSpriteUrl(battle?.enemyTrainer?.name || currentGym?.leaderName || "")}
+                    src={getLeaderSpriteUrl(
+                      battle?.enemyTrainer?.name ||
+                        currentGym?.leaderName ||
+                        "",
+                    )}
                     alt={battle?.enemyTrainer?.name || currentGym?.leaderName}
                     className={clsx(
                       "w-32 h-32 sm:w-48 sm:h-48 object-contain transition-all duration-500",
@@ -627,7 +644,8 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                       "w-32 h-32 sm:w-48 sm:h-48 drop-shadow-lg",
                       enemyPokemon.currentHP === 0 &&
                         "opacity-0 translate-y-8 transition-all duration-500",
-                      enemyHidden && "opacity-0 transition-opacity duration-300",
+                      enemyHidden &&
+                        "opacity-0 transition-opacity duration-300",
                     )}
                   />
                 )}
@@ -666,7 +684,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
             {/* Floating HP Bar Container above sprite */}
             <div className="absolute bottom-full mb-12 flex flex-col items-center gap-1 bg-surface-alt/80 p-2 border-2 border-border backdrop-blur-sm shadow-pixel z-20 w-48 sm:w-64">
               <div className="flex items-center gap-2 justify-between w-full">
-                <span className="font-display text-xs truncate max-w-[140px] drop-shadow-md text-white">
+                <span className="font-display text-xs truncate max-w-[140px] drop-shadow-sm text-foreground">
                   {playerPokemon.name}
                 </span>
                 <div className="flex gap-1 ml-1">
@@ -770,7 +788,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                   style={{ width: `${run.currentZoneProgress}%` }}
                 ></div>
               </div>
-              <div className="mt-1 text-center font-body text-[0.55rem] text-white tracking-widest uppercase opacity-80">
+              <div className="mt-1 text-center font-body text-[0.55rem] text-foreground tracking-widest uppercase opacity-80">
                 Progreso de exploración: {run.currentZoneProgress}%
               </div>
             </div>
@@ -779,7 +797,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
       {/* Encounter Info Bar */}
       <div className="absolute bottom-0 inset-x-0 bg-surface border-t-2 border-border px-3 py-1 flex justify-between items-center z-20">
-        <span className="font-body italic text-[0.6rem] text-white">
+        <span className="font-body italic text-[0.6rem] text-foreground">
           {!battle && run.isActive && !isTraining
             ? run.pendingLootSelection
               ? "Seleccionando botín..."
@@ -950,7 +968,7 @@ function BadgeModal({
   }, [onClose]);
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 backdrop-blur-sm animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/85 backdrop-blur-sm animate-in fade-in duration-300">
       <div
         className="bg-surface-dark border-4 w-full max-w-sm mx-4 flex flex-col items-center overflow-hidden animate-in zoom-in duration-300"
         style={{ borderColor: color }}

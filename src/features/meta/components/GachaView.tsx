@@ -30,6 +30,7 @@ import {
   PARADOX_IDS,
 } from "../../../lib/legendaries";
 import { getDailyLegendaries } from "../../../lib/gacha.utils";
+import { PixelWindow, GBAButton, C } from "../../../components/ui/GBAUI";
 
 // ── TYPES ────────────────────────────────────────────────────────────────────
 interface Banner {
@@ -256,8 +257,8 @@ function GachaSprite({
       onError={handleError}
       className={`pixelated object-contain transition-opacity duration-300 ${className}`}
       style={{
-        width: size,
-        height: size,
+        width: className.includes("w-") ? undefined : size,
+        height: className.includes("h-") ? undefined : size,
         filter: getGlowStyle(),
       }}
     />
@@ -340,7 +341,7 @@ function MeteorPull({
 
       {/* 💥 Phase 3: Shatter/Flash */}
       {phase === "shatter" && (
-        <div className="absolute inset-0 z-[101] flex items-center justify-center">
+        <div className="absolute inset-0 z-101 flex items-center justify-center">
           <div
             className={`w-full h-full ${highestTier >= 6 ? "bg-accent" : highestTier === 5 ? "bg-orange-500" : "bg-blue-500"} animate-impact-flash rounded-full`}
           />
@@ -634,7 +635,7 @@ export function GachaView({ onBack }: Props) {
 
   return (
     <div
-      className={`fixed inset-0 z-60 bg-color-surface flex w-screen h-screen crt-screen overflow-hidden transition-opacity duration-1000 ${isReady ? "opacity-100" : "opacity-0"}`}
+      className={`fixed inset-0 z-60 bg-color-surface flex flex-col md:flex-row w-screen h-screen crt-screen overflow-hidden transition-opacity duration-1000 ${isReady ? "opacity-100" : "opacity-0"}`}
     >
       {/* Immersive Background */}
       <div
@@ -646,36 +647,46 @@ export function GachaView({ onBack }: Props) {
       />
       <div className="absolute inset-0 z-0 bg-linear-to-b from-transparent via-transparent to-black" />
 
-      {/* Sidebar Navigation */}
-      <aside className="relative z-10 w-24 md:w-32 flex flex-none flex-col items-center py-8 bg-black/60 backdrop-blur-md border-r border-white/10">
-        <button
-          onClick={onBack}
-          className="p-3 mb-12 hover:bg-white/10 text-muted hover:text-white transition-colors border-2 border-transparent hover:border-white/20"
-        >
-          <ChevronLeft size={32} />
-        </button>
+      {/* Responsive Sidebar/TopBar */}
+      <aside
+        className="relative z-10 w-full h-16 md:w-44 md:h-full flex flex-row md:flex-col items-center px-3 md:px-0 md:py-8 border-b md:border-b-0 md:border-r shrink-0"
+        style={{ background: C.bgDark, borderColor: C.border }}
+      >
+        <div className="mb-0 md:mb-12 mr-3 md:mr-0">
+          <GBAButton onClick={onBack} variant="secondary">
+            <span className="md:hidden">
+              <ChevronLeft size={16} />
+            </span>
+            <span className="hidden md:inline">VOLVER</span>
+          </GBAButton>
+        </div>
 
-        <div className="flex flex-col gap-6 w-full px-2">
+        <div className="flex flex-row md:flex-col gap-4 md:gap-6 w-full overflow-x-auto md:overflow-x-visible no-scrollbar py-2">
           {dynamicBanners.map((banner) => (
             <button
               key={banner.id}
               onClick={() => setActiveBanner(banner)}
-              className={`relative py-4 flex flex-col items-center gap-2 transition-all group ${
+              className={`relative flex flex-col items-center gap-1 md:gap-2 transition-all shrink-0 group ${
                 activeBanner.id === banner.id
                   ? "opacity-100"
                   : "opacity-40 hover:opacity-100"
               }`}
             >
               <div
-                className={`w-16 h-16 md:w-20 md:h-20 flex items-center justify-center border-2 transition-all ${
+                className={`w-10 h-10 md:w-20 md:h-20 flex items-center justify-center border-4 transition-all ${
                   activeBanner.id === banner.id
-                    ? "bg-accent/20 border-accent shadow-pixel"
-                    : "bg-black/40 border-white/10 group-hover:border-white/30"
+                    ? "shadow-pixel -translate-y-1"
+                    : "opacity-60 hover:opacity-100"
                 }`}
+                style={{
+                  background: activeBanner.id === banner.id ? C.win : C.shadow,
+                  borderColor:
+                    activeBanner.id === banner.id ? "white" : C.border,
+                }}
               >
                 {banner.isShinyBanner ? (
                   <Sparkles
-                    size={28}
+                    size={20}
                     className={
                       activeBanner.id === banner.id
                         ? "text-accent"
@@ -685,22 +696,22 @@ export function GachaView({ onBack }: Props) {
                 ) : (
                   <img
                     src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${banner.featuredId}.png`}
-                    className="pixelated w-14 h-14"
+                    className="pixelated w-8 h-8 md:w-14 md:h-14"
                     alt=""
                   />
                 )}
               </div>
-              <div
-                className={`absolute left-0 top-0 bottom-0 w-1 bg-accent transition-all ${activeBanner.id === banner.id ? "opacity-100" : "opacity-0"}`}
-              />
             </button>
           ))}
         </div>
 
-        <div className="mt-auto flex flex-col items-center gap-6">
-          <div className="flex flex-col items-center gap-1 bg-black/40 border border-white/10 p-3 rounded-sm shadow-xl">
-            <Coins size={18} className="text-accent" />
-            <span className="font-display text-[0.7rem] font-bold">
+        <div className="ml-auto md:ml-0 md:mt-auto py-2">
+          <div
+            className="flex items-center md:flex-col gap-2 px-3 py-1.5 md:p-3 border-2 shadow-pixel"
+            style={{ background: C.shadow, borderColor: C.border }}
+          >
+            <Coins size={14} className="text-accent" />
+            <span className="font-display text-[0.6rem] md:text-[0.7rem] text-white">
               {meta.pokeCoins}
             </span>
           </div>
@@ -708,70 +719,117 @@ export function GachaView({ onBack }: Props) {
       </aside>
 
       {/* Main Stage */}
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-8">
-        {/* Featured Pokémon Display */}
-        <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-700">
-          <div className="relative group mb-8">
-            <div className="absolute inset-0 bg-accent/20 blur-[120px] rounded-full group-hover:bg-accent/30 transition-all duration-1000 animate-pulse" />
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-between md:justify-center p-4 md:p-8 overflow-y-auto">
+        {/* Placeholder for top vertical space on desktop */}
+        <div className="hidden md:block h-20" />
+        <div className="flex-1 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-700 py-12 md:py-0">
+          <div className="relative group mb-4 md:mb-8">
+            <div className="absolute inset-0 bg-accent/20 blur-[80px] md:blur-[120px] rounded-full group-hover:bg-accent/30 transition-all duration-1000 animate-pulse" />
             <GachaSprite
               pokemonId={activeBanner.featuredId}
-              size={window.innerWidth > 768 ? 420 : 280}
+              size={320}
               tier={6}
-              className="relative z-10 drop-shadow-[0_25px_60px_rgba(0,0,0,0.9)] animate-floating"
+              className="relative z-10 w-40 h-40 sm:w-56 sm:h-56 md:w-96 md:h-96 drop-shadow-[0_25px_60px_rgba(0,0,0,0.9)] animate-floating"
             />
             {activeBanner.isShinyBanner && (
               <Sparkles
-                size={64}
-                className="absolute -top-8 -right-8 text-accent animate-spin-slow opacity-80"
+                size={48}
+                className="absolute -top-4 -right-4 md:size-16 md:-top-8 md:-right-8 text-accent animate-spin-slow opacity-80"
               />
             )}
           </div>
 
-          <div className="flex flex-col items-center text-center">
-            <span className="font-display text-[0.75rem] text-accent tracking-[0.6em] mb-4 uppercase drop-shadow-md font-bold">
-              INVOCACIÓN LIMITADA
-            </span>
-            <h1 className="font-display text-5xl md:text-7xl tracking-widest text-white drop-shadow-title uppercase leading-tight">
-              {activeBanner.name}
-            </h1>
-            <div className="h-1.5 w-32 bg-accent mt-8 animate-scale-x" />
-            <p className="mt-8 font-display text-[0.7rem] text-muted tracking-[0.3em] max-w-lg uppercase opacity-90 leading-relaxed drop-shadow-md">
-              {activeBanner.isShinyBanner
-                ? "Festival especial con probabilidad aumentada de formas Variocolor"
-                : `Invocación destacada de Pokémon nivel 6★ (Major Legendary)`}
-            </p>
+          <div className="flex flex-col items-center text-center px-4 mt-8">
+            <PixelWindow>
+              <div className="flex flex-col items-center p-2 md:p-4 text-center">
+                <span className="font-display text-[0.55rem] md:text-[0.65rem] text-accent tracking-[0.2em] md:tracking-[0.4em] mb-2 uppercase text-shadow-sm">
+                  INVOCACIÓN LIMITADA
+                </span>
+                <h1
+                  className="font-display text-lg sm:text-2xl md:text-3xl tracking-widest text-shadow-sm uppercase leading-tight"
+                  style={{ color: C.text }}
+                >
+                  {activeBanner.name}
+                </h1>
+                <div
+                  className="h-1 w-20 md:h-1.5 md:w-32 mt-4"
+                  style={{ background: C.border }}
+                />
+                <p
+                  className="hidden sm:block mt-4 font-display text-[0.55rem] tracking-[0.1em] max-w-lg uppercase"
+                  style={{ color: C.textMuted }}
+                >
+                  {activeBanner.isShinyBanner
+                    ? "Festival especial - formas Variocolor"
+                    : `Invocación destacada de Pokémon nivel 6★`}
+                </p>
+              </div>
+            </PixelWindow>
           </div>
         </div>
 
-        {/* Pity HUD (Bottom Left of Main) */}
-        <div className="absolute left-10 bottom-10 flex flex-col gap-4">
-          <div className="bg-black/80 backdrop-blur-xl border-l-[6px] border-accent p-6 flex flex-col gap-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in slide-in-from-left duration-700">
-            <span className="font-display text-[0.6rem] text-accent tracking-[0.2em] uppercase font-bold">
-              PROGRESO DE GARANTÍA (6★)
-            </span>
-            <div className="flex items-center gap-8">
-              <span className="font-display text-4xl text-white">
+        {/* HUD Bottom Layout (Responsive) */}
+        <div className="w-full mt-auto flex flex-col md:flex-row items-center justify-between gap-3 md:gap-8 pb-3 md:pb-10">
+          {/* Pity HUD */}
+          <PixelWindow
+            className="w-full md:w-auto animate-in slide-in-from-left duration-700"
+            style={{ padding: 0 }}
+          >
+            <div className="flex items-center justify-between md:block mb-2">
+              <span className="font-display text-[0.5rem] md:text-[0.6rem] text-accent tracking-[0.2em] uppercase font-bold text-shadow-sm">
+                PROGRESO 6★
+              </span>
+              <span
+                className="font-display text-sm md:hidden"
+                style={{ color: C.text }}
+              >
                 {currentPity}
-                <span className="text-[1rem] text-muted/60 ml-2 font-normal">
+                <span
+                  className="text-[0.6rem] ml-1"
+                  style={{ color: C.textMuted }}
+                >
                   / 100
                 </span>
               </span>
-              <div className="w-56 h-3 bg-white/5 rounded-full overflow-hidden relative border border-white/10">
+            </div>
+            <div className="flex items-center gap-4 md:gap-8 mb-2">
+              <span
+                className="hidden md:block font-display text-xl"
+                style={{ color: C.text }}
+              >
+                {currentPity}
+                <span
+                  className="text-[0.8rem] ml-2 font-normal"
+                  style={{ color: C.textMuted }}
+                >
+                  / 100
+                </span>
+              </span>
+              <div
+                className="flex-1 md:w-56 h-3 md:h-4 border-2 shadow-inner"
+                style={{ background: C.bgDark, borderColor: C.border }}
+              >
                 <div
-                  className={`h-full transition-all duration-1000 ease-out ${currentPity >= SOFT_PITY_START ? "bg-accent shadow-[0_0_15px_rgba(255,215,0,0.5)]" : "bg-brand"}`}
+                  className={`h-full border-r-2 transition-all duration-1000 ease-out`}
                   style={{
                     width: `${Math.min(100, (currentPity / 100) * 100)}%`,
+                    background:
+                      currentPity >= SOFT_PITY_START ? C.yellow : C.green,
+                    borderColor: C.border,
                   }}
                 />
-                {currentPity >= SOFT_PITY_START && (
-                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
-                )}
               </div>
             </div>
-            <div className="flex justify-between items-center border-t border-white/10 pt-3">
-              <span className="font-display text-[0.55rem] text-muted tracking-[0.15em] uppercase">
-                Probabilidad:{" "}
-                <span className="text-white font-bold">
+            <div
+              className="flex justify-between items-center border-t-2 pt-2 md:pt-3"
+              style={{ borderColor: C.border }}
+            >
+              <span
+                className="font-display text-[0.5rem] uppercase"
+                style={{ color: C.textMuted }}
+              >
+                Prob:{" "}
+                <span className="font-bold" style={{ color: C.text }}>
                   {(getCurrent6StarRate(currentPity) * 100).toFixed(1)}%
                 </span>
               </span>
@@ -780,65 +838,57 @@ export function GachaView({ onBack }: Props) {
                 className={
                   currentPity >= SOFT_PITY_START
                     ? "text-accent animate-pulse"
-                    : "text-muted/20"
+                    : "opacity-20"
                 }
               />
             </div>
-          </div>
-        </div>
+          </PixelWindow>
 
-        {/* Action Buttons (Bottom Right of Main) */}
-        <div className="absolute right-10 bottom-10 flex items-end gap-8 animate-in slide-in-from-right duration-700">
-          <button
-            onClick={() => handlePull(1)}
-            disabled={pulling || !canAfford1}
-            className={`group flex flex-col items-center justify-center w-56 h-18 border-2 transition-all ${
-              canAfford1 && !pulling
-                ? "bg-black/60 border-white/10 hover:bg-white/10 hover:border-white/40 shadow-xl"
-                : "bg-surface-dark/50 border-white/5 text-muted cursor-not-allowed"
-            }`}
-          >
-            <span className="font-display text-[0.75rem] tracking-[0.4em] text-white">
-              INVOCAR ×1
-            </span>
-            <div className="flex items-center gap-2 mt-2">
-              <Coins
-                size={14}
-                className="text-muted group-hover:text-accent transition-colors"
-              />
-              <span className="font-display text-[0.65rem] text-muted">
-                {GACHA_COST}
+          {/* Action Buttons */}
+          <div className="flex flex-row items-stretch gap-2 md:gap-8 w-full md:w-auto animate-in slide-in-from-right duration-700 flex-1 justify-end max-w-full">
+            <GBAButton
+              onClick={() => handlePull(1)}
+              disabled={pulling || !canAfford1}
+              variant="secondary"
+              className="flex-1 min-w-[110px] md:min-w-[180px] h-16! md:h-20! flex flex-col items-center justify-center p-0"
+              fullWidth
+            >
+              <span className="font-display text-[0.55rem] md:text-[0.7rem] tracking-[0.1em] text-white text-shadow-sm">
+                INVOCAR ×1
               </span>
-            </div>
-          </button>
-
-          <button
-            onClick={() => handlePull(10)}
-            disabled={pulling || !canAfford10}
-            className={`group relative overflow-hidden w-[340px] h-24 border-2 transition-all ${
-              canAfford10 && !pulling
-                ? "bg-brand border-brand-dark hover:scale-105 active:scale-95 shadow-[0_0_50px_rgba(204,0,0,0.4)]"
-                : "bg-surface-dark/50 border-white/5 text-muted cursor-not-allowed"
-            }`}
-          >
-            <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 shadow-inner" />
-            <div className="relative flex flex-col items-center justify-center">
-              <span className="font-display text-xl tracking-[0.5em] text-white italic font-black">
-                MULTITIRADA ×10
-              </span>
-              <div className="flex items-center gap-4 mt-2">
-                <div className="flex items-center gap-2">
-                  <Coins size={16} className="text-accent" />
-                  <span className="font-display text-[0.8rem] text-white font-bold">
-                    {costX10}
-                  </span>
-                </div>
-                <span className="text-[0.6rem] bg-accent text-black px-3 py-1 font-display font-black rounded-sm animate-pulse tracking-[0.2em] shadow-lg">
-                  1 GRATIS
+              <div className="flex items-center justify-center gap-1.5 mt-1.5">
+                <Coins size={14} className="text-accent" />
+                <span className="font-display text-[0.55rem] md:text-[0.7rem] text-white">
+                  {GACHA_COST}
                 </span>
               </div>
-            </div>
-          </button>
+            </GBAButton>
+
+            <GBAButton
+              onClick={() => handlePull(10)}
+              disabled={pulling || !canAfford10}
+              variant="primary"
+              className="flex-2 min-w-[160px] md:min-w-[280px] h-16! md:h-20! p-0"
+              fullWidth
+            >
+              <div className="flex flex-col items-center justify-center w-full h-full">
+                <span className="font-display text-[0.7rem] md:text-[0.9rem] tracking-[0.2em] text-white text-shadow-sm">
+                  MULTI ×10
+                </span>
+                <div className="flex items-center justify-center gap-2 md:gap-3 mt-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Coins size={14} className="text-accent" />
+                    <span className="font-display text-[0.6rem] md:text-[0.8rem] text-white">
+                      {costX10}
+                    </span>
+                  </div>
+                  <span className="text-[0.45rem] md:text-[0.55rem] bg-accent text-black px-1.5 py-0.5 font-display shadow-pixel tracking-widest">
+                    +1 GRATIS
+                  </span>
+                </div>
+              </div>
+            </GBAButton>
+          </div>
         </div>
       </main>
 
@@ -852,10 +902,16 @@ export function GachaView({ onBack }: Props) {
 
       {/* ── PULL RESULT OVERLAY ── */}
       {(pulling || (results.length > 0 && !animatingMeteor)) && (
-        <div className="fixed inset-0 z-70 bg-black/98 flex flex-col items-center justify-center p-4 overflow-y-auto backdrop-blur-xl">
+        <div
+          className="fixed inset-0 z-70 flex flex-col items-center justify-center p-4 overflow-y-auto"
+          style={{ background: "rgba(0,0,0,0.9)" }}
+        >
           {pulling ? (
             <div className="flex flex-col items-center gap-8">
-              <h3 className="font-display text-2xl animate-pulse tracking-widest text-white/40">
+              <h3
+                className="font-display text-xl animate-pulse tracking-widest text-shadow-sm uppercase"
+                style={{ color: C.textMuted }}
+              >
                 INVOCANDO...
               </h3>
             </div>
@@ -866,67 +922,106 @@ export function GachaView({ onBack }: Props) {
             />
           ) : (
             <div className="w-full max-w-4xl flex flex-col items-center gap-6 animate-in zoom-in-90 duration-300 py-10">
-              <h3 className="font-display text-xl tracking-widest text-brand">
-                RESULTADOS ×{results.length}
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 w-full">
-                {results.map((r, i) => (
-                  <div
-                    key={i}
-                    className={`bg-surface-dark border-2 p-3 flex flex-col items-center gap-2 transition-all ${getTierColor(r.tier)}`}
+              <PixelWindow className="p-4! md:p-6! w-full flex flex-col items-center gap-6">
+                <h3
+                  className="font-display text-lg tracking-widest uppercase text-shadow-sm"
+                  style={{ color: C.text }}
+                >
+                  RESULTADOS ×{results.length}
+                </h3>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 md:gap-3 w-full">
+                  {results.map((r, i) => (
+                    <div
+                      key={i}
+                      className={`border-2 p-2 md:p-3 flex flex-col items-center gap-1 md:gap-2 transition-all`}
+                      style={{
+                        background: C.win,
+                        borderColor:
+                          r.tier === 6
+                            ? C.yellow
+                            : r.tier === 5
+                              ? C.orange
+                              : r.tier === 4
+                                ? C.purple
+                                : C.border,
+                        boxShadow:
+                          r.tier === 6 ? `0 0 10px ${C.yellow}` : "none",
+                      }}
+                    >
+                      <div className="relative">
+                        <GachaSprite
+                          pokemonId={r.pokemonId}
+                          shiny={r.isShiny}
+                          tier={r.tier}
+                          size={84}
+                          className="w-14 h-14 md:w-[84px] md:h-[84px] animate-floating drop-shadow-md"
+                        />
+                        {r.isShiny && (
+                          <Sparkles
+                            size={12}
+                            className="absolute top-0 right-0 text-accent animate-ping"
+                          />
+                        )}
+                        {r.tier === 6 && (
+                          <Star
+                            size={12}
+                            className="absolute top-0 right-0 text-accent animate-pulse"
+                          />
+                        )}
+                      </div>
+                      <span
+                        className="font-display text-[0.6rem] text-center capitalize truncate w-full"
+                        style={{ color: C.text }}
+                      >
+                        {r.name}
+                      </span>
+                      <div className="flex gap-1 flex-wrap justify-center text-[0.45rem]">
+                        {r.isNew && (
+                          <span
+                            className="bg-accent text-black font-display px-1 border"
+                            style={{ borderColor: C.border }}
+                          >
+                            NUEVO
+                          </span>
+                        )}
+                        {r.tier >= 4 && (
+                          <span
+                            className={`text-white font-display px-1 border`}
+                            style={{
+                              background:
+                                r.tier === 6
+                                  ? C.purple
+                                  : r.tier === 5
+                                    ? C.orange
+                                    : C.blue,
+                              borderColor: C.border,
+                            }}
+                          >
+                            {r.tier}★
+                          </span>
+                        )}
+                        {r.isShiny && (
+                          <span
+                            className="bg-brand text-white font-display text-[0.7rem] px-1 border"
+                            style={{ borderColor: C.border }}
+                          >
+                            SHINY
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="w-full max-w-xs mt-2">
+                  <GBAButton
+                    onClick={() => setResults([])}
+                    variant="primary"
+                    fullWidth
                   >
-                    <div className="relative">
-                      <GachaSprite
-                        pokemonId={r.pokemonId}
-                        shiny={r.isShiny}
-                        tier={r.tier}
-                        size={84}
-                        className="animate-floating"
-                      />
-                      {r.isShiny && (
-                        <Sparkles
-                          size={12}
-                          className="absolute top-0 right-0 text-accent animate-ping"
-                        />
-                      )}
-                      {r.tier === 6 && (
-                        <Star
-                          size={12}
-                          className="absolute top-0 right-0 text-accent animate-pulse"
-                        />
-                      )}
-                    </div>
-                    <span className="font-display text-[0.7rem] text-center capitalize truncate w-full">
-                      {r.name}
-                    </span>
-                    <div className="flex gap-1 flex-wrap justify-center text-[0.5rem]">
-                      {r.isNew && (
-                        <span className="bg-accent text-black font-display px-1">
-                          NUEVO
-                        </span>
-                      )}
-                      {r.tier >= 4 && (
-                        <span
-                          className={`text-white font-display px-1 ${r.tier === 6 ? "bg-purple-600" : r.tier === 5 ? "bg-orange-600" : "bg-blue-600"}`}
-                        >
-                          {r.tier}★
-                        </span>
-                      )}
-                      {r.isShiny && (
-                        <span className="bg-brand text-white font-display text-[0.7rem] px-1">
-                          SHINY
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={() => setResults([])}
-                className="w-full max-w-xs py-3 bg-brand text-white font-display text-[0.7rem] tracking-widest hover:bg-brand-dark transition-all mt-2"
-              >
-                CONFIRMAR
-              </button>
+                    CONFIRMAR
+                  </GBAButton>
+                </div>
+              </PixelWindow>
             </div>
           )}
         </div>
@@ -935,7 +1030,6 @@ export function GachaView({ onBack }: Props) {
   );
 }
 
-/* ── Single Result Card ── */
 function SinglePullCard({
   result,
   onConfirm,
@@ -944,33 +1038,41 @@ function SinglePullCard({
   onConfirm: () => void;
 }) {
   return (
-    <div
-      className={`relative w-full max-w-lg p-10 flex flex-col items-center gap-8 animate-in zoom-in-90 duration-500 bg-black/40 backdrop-blur-2xl border-2 ${
-        result.tier === 6
-          ? "border-accent shadow-[0_0_120px_rgba(255,215,0,0.3)]"
-          : result.tier === 5
-            ? "border-orange-500 shadow-[0_0_100px_rgba(249,115,22,0.2)]"
-            : result.tier === 4
-              ? "border-purple-500 shadow-[0_0_80px_rgba(168,85,247,0.1)]"
-              : "border-white/10"
-      }`}
+    <PixelWindow
+      className="relative w-full max-w-md !p-6 md:!p-10 flex flex-col items-center gap-4 animate-in zoom-in-90 duration-500 shadow-2xl"
+      style={{
+        borderColor:
+          result.tier === 6
+            ? C.yellow
+            : result.tier === 5
+              ? C.orange
+              : result.tier === 4
+                ? C.purple
+                : C.border,
+        boxShadow:
+          result.tier === 6
+            ? `0 0 30px ${C.yellow}`
+            : result.tier === 5
+              ? `0 0 20px ${C.orange}`
+              : "none",
+      }}
     >
-      <div className="absolute inset-x-0 -top-8 flex justify-center">
-        <div className="px-6 py-1 font-display text-[0.55rem] tracking-[0.4em] text-white border-2 border-inherit bg-black uppercase shadow-2xl">
+      <div className="absolute inset-x-0 -top-4 flex justify-center">
+        <div
+          className="px-4 py-1 font-display text-[0.5rem] tracking-[0.2em] border shadow-pixel uppercase"
+          style={{ background: C.shadow, borderColor: C.border, color: C.text }}
+        >
           {result.tier} Estrellas
         </div>
       </div>
 
-      <div className="relative">
-        <div
-          className={`absolute inset-0 blur-[100px] animate-pulse rounded-full ${result.tier === 6 ? "bg-accent/40" : result.tier === 5 ? "bg-orange-500/30" : "bg-white/5"}`}
-        />
+      <div className="relative mt-4">
         <GachaSprite
           pokemonId={result.pokemonId}
           shiny={result.isShiny}
           tier={result.tier}
           size={256}
-          className="relative drop-shadow-[0_15px_30px_rgba(0,0,0,0.8)] animate-floating"
+          className="relative w-32 h-32 sm:w-48 sm:h-48 md:w-64 md:h-64 drop-shadow-[0_15px_30px_rgba(0,0,0,0.5)] animate-floating"
         />
         {result.isShiny && (
           <Sparkles
@@ -980,43 +1082,55 @@ function SinglePullCard({
         )}
       </div>
 
-      <div className="flex flex-col items-center text-center">
+      <div className="flex flex-col items-center text-center w-full">
         {result.isNew && (
-          <span className="bg-accent text-black font-display text-[0.5rem] px-4 py-1 rounded-full mb-4 animate-scale-in">
+          <span
+            className="bg-accent text-black font-display text-[0.5rem] px-3 py-1 mb-3 animate-scale-in border shadow-sm"
+            style={{ borderColor: C.border }}
+          >
             ¡NUEVO REGISTRO!
           </span>
         )}
         <h4
-          className={`font-display text-4xl tracking-[0.3em] ${result.isShiny ? "text-accent drop-shadow-accent" : "text-white"}`}
+          className={`font-display text-xl sm:text-2xl md:text-3xl tracking-widest text-shadow-sm`}
+          style={{ color: result.isShiny ? C.yellow : C.text }}
         >
           {result.name.toUpperCase()}
         </h4>
-        <div className="mt-2 flex items-center gap-3">
-          <div className="h-px w-8 bg-white/20" />
-          <span className="font-display text-[0.65rem] text-muted tracking-[0.3em] uppercase">
+        <div className="mt-3 flex items-center gap-3 w-full justify-center">
+          <div className="h-0.5 w-8" style={{ background: C.border }} />
+          <span
+            className="font-display text-[0.6rem] uppercase tracking-widest"
+            style={{ color: C.textMuted }}
+          >
             {result.nature}
           </span>
-          <div className="h-px w-8 bg-white/20" />
+          <div className="h-0.5 w-8" style={{ background: C.border }} />
         </div>
       </div>
 
       {result.eggMove && (
-        <div className="flex flex-col items-center gap-1.5 border-t border-white/10 w-full pt-6">
-          <span className="font-display text-[0.5rem] text-accent flex items-center gap-2 tracking-[0.2em]">
-            <Wand2 size={12} /> MOVIMIENTO HUEVO DESBLOQUEADO
+        <div
+          className="flex flex-col items-center gap-1 border-t-2 w-full pt-4 mt-2"
+          style={{ borderColor: C.border }}
+        >
+          <span className="font-display text-[0.5rem] text-accent flex items-center gap-2 tracking-widest text-shadow-sm">
+            <Wand2 size={12} /> MOVIMIENTO HUEVO
           </span>
-          <span className="font-display text-xs text-white/60 italic uppercase tracking-widest">
+          <span
+            className="font-display text-[0.5rem] uppercase tracking-widest"
+            style={{ color: C.textMuted }}
+          >
             ID: {result.eggMove}
           </span>
         </div>
       )}
 
-      <button
-        onClick={onConfirm}
-        className="w-full h-16 bg-white/5 border border-white/20 text-white font-display text-xs tracking-[0.4em] hover:bg-white/10 hover:border-accent transition-all duration-300 mt-6"
-      >
-        CONFIRMAR
-      </button>
-    </div>
+      <div className="w-full mt-4">
+        <GBAButton onClick={onConfirm} variant="primary" fullWidth>
+          CONFIRMAR
+        </GBAButton>
+      </div>
+    </PixelWindow>
   );
 }

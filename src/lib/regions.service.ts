@@ -1,5 +1,10 @@
 import { supabase } from "./supabase";
-import type { Zone, GymDefinition, EliteFourDefinition } from "./regions";
+import {
+  REGIONS,
+  type Zone,
+  type GymDefinition,
+  type EliteFourDefinition,
+} from "./regions";
 
 // Cache en memoria para no repetir queries durante la sesión
 const zoneCache = new Map<string, Zone[]>();
@@ -23,7 +28,6 @@ export async function getZonesForRegion(regionId: string): Promise<Zone[]> {
       );
     }
     // Fallback
-    const { REGIONS } = await import("./regions");
     return (REGIONS as any)[regionId]?.zones ?? [];
   }
 
@@ -53,7 +57,9 @@ export async function getGymsForRegion(
 
   const { data, error } = await supabase
     .from("gyms")
-    .select("id, leader_name, badge_name, type, unlock_level, reference_bst, mechanic, pokemon, reward_items, dialog_intro, dialog_victory, dialog_defeat")
+    .select(
+      "id, leader_name, badge_name, type, unlock_level, reference_bst, mechanic, pokemon, reward_items, dialog_intro, dialog_victory, dialog_defeat",
+    )
     .eq("region", regionId)
     .order("id", { ascending: true });
 
@@ -64,7 +70,6 @@ export async function getGymsForRegion(
         error,
       );
     }
-    const { REGIONS } = await import("./regions");
     return (REGIONS as any)[regionId]?.gyms ?? [];
   }
 
@@ -105,7 +110,6 @@ export async function getEliteFourForRegion(
         error,
       );
     }
-    const { REGIONS } = await import("./regions");
     return (
       (REGIONS as any)[regionId]?.eliteFour ?? {
         trainers: [],

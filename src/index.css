@@ -3,29 +3,29 @@
 
 @layer base {
   :root {
-    --color-brand: #cc0000;
-    --color-brand-dark: #ff1a1a;
-    --color-brand-deep: #990000;
-    --color-surface: #0d0d0d;
-    --color-surface-dark: #0d0d0d;
-    --color-surface-alt: #151515;
-    --color-surface-alt-dark: #151515;
-    --color-surface-light: #1f1f1f;
-    --color-foreground: #e8e8d0;
-    --color-foreground-dark: #e8e8d0;
-    --color-muted: #6b6b5a;
-    --color-muted-dark: #6b6b5a;
-    --color-accent: #ffd700;
+    --color-brand: #e83820;
+    --color-brand-dark: #cc2a16;
+    --color-brand-deep: #b01f0c;
+    --color-surface: #f0f0d8;
+    --color-surface-dark: #e0e0c8;
+    --color-surface-alt: #d0d0b8;
+    --color-surface-alt-dark: #c0c0a8;
+    --color-surface-light: #f8f8e8;
+    --color-foreground: #303030;
+    --color-foreground-dark: #141a1c;
+    --color-muted: #788890;
+    --color-muted-dark: #687880;
+    --color-accent: #e8a838;
     --color-accent-blue: #4a90d9;
-    --color-danger: #ff3b3b;
+    --color-danger: #e83820;
     --color-success: #78c850;
-    --color-border: #2a2a2a;
-    --color-border-dark: #2a2a2a;
+    --color-border: #506860;
+    --color-border-dark: #385040;
     --color-hp: #78c850;
     --color-hp-low: #f08030;
-    --color-hp-critical: #cc0000;
+    --color-hp-critical: #e83820;
     --color-xp: #4a90d9;
-    --color-scanline: rgba(0, 0, 0, 0.15);
+    --color-scanline: rgba(0, 0, 0, 0.05);
 
     --font-display: "Press Start 2P", monospace;
     --font-body: "IBM Plex Mono", monospace;
@@ -403,6 +403,16 @@
 
   .anim-screen-shake {
     animation: screenShake 0.4s ease-in-out;
+  }
+
+  @keyframes gbaHoverArrow {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    50% {
+      transform: translateX(3px);
+    }
   }
 }
 

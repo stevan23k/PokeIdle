@@ -33,7 +33,7 @@ export function ZoneView() {
           <span className="font-display text-[0.7rem] text-brand drop-shadow-sm animate-pulse-slow">
             ${run.money.toLocaleString()}
           </span>
-          <span className="font-display text-[0.6rem] text-white tracking-widest whitespace-nowrap shrink-0">
+          <span className="font-display text-[0.6rem] text-foreground tracking-widest whitespace-nowrap shrink-0">
             ZONA {run.currentZoneIndex + 1}
           </span>
         </div>
@@ -59,7 +59,7 @@ export function ZoneView() {
             return (
               <React.Fragment key={z.id}>
                 <div
-                  className={`w-5 h-5 md:w-6 md:h-6 shrink-0 border-2 flex items-center justify-center font-display text-[0.45rem] ${isCurrent ? "bg-brand border-brand-deep text-white shadow-[0_0_5px_rgba(255,0,0,0.5)]" : isPast ? "bg-accent border-accent text-black" : "bg-surface-dark border-border text-white"}`}
+                  className={`w-5 h-5 md:w-6 md:h-6 shrink-0 border-2 flex items-center justify-center font-display text-[0.45rem] ${isCurrent ? "bg-brand border-brand-deep text-white shadow-[0_0_5px_rgba(255,0,0,0.5)]" : isPast ? "bg-accent border-accent text-black" : "bg-surface-dark border-border text-foreground"}`}
                   title={`${z.name} - ${z.trainerCount} batallas`}
                 >
                   {idx + 1}
@@ -83,13 +83,13 @@ export function ZoneView() {
               style={{ width: `${progressPercent}%` }}
             ></div>
           </div>
-          <span className="font-display text-[0.55rem] text-white tracking-tighter whitespace-nowrap">
+          <span className="font-display text-[0.55rem] text-foreground tracking-tighter whitespace-nowrap">
             {run.zoneBattlesWon || 0} / {requiredBattles} BATALLAS
           </span>
         </div>
 
         <div className="flex flex-col gap-2 mb-4">
-          <p className="font-body text-[0.65rem] text-white italic leading-relaxed">
+          <p className="font-body text-[0.65rem] text-foreground italic leading-relaxed">
             "{currentZone.description}"
           </p>
           <div className="w-full">
@@ -99,7 +99,7 @@ export function ZoneView() {
 
         {/* Wild Sightings */}
         <div className="flex justify-between items-center bg-surface-dark p-2 border border-border mb-2">
-          <span className="font-display text-[0.55rem] text-white tracking-widest">
+          <span className="font-display text-[0.55rem] text-foreground tracking-widest">
             AVISTAMIENTOS SALVAJES
           </span>
         </div>
@@ -123,9 +123,9 @@ export function ZoneView() {
                   alt="Pokemon"
                   className={isCaught ? "" : "brightness-0"}
                 />
-                <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-1 bg-surface-dark border border-border p-1 text-[0.5rem] font-display text-white z-10 whitespace-nowrap text-center shadow-pixel">
+                <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-1 bg-surface-dark border border-border p-1 text-[0.5rem] font-display text-foreground z-10 whitespace-nowrap text-center shadow-pixel">
                   {isCaught ? wp.pokemonId : "???"}
-                  <div className="text-[0.4rem] text-white">
+                  <div className="text-[0.4rem] text-foreground">
                     Nv. {wp.minLevel}-{wp.maxLevel}
                   </div>
                 </div>
@@ -137,51 +137,51 @@ export function ZoneView() {
         <div className="mt-4 flex flex-col gap-2 border-t border-dashed border-border pt-3">
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between group">
-              <span className="font-display text-[0.55rem] text-white tracking-widest uppercase">
+              <span className="font-display text-[0.55rem] text-foreground tracking-widest uppercase">
                 Auto-Curación
               </span>
               <button
                 onClick={() =>
                   setRun((p) => ({ ...p, autoItems: !p.autoItems }))
                 }
-                className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.autoItems ? "bg-success/20 text-success border-success" : "bg-surface-dark text-white border-border hover:border-muted"}`}
+                className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.autoItems ? "bg-success/20 text-success border-success" : "bg-surface-dark text-foreground border-border hover:border-muted"}`}
               >
                 {run.autoItems ? "ON" : "OFF"}
               </button>
             </div>
             <div className="flex items-center justify-between group">
-              <span className="font-display text-[0.55rem] text-white tracking-widest uppercase">
+              <span className="font-display text-[0.55rem] text-foreground tracking-widest uppercase">
                 Auto Captura
               </span>
               <button
                 onClick={() =>
                   setRun((p) => ({ ...p, autoCapture: !p.autoCapture }))
                 }
-                className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.autoCapture ? "bg-success/20 text-success border-success" : "bg-surface-dark text-white border-border hover:border-muted"}`}
+                className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.autoCapture ? "bg-success/20 text-success border-success" : "bg-surface-dark text-foreground border-border hover:border-muted"}`}
               >
                 {run.autoCapture ? "ON" : "OFF"}
               </button>
             </div>
             <div className="flex items-center justify-between group">
-              <span className="font-display text-[0.55rem] text-white tracking-widest uppercase">
+              <span className="font-display text-[0.55rem] text-foreground tracking-widest uppercase">
                 Batalla Manual
               </span>
               <button
                 onClick={() =>
                   setRun((p) => ({ ...p, isManualBattle: !p.isManualBattle }))
                 }
-                className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.isManualBattle ? "bg-brand/20 text-brand border-brand" : "bg-surface-dark text-white border-border hover:border-muted"}`}
+                className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.isManualBattle ? "bg-brand/20 text-brand border-brand" : "bg-surface-dark text-foreground border-border hover:border-muted"}`}
               >
                 {run.isManualBattle ? "ON" : "OFF"}
               </button>
             </div>
             <div className="flex items-center justify-between group">
-              <span className="font-display text-[0.55rem] text-white tracking-widest uppercase">
+              <span className="font-display text-[0.55rem] text-foreground tracking-widest uppercase">
                 Auto Recompensa
               </span>
               <button
                 onClick={() => setRun((p) => ({ ...p, autoLoot: !p.autoLoot }))}
-                className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.autoLoot ? "bg-success/20 text-success border-success" : "bg-surface-dark text-white border-border hover:border-muted"}`}
+                className={`px-3 py-1 font-display text-[0.55rem] border-2 transition-colors ${run.autoLoot ? "bg-success/20 text-success border-success" : "bg-surface-dark text-foreground border-border hover:border-muted"}`}
               >
                 {run.autoLoot ? "ON" : "OFF"}
               </button>

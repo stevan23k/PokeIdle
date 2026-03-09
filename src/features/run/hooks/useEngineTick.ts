@@ -25,8 +25,16 @@ import {
   getBestAvailableHealingItem,
   useItemOnPokemon,
 } from "../../../engine/items.engine";
-import { getZonesForRegion, getGymsForRegion, getEliteFourForRegion } from "../../../lib/regions.service";
-import type { Zone, GymDefinition, EliteFourDefinition } from "../../../lib/regions";
+import {
+  getZonesForRegion,
+  getGymsForRegion,
+  getEliteFourForRegion,
+} from "../../../lib/regions.service";
+import type {
+  Zone,
+  GymDefinition,
+  EliteFourDefinition,
+} from "../../../lib/regions";
 import {
   getPokemonData,
   learnMovesOnLevelUp,
@@ -60,13 +68,17 @@ import { canMegaEvolveSync } from "../../../lib/mega.service";
 export function useEngineTick() {
   // console.log("[useEngineTick] Hook active");
   const { run, setRun, training, setTraining, setMeta, notify } = useGame();
-  
+
   // Protective refs to always have the freshest data in async callbacks
   const teamRef = useRef(run.team);
   const trainingRef = useRef(training);
 
-  useEffect(() => { teamRef.current = run.team; }, [run.team]);
-  useEffect(() => { trainingRef.current = training; }, [training]);
+  useEffect(() => {
+    teamRef.current = run.team;
+  }, [run.team]);
+  useEffect(() => {
+    trainingRef.current = training;
+  }, [training]);
   const fetchingRef = useRef(false);
   const turnStateRef = useRef<string>("idle");
   const processedAnimRef = useRef<string | null>(null);
@@ -74,7 +86,8 @@ export function useEngineTick() {
 
   const [regionZones, setRegionZones] = useState<Zone[]>([]);
   const [regionGyms, setRegionGyms] = useState<GymDefinition[]>([]);
-  const [regionEliteFour, setRegionEliteFour] = useState<EliteFourDefinition | null>(null);
+  const [regionEliteFour, setRegionEliteFour] =
+    useState<EliteFourDefinition | null>(null);
 
   // Keep turnStateRef in sync with battle state
   useEffect(() => {
@@ -92,18 +105,22 @@ export function useEngineTick() {
       getZonesForRegion(run.currentRegion),
       getGymsForRegion(run.currentRegion),
       getEliteFourForRegion(run.currentRegion),
-    ]).then(([zones, gyms, e4]) => {
-      if (!active) return;
-      setRegionZones(zones);
-      setRegionGyms(gyms);
-      setRegionEliteFour(e4);
-      fetchingRef.current = false;
-    }).catch(err => {
-      console.error("[useEngineTick] Failed to load region data", err);
-      if (active) fetchingRef.current = false;
-    });
+    ])
+      .then(([zones, gyms, e4]) => {
+        if (!active) return;
+        setRegionZones(zones);
+        setRegionGyms(gyms);
+        setRegionEliteFour(e4);
+        fetchingRef.current = false;
+      })
+      .catch((err) => {
+        console.error("[useEngineTick] Failed to load region data", err);
+        if (active) fetchingRef.current = false;
+      });
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [run.currentRegion]);
 
   const tick = async () => {
@@ -254,7 +271,11 @@ export function useEngineTick() {
             // referenceBst escala suavemente: 540 (Lorelei) → 620 (Campeón)
             const referenceBst = 540 + (run.eliteFourProgress ?? 0) * 20;
 
-            const baseEnemy = await getPokemonData(spawnSlot.pokemonId, spawnLevel, false);
+            const baseEnemy = await getPokemonData(
+              spawnSlot.pokemonId,
+              spawnLevel,
+              false,
+            );
             const teamAverageBst = calculateTeamBST(run.team);
             const multiplier = getBossMultiplier(teamAverageBst, referenceBst);
             const enemy = scaleGymPokemon(baseEnemy, multiplier, false);
@@ -265,7 +286,8 @@ export function useEngineTick() {
               return;
             }
 
-            const isChampion = run.eliteFourProgress >= regionEliteFour.trainers.length;
+            const isChampion =
+              run.eliteFourProgress >= regionEliteFour.trainers.length;
 
             setRun((prev) => {
               if (prev.currentBattle) return prev;
@@ -297,7 +319,7 @@ export function useEngineTick() {
               };
             });
 
-            // Trigger On-Entry Abilities (Elite Four) - Note: this runs AFTER setRun in a follow-up tick or here if we use a helper. 
+            // Trigger On-Entry Abilities (Elite Four) - Note: this runs AFTER setRun in a follow-up tick or here if we use a helper.
             // Actually, for simplicity, I'll add a helper call or just use a simpler method.
             // But setRun is async. Best is to handle it inside setRun or in the idle state turnCount 0.
             // Wait, turnCount 0 is a good place.
@@ -309,10 +331,14 @@ export function useEngineTick() {
             return;
           }
 
-          const requiredBattles = currentZone.isGym ? (currentZone.trainerCount ?? 0) : (currentZone.trainerCount || 3);
+          const requiredBattles = currentZone.isGym
+            ? (currentZone.trainerCount ?? 0)
+            : currentZone.trainerCount || 3;
           // For gyms with no wild encounters, we should jump straight to the boss
           const hasEncounters = (currentZone.wildPokemon?.length ?? 0) > 0;
-          const isBossTime = (currentZone.isGym && !hasEncounters) || run.zoneBattlesWon >= requiredBattles;
+          const isBossTime =
+            (currentZone.isGym && !hasEncounters) ||
+            run.zoneBattlesWon >= requiredBattles;
           let enemy;
           let isBoss = false;
           let activeMechanic:
@@ -320,32 +346,32 @@ export function useEngineTick() {
             | undefined = undefined;
           let battleType: "wild" | "gym" = "wild";
           let gymForBattle: GymDefinition | null = null;
- 
+
           if (isBossTime) {
             const teamMaxLevel = Math.max(...run.team.map((p) => p.level), 5);
- 
+
             // ── GYM ZONE ──────────────────────────────────────────────────────────
             if (currentZone.isGym && currentZone.gymId != null) {
               const gym =
                 regionGyms.find((g) => g.id === currentZone.gymId) ?? null;
- 
+
               if (gym) {
                 gymForBattle = gym;
                 battleType = "gym";
                 activeMechanic =
                   gym.mechanic as import("../types/game.types").GymMechanic;
- 
+
                 // Sequential spawning starts with the first Pokémon (index 0)
                 // The Ace is the last one in the team array.
                 const spawnSlot = gym.pokemon[0];
                 const spawnLevel = Math.max(spawnSlot.level, teamMaxLevel);
- 
+
                 let baseEnemy = await getPokemonData(
                   spawnSlot.pokemonId,
                   spawnLevel,
                   false,
                 );
- 
+
                 const teamAverageBst = calculateTeamBST(run.team);
                 const multiplier = getBossMultiplier(
                   teamAverageBst,
@@ -364,7 +390,9 @@ export function useEngineTick() {
               // ── ROUTE BOSS ────────────────────────────────────────────────────────
               const encounter = getWildEncounter(currentZone);
               if (!encounter) {
-                console.warn("[useEngineTick] No encounter available for boss fallback");
+                console.warn(
+                  "[useEngineTick] No encounter available for boss fallback",
+                );
                 fetchingRef.current = false;
                 return;
               }
@@ -385,7 +413,10 @@ export function useEngineTick() {
             // ── WILD ENCOUNTER ────────────────────────────────────────────────────
             const encounter = getWildEncounter(currentZone);
             if (!encounter) {
-              console.warn("[useEngineTick] No encounters allowed for zone:", currentZone.id);
+              console.warn(
+                "[useEngineTick] No encounters allowed for zone:",
+                currentZone.id,
+              );
               fetchingRef.current = false;
               return;
             }
@@ -403,11 +434,16 @@ export function useEngineTick() {
           setRun((prev) => {
             // Safety check: if a battle was already spawned by another tick, don't overwrite it
             if (prev.currentBattle) {
-              console.log("[useEngineTick] Spawn cancelled - battle already exists");
+              console.log(
+                "[useEngineTick] Spawn cancelled - battle already exists",
+              );
               return prev;
             }
 
-            console.log("[useEngineTick] Spawning Battle:", { type: battleType, boss: isBoss });
+            console.log("[useEngineTick] Spawning Battle:", {
+              type: battleType,
+              boss: isBoss,
+            });
 
             return {
               ...prev,
@@ -579,7 +615,8 @@ export function useEngineTick() {
               fromName: prev.currentBattle.playerPokemon.name,
               toId: mega.mega_pokemon_id,
               toName: mega.mega_name,
-              megaName: logMessage.split("¡")[1]?.split(" ha")[0] ?? mega.mega_name,
+              megaName:
+                logMessage.split("¡")[1]?.split(" ha")[0] ?? mega.mega_name,
             },
           };
         });
@@ -601,7 +638,7 @@ export function useEngineTick() {
       if (!state.isActive || !state.currentBattle) return state;
 
       const bState = { ...state.currentBattle };
-      
+
       // Bloquear turnos durante diálogo de gym intro
       if ((state as any).pendingGymIntro || (state as any).pendingGymDialogue) {
         return state;
@@ -611,7 +648,7 @@ export function useEngineTick() {
 
       const actor = bState.turnQueue?.[0] || "";
       const stateKey = `${bState.turnState}-${bState.turnCount}-${actor}`;
-      
+
       // We'll log at the end if we actually returned something new
       let shouldReturnNewState = false;
 
@@ -703,9 +740,12 @@ export function useEngineTick() {
 
             // ── BADGE AWARD (gym battles only) ───────────────────────────────────
             if (bState.type === "gym" && isLastGymPokemon) {
-              const currentZoneForBadge = regionZones[nextState.currentZoneIndex];
+              const currentZoneForBadge =
+                regionZones[nextState.currentZoneIndex];
               if (currentZoneForBadge?.gymId != null) {
-                const gym = regionGyms.find((g) => g.id === currentZoneForBadge.gymId);
+                const gym = regionGyms.find(
+                  (g) => g.id === currentZoneForBadge.gymId,
+                );
                 if (gym && !nextState.gymsBadges.includes(gym.id)) {
                   nextState.gymsBadges = [...nextState.gymsBadges, gym.id];
                   pushLog(`¡Has obtenido la ${gym.badgeName}!`, "badge");
@@ -715,7 +755,8 @@ export function useEngineTick() {
                     if (Math.random() <= reward.chance) {
                       nextState.items = {
                         ...nextState.items,
-                        [reward.itemId]: (nextState.items[reward.itemId] ?? 0) + 1,
+                        [reward.itemId]:
+                          (nextState.items[reward.itemId] ?? 0) + 1,
                       };
                     }
                   }
@@ -725,13 +766,17 @@ export function useEngineTick() {
 
             // ── ELITE FOUR PROGRESSION (on capture) ─────────────────────────────
             if (bState.type === "elite" && isLastGymPokemon) {
-              const allMembersCount = (regionEliteFour?.trainers.length ?? 4) + 1;
+              const allMembersCount =
+                (regionEliteFour?.trainers.length ?? 4) + 1;
               const currentProgress = nextState.eliteFourProgress ?? 0;
               const nextProgress = currentProgress + 1;
 
               if (nextProgress >= allMembersCount) {
                 nextState.eliteFourDefeated = true;
-                pushLog("¡Has derrotado al Campeón! ¡Eres el nuevo Campeón Pokémon!", "badge");
+                pushLog(
+                  "¡Has derrotado al Campeón! ¡Eres el nuevo Campeón Pokémon!",
+                  "badge",
+                );
               } else {
                 nextState.eliteFourProgress = nextProgress;
                 nextState.currentZoneProgress = 0;
@@ -740,16 +785,19 @@ export function useEngineTick() {
 
                 const allMembers = [
                   ...(regionEliteFour?.trainers ?? []),
-                  ...(regionEliteFour?.champion ? [regionEliteFour.champion] : []),
+                  ...(regionEliteFour?.champion
+                    ? [regionEliteFour.champion]
+                    : []),
                 ];
                 const nextMember = allMembers[nextProgress];
                 if (nextMember) {
-                  const isNextChampion = nextProgress >= (regionEliteFour?.trainers.length ?? 4);
+                  const isNextChampion =
+                    nextProgress >= (regionEliteFour?.trainers.length ?? 4);
                   pushLog(
                     isNextChampion
                       ? `¡Siguiente: El Campeón ${nextMember.name}!`
                       : `¡Siguiente rival del Alto Mando: ${nextMember.name}!`,
-                    "badge"
+                    "badge",
                   );
                 }
               }
@@ -769,7 +817,11 @@ export function useEngineTick() {
             }
 
             // ── ROUTE BOSS PROGRESSION (on capture) ────────────────────────────────
-            if (isLastGymPokemon && bState.type === "wild" && bState.isBossBattle) {
+            if (
+              isLastGymPokemon &&
+              bState.type === "wild" &&
+              bState.isBossBattle
+            ) {
               const region = { zones: regionZones };
               if (nextState.currentZoneIndex + 1 < region.zones.length) {
                 nextState.currentZoneIndex += 1;
@@ -964,8 +1016,6 @@ export function useEngineTick() {
           bState.pendingCaptureAnim = null;
           processedAnimRef.current = null;
 
-
-
           (nextState as any).currentBattle = null;
           return nextState;
         } else {
@@ -1091,10 +1141,10 @@ export function useEngineTick() {
         bState.enemyCurrentMove = eMove;
         bState.usedManualTurn = usedManualTurn;
 
-        // console.log("[useEngineTick] Action selected:", { 
-        //   pMove: pMove?.moveName, 
-        //   eMove: eMove?.moveName, 
-        //   order: bState.turnQueue 
+        // console.log("[useEngineTick] Action selected:", {
+        //   pMove: pMove?.moveName,
+        //   eMove: eMove?.moveName,
+        //   order: bState.turnQueue
         // });
 
         bState.turnState = "turn_start";
@@ -1138,7 +1188,7 @@ export function useEngineTick() {
       if (bState.turnState === "animating") {
         turnStateRef.current = "animating";
         processedStateRef.current = stateKey;
-        return state; 
+        return state;
       }
 
       let nextEnemyHP = bState.enemyPokemon.currentHP;
@@ -1201,7 +1251,7 @@ export function useEngineTick() {
           const usedManual = isPlayer ? bState.usedManualTurn : false;
 
           let resolvedMove = move;
-          
+
           // console.log(`[ENGINE] ${isPlayer ? "Player" : "Enemy"} turn logic:`, {
           //   move: resolvedMove?.moveName,
           //   hp: attacker.currentHP,
@@ -1377,7 +1427,11 @@ export function useEngineTick() {
               };
 
               // ── SELF STAT BOOST ───────────────────────────────────────────
-              const selfBoosts = resolvedMove?.selfBoost || (resolvedMove?.moveId ? COMMON_SELF_BOOSTS[resolvedMove.moveId] : null);
+              const selfBoosts =
+                resolvedMove?.selfBoost ||
+                (resolvedMove?.moveId
+                  ? COMMON_SELF_BOOSTS[resolvedMove.moveId]
+                  : null);
 
               if (selfBoosts && selfBoosts.length > 0) {
                 for (const boost of selfBoosts) {
@@ -1433,10 +1487,13 @@ export function useEngineTick() {
                 const pMoveIdx = attacker.moves.findIndex(
                   (m: any) => m.moveId === resolvedMove.moveId,
                 );
-                
+
                 // Add a more robust check to ensure we only deduct PP once per turn count
                 const ppDeductionKey = `pp-${bState.turnCount}-${resolvedMove.moveId}`;
-                if (pMoveIdx >= 0 && processedAnimRef.current !== ppDeductionKey) {
+                if (
+                  pMoveIdx >= 0 &&
+                  processedAnimRef.current !== ppDeductionKey
+                ) {
                   attacker.moves[pMoveIdx].currentPP = Math.max(
                     0,
                     attacker.moves[pMoveIdx].currentPP - 1,
@@ -1540,7 +1597,10 @@ export function useEngineTick() {
             );
 
             if (isPlayer) {
-              bState.enemyPokemon = { ...bState.enemyPokemon, currentHP: nextHP };
+              bState.enemyPokemon = {
+                ...bState.enemyPokemon,
+                currentHP: nextHP,
+              };
             } else {
               bState.playerPokemon = {
                 ...bState.playerPokemon,
@@ -1548,7 +1608,7 @@ export function useEngineTick() {
               };
               // IMPORTANT: Sync back to team so death checks see the 0 HP
               nextState.team = nextState.team.map((p) =>
-                p.uid === bState.playerPokemon.uid ? bState.playerPokemon : p
+                p.uid === bState.playerPokemon.uid ? bState.playerPokemon : p,
               );
             }
 
@@ -1570,7 +1630,8 @@ export function useEngineTick() {
 
           // Logs
           if (move) {
-            const damageText = anim.damage > 0 ? ` causando ${anim.damage} de daño!` : "!";
+            const damageText =
+              anim.damage > 0 ? ` causando ${anim.damage} de daño!` : "!";
             pushLog(
               `${attacker.name} usó ${move.moveName}${damageText}`,
               isPlayer ? "attack" : "normal",
@@ -1588,6 +1649,124 @@ export function useEngineTick() {
 
         // Shift queue and determine next turnState
         bState.turnQueue = bState.turnQueue ? bState.turnQueue.slice(1) : [];
+
+        // ── AUTO-CAPTURA (evaluar después del daño, antes de procesar muerte) ──
+        if (
+          nextState.autoCapture &&
+          bState.type === "wild" &&
+          !bState.isBossBattle &&
+          !bState.pendingCaptureAnim &&
+          bState.phase === "active" &&
+          nextState.items["poke-ball"] > 0 &&
+          bState.enemyPokemon.currentHP > 0
+        ) {
+          const enemyHpRatio =
+            bState.enemyPokemon.currentHP / bState.enemyPokemon.maxHP;
+          const isOwned =
+            nextState.team.some(
+              (p: any) => p.pokemonId === bState.enemyPokemon.pokemonId,
+            ) ||
+            nextState.pc.some(
+              (p: any) => p.pokemonId === bState.enemyPokemon.pokemonId,
+            );
+
+          console.log("[AutoCaptura] Evaluando:", {
+            enemyName: bState.enemyPokemon.name,
+            enemyHP: bState.enemyPokemon.currentHP,
+            enemyMaxHP: bState.enemyPokemon.maxHP,
+            enemyHpRatio: enemyHpRatio.toFixed(2),
+            isOwned,
+            pokeBalls: nextState.items["poke-ball"],
+          });
+
+          if (!isOwned) {
+            let shouldCapture = false;
+
+            // Caso 1: HP ≤ 30% — captura directa
+            if (enemyHpRatio <= 0.3) {
+              console.log(
+                "[AutoCaptura] ✅ Caso 1: HP <= 30%, capturando directamente",
+              );
+              shouldCapture = true;
+            }
+
+            // Caso 2: HP 30-50% y el siguiente golpe lo mataría
+            if (!shouldCapture && enemyHpRatio > 0.3 && enemyHpRatio <= 0.5) {
+              const nextMove = chooseBestMove(
+                bState.playerPokemon,
+                bState.enemyPokemon,
+                bState.activeMechanic,
+              );
+              if (nextMove) {
+                const { damage } = calculateDamage(
+                  bState.playerPokemon,
+                  bState.enemyPokemon,
+                  nextMove,
+                  bState.activeMechanic,
+                );
+                console.log(
+                  "[AutoCaptura] 🔍 Caso 2: HP 30-50%, daño estimado:",
+                  damage,
+                  "/ HP restante:",
+                  bState.enemyPokemon.currentHP,
+                );
+                if (damage >= bState.enemyPokemon.currentHP) {
+                  console.log(
+                    "[AutoCaptura] ✅ Caso 2: golpe letal detectado, captura preventiva",
+                  );
+                  shouldCapture = true;
+                }
+              } else {
+                console.log(
+                  "[AutoCaptura] ⚠️ Caso 2: no se encontró movimiento para simular",
+                );
+              }
+            }
+
+            if (shouldCapture) {
+              console.log("[AutoCaptura] 🎯 Lanzando Poké Ball...");
+              nextState.items["poke-ball"] -= 1;
+              const catchAttempt = calculateCaptureChance(
+                bState.enemyPokemon,
+                ITEMS["poke-ball"],
+                null,
+                255,
+                false,
+                nextState.totalCaptured,
+                false,
+                1.0,
+              );
+              pushLog(`Auto-captura: lanzando Poké Ball...`, "capture");
+              bState.pendingCaptureAnim = {
+                ballId: "poke-ball",
+                captured: catchAttempt.success,
+              };
+              bState.turnState = "animating";
+              turnStateRef.current = "animating";
+              nextState.currentBattle = bState;
+              nextState.battleLog = logs.slice(-40);
+              return nextState;
+            } else {
+              console.log(
+                "[AutoCaptura] ⏳ Condiciones no cumplidas aún, esperando...",
+              );
+            }
+          } else {
+            console.log("[AutoCaptura] ⏭️ Pokémon ya poseído, saltando");
+          }
+        } else {
+          // Log solo una vez por batalla para no spamear
+          if (bState.turnCount === 0) {
+            console.log("[AutoCaptura] ❌ Guard bloqueado:", {
+              autoCapture: nextState.autoCapture,
+              type: bState.type,
+              isBossBattle: bState.isBossBattle,
+              pendingCaptureAnim: !!bState.pendingCaptureAnim,
+              phase: bState.phase,
+              pokeBalls: nextState.items["poke-ball"],
+            });
+          }
+        }
 
         // --- CHECK FOR DEFEAT/VICTORY ---
         if (bState.enemyPokemon.currentHP === 0) {
@@ -1712,10 +1891,11 @@ export function useEngineTick() {
                 referenceBst:
                   bState.type === "elite"
                     ? 540 + (nextState.eliteFourProgress ?? 0) * 20
-                    : regionGyms.find(
+                    : (regionGyms.find(
                         (g) =>
-                          g.id === regionZones[nextState.currentZoneIndex]?.gymId,
-                      )?.referenceBst ?? 400,
+                          g.id ===
+                          regionZones[nextState.currentZoneIndex]?.gymId,
+                      )?.referenceBst ?? 400),
               };
               nextState.battleLog = logs.slice(-40);
               return nextState;
@@ -1731,9 +1911,12 @@ export function useEngineTick() {
 
             // ── BADGE AWARD (gym battles only) ───────────────────────────────────
             if (bState.type === "gym" && isLastGymPokemon) {
-              const currentZoneForBadge = regionZones[nextState.currentZoneIndex];
+              const currentZoneForBadge =
+                regionZones[nextState.currentZoneIndex];
               if (currentZoneForBadge?.gymId != null) {
-                const gym = regionGyms.find((g) => g.id === currentZoneForBadge.gymId);
+                const gym = regionGyms.find(
+                  (g) => g.id === currentZoneForBadge.gymId,
+                );
                 if (gym && !nextState.gymsBadges.includes(gym.id)) {
                   nextState.gymsBadges = [...nextState.gymsBadges, gym.id];
                   pushLog(`¡Has obtenido la ${gym.badgeName}!`, "badge");
@@ -1743,7 +1926,8 @@ export function useEngineTick() {
                     if (Math.random() <= reward.chance) {
                       nextState.items = {
                         ...nextState.items,
-                        [reward.itemId]: (nextState.items[reward.itemId] ?? 0) + 1,
+                        [reward.itemId]:
+                          (nextState.items[reward.itemId] ?? 0) + 1,
                       };
                     }
                   }
@@ -1753,13 +1937,17 @@ export function useEngineTick() {
 
             // ── ELITE FOUR PROGRESSION ───────────────────────────────────────────
             if (bState.type === "elite" && isLastGymPokemon) {
-              const allMembersCount = (regionEliteFour?.trainers.length ?? 4) + 1;
+              const allMembersCount =
+                (regionEliteFour?.trainers.length ?? 4) + 1;
               const currentProgress = nextState.eliteFourProgress ?? 0;
               const nextProgress = currentProgress + 1;
 
               if (nextProgress >= allMembersCount) {
                 nextState.eliteFourDefeated = true;
-                pushLog("¡Has derrotado al Campeón! ¡Eres el nuevo Campeón Pokémon!", "badge");
+                pushLog(
+                  "¡Has derrotado al Campeón! ¡Eres el nuevo Campeón Pokémon!",
+                  "badge",
+                );
               } else {
                 nextState.eliteFourProgress = nextProgress;
                 nextState.currentZoneProgress = 0;
@@ -1768,16 +1956,19 @@ export function useEngineTick() {
 
                 const allMembers = [
                   ...(regionEliteFour?.trainers ?? []),
-                  ...(regionEliteFour?.champion ? [regionEliteFour.champion] : []),
+                  ...(regionEliteFour?.champion
+                    ? [regionEliteFour.champion]
+                    : []),
                 ];
                 const nextMember = allMembers[nextProgress];
                 if (nextMember) {
-                  const isNextChampion = nextProgress >= (regionEliteFour?.trainers.length ?? 4);
+                  const isNextChampion =
+                    nextProgress >= (regionEliteFour?.trainers.length ?? 4);
                   pushLog(
                     isNextChampion
                       ? `¡Siguiente: El Campeón ${nextMember.name}!`
                       : `¡Siguiente rival del Alto Mando: ${nextMember.name}!`,
-                    "badge"
+                    "badge",
                   );
                 }
               }
@@ -1787,14 +1978,21 @@ export function useEngineTick() {
               const region = { zones: regionZones };
               if (nextState.currentZoneIndex + 1 < region.zones.length) {
                 nextState.currentZoneIndex += 1;
-                nextState.maxZoneIndex = Math.max(nextState.maxZoneIndex, nextState.currentZoneIndex);
+                nextState.maxZoneIndex = Math.max(
+                  nextState.maxZoneIndex,
+                  nextState.currentZoneIndex,
+                );
                 nextState.zoneBattlesWon = 0;
                 nextState.pendingZoneTransition = true;
               }
             }
 
             // ── ROUTE BOSS PROGRESSION (on defeat) ────────────────────────────────
-            if (isLastGymPokemon && bState.type === "wild" && bState.isBossBattle) {
+            if (
+              isLastGymPokemon &&
+              bState.type === "wild" &&
+              bState.isBossBattle
+            ) {
               const region = { zones: regionZones };
               if (nextState.currentZoneIndex + 1 < region.zones.length) {
                 nextState.currentZoneIndex += 1;
@@ -1822,7 +2020,7 @@ export function useEngineTick() {
           const expShareCount = nextState.items["exp-share"] || 0;
           const { updatedTeam } = distributeTeamXP(
             nextState.team,
-          bState.playerPokemon.uid,
+            bState.playerPokemon.uid,
             xpGain,
             expShareCount,
           );
@@ -1854,7 +2052,8 @@ export function useEngineTick() {
 
               // Queue move learning
               if (!nextState.pendingMoveLearn) {
-                const learnQueue = (nextState as any).__checkMoveLearnQueue || [];
+                const learnQueue =
+                  (nextState as any).__checkMoveLearnQueue || [];
                 // console.log(`[Tick] Queuing move learn check for ${current.name} at level ${current.level}`);
                 (nextState as any).__checkMoveLearnQueue = [
                   ...learnQueue,
@@ -2117,55 +2316,6 @@ export function useEngineTick() {
       );
       bState.turnCount += 1;
 
-      // Auto capture wild (ONLY UNOWNED POKEMON)
-      if (
-        nextState.autoCapture &&
-        bState.type === "wild" &&
-        nextPlayerHP > 0 &&
-        nextEnemyHP > 0 &&
-        nextEnemyHP / bState.enemyPokemon.maxHP < 0.3 &&
-        !bState.pendingCaptureAnim // Don't trigger if already animating
-      ) {
-        const isOwned =
-          nextState.team.some(
-            (p: any) => p.pokemonId === bState.enemyPokemon.pokemonId,
-          ) ||
-          nextState.pc.some(
-            (p: any) => p.pokemonId === bState.enemyPokemon.pokemonId,
-          );
-
-        if (
-          (!isOwned || bState.isBossBattle) &&
-          nextState.items["poke-ball"] > 0
-        ) {
-          nextState.items["poke-ball"] -= 1;
-          const catchAttempt = calculateCaptureChance(
-            bState.enemyPokemon,
-            ITEMS["poke-ball"],
-            null,
-            255,
-            bState.isBossBattle || false,
-            nextState.totalCaptured,
-            false,
-            1.0,
-          );
-
-          pushLog(`Auto-captura: lanzando Poké Ball...`, "capture");
-
-          // Trigger animation
-          bState.pendingCaptureAnim = {
-            ballId: "poke-ball",
-            captured: catchAttempt.success,
-          };
-          bState.turnState = "animating";
-          turnStateRef.current = "animating";
-
-          nextState.currentBattle = bState;
-          nextState.battleLog = logs.slice(-40);
-          return nextState;
-        }
-      }
-
       if (nextState.currentBattle !== null) {
         nextState.currentBattle = bState;
       }
@@ -2179,7 +2329,7 @@ export function useEngineTick() {
 
   // ─── Async: Move Learn on Level Up ──────────────────────────────────────
   useEffect(() => {
-    const queue = (((run as any).__checkMoveLearnQueue || []) as any[]);
+    const queue = ((run as any).__checkMoveLearnQueue || []) as any[];
     const legacyMarker = (run as any).__checkMoveLearnAt;
 
     if (queue.length === 0 && !legacyMarker) return;
@@ -2214,10 +2364,13 @@ export function useEngineTick() {
     });
 
     const { pokemonUid, level, fromLevel, _specificMoveId } = marker;
-    
+
     // Find pokemon using refs for fresh state
-    const pokemon = teamRef.current.find((p) => p.uid === pokemonUid) 
-      ?? (trainingRef.current?.pokemon?.uid === pokemonUid ? trainingRef.current.pokemon : null);
+    const pokemon =
+      teamRef.current.find((p) => p.uid === pokemonUid) ??
+      (trainingRef.current?.pokemon?.uid === pokemonUid
+        ? trainingRef.current.pokemon
+        : null);
 
     if (!pokemon) {
       moveLearnProcessingRef.current = false;
@@ -2225,144 +2378,160 @@ export function useEngineTick() {
     }
 
     // Use specificMoveId if present, otherwise search range
-    learnMovesOnLevelUp(pokemon, level, fromLevel ?? level, _specificMoveId).then((newMoves) => {
-      if (newMoves.length === 0) {
-        moveLearnProcessingRef.current = false;
-        return;
-      }
+    learnMovesOnLevelUp(pokemon, level, fromLevel ?? level, _specificMoveId)
+      .then((newMoves) => {
+        if (newMoves.length === 0) {
+          moveLearnProcessingRef.current = false;
+          return;
+        }
 
-      const firstMove = newMoves[0];
-      const remainingMoves = newMoves.slice(1);
+        const firstMove = newMoves[0];
+        const remainingMoves = newMoves.slice(1);
 
-      // --- TRAINING MODE AUTO-LEARN ---
-      if (trainingRef.current?.isActive && trainingRef.current.pokemon?.uid === pokemonUid) {
-        setTraining(prev => {
-          if (!prev.pokemon || prev.pokemon.uid !== pokemonUid) return prev;
-          const p = { ...prev.pokemon };
-          const nextMoves = [...p.moves];
-          
-          if (!nextMoves.some(m => m.moveId === firstMove.moveId)) {
-            if (nextMoves.length < 4) {
-              nextMoves.push(firstMove);
+        // --- TRAINING MODE AUTO-LEARN ---
+        if (
+          trainingRef.current?.isActive &&
+          trainingRef.current.pokemon?.uid === pokemonUid
+        ) {
+          setTraining((prev) => {
+            if (!prev.pokemon || prev.pokemon.uid !== pokemonUid) return prev;
+            const p = { ...prev.pokemon };
+            const nextMoves = [...p.moves];
+
+            if (!nextMoves.some((m) => m.moveId === firstMove.moveId)) {
+              if (nextMoves.length < 4) {
+                nextMoves.push(firstMove);
+              } else {
+                // Replace last move silently in training if no modal is available/desired
+                // or the player is busy battling.
+                nextMoves[3] = firstMove;
+              }
+            }
+
+            return {
+              ...prev,
+              pokemon: { ...p, moves: nextMoves },
+              battleLog: [
+                ...prev.battleLog,
+                {
+                  id: generateUid(),
+                  text: `¡${p.name} aprendió ${firstMove.moveName}!`,
+                  type: "level" as any,
+                },
+              ].slice(-40),
+            };
+          });
+
+          // Re-queue remaining moves if any
+          if (remainingMoves.length > 0) {
+            setRun((prev) => ({
+              ...prev,
+              __checkMoveLearnQueue: [
+                ...((prev as any).__checkMoveLearnQueue || []),
+                ...remainingMoves.map((m) => ({
+                  pokemonUid,
+                  level,
+                  fromLevel: level,
+                  _specificMoveId: m.moveId,
+                })),
+              ],
+            }));
+          }
+
+          moveLearnProcessingRef.current = false;
+          return;
+        }
+
+        // --- RUN MODE (Team) ---
+        setRun((prev) => {
+          const pIndex = prev.team.findIndex((t) => t.uid === pokemonUid);
+          if (pIndex === -1) {
+            moveLearnProcessingRef.current = false;
+            return prev;
+          }
+
+          let currentPokemon = { ...prev.team[pIndex] };
+          let nextBattle = prev.currentBattle;
+          const newLogs = [...prev.battleLog];
+
+          if (currentPokemon.moves.length < 4) {
+            // Direct learn if space
+            if (
+              !currentPokemon.moves.some((m) => m.moveId === firstMove.moveId)
+            ) {
+              currentPokemon.moves = [...currentPokemon.moves, firstMove];
+              newLogs.push({
+                id: generateUid(),
+                text: `¡${currentPokemon.name} aprendió ${firstMove.moveName}!`,
+                type: "level" as const,
+              });
+            }
+
+            // If there are more moves, re-queue them so they process one by one
+            const nextState: any = {
+              ...prev,
+              team: prev.team.map((t) =>
+                t.uid === pokemonUid ? currentPokemon : t,
+              ),
+              battleLog: newLogs.slice(-40),
+            };
+
+            if (nextBattle && nextBattle.playerPokemon.uid === pokemonUid) {
+              nextState.currentBattle = {
+                ...nextBattle,
+                playerPokemon: currentPokemon,
+              };
             } else {
-              // Replace last move silently in training if no modal is available/desired
-              // or the player is busy battling.
-              nextMoves[3] = firstMove;
+              nextState.currentBattle = nextBattle;
             }
-          }
-          
-          return {
-            ...prev,
-            pokemon: { ...p, moves: nextMoves },
-            battleLog: [
-              ...prev.battleLog,
-              { id: generateUid(), text: `¡${p.name} aprendió ${firstMove.moveName}!`, type: "level" as any }
-            ].slice(-40)
-          };
-        });
 
-        // Re-queue remaining moves if any
-        if (remainingMoves.length > 0) {
-          setRun(prev => ({
-            ...prev,
-            __checkMoveLearnQueue: [
-              ...((prev as any).__checkMoveLearnQueue || []),
-              ...remainingMoves.map(m => ({
-                pokemonUid,
-                level,
-                fromLevel: level,
-                _specificMoveId: m.moveId
-              }))
-            ]
-          }));
-        }
+            if (remainingMoves.length > 0) {
+              nextState.__checkMoveLearnQueue = [
+                ...((prev as any).__checkMoveLearnQueue || []),
+                ...remainingMoves.map((m) => ({
+                  pokemonUid,
+                  level,
+                  fromLevel: level,
+                  _specificMoveId: m.moveId,
+                })),
+              ];
+            }
 
-        moveLearnProcessingRef.current = false;
-        return;
-      }
-
-      // --- RUN MODE (Team) ---
-      setRun((prev) => {
-        const pIndex = prev.team.findIndex((t) => t.uid === pokemonUid);
-        if (pIndex === -1) {
-          moveLearnProcessingRef.current = false;
-          return prev;
-        }
-
-        let currentPokemon = { ...prev.team[pIndex] };
-        let nextBattle = prev.currentBattle;
-        const newLogs = [...prev.battleLog];
-
-        if (currentPokemon.moves.length < 4) {
-          // Direct learn if space
-          if (!currentPokemon.moves.some(m => m.moveId === firstMove.moveId)) {
-            currentPokemon.moves = [...currentPokemon.moves, firstMove];
-            newLogs.push({
-              id: generateUid(),
-              text: `¡${currentPokemon.name} aprendió ${firstMove.moveName}!`,
-              type: "level" as const,
-            });
-          }
-
-          // If there are more moves, re-queue them so they process one by one
-          const nextState: any = {
-            ...prev,
-            team: prev.team.map((t) => t.uid === pokemonUid ? currentPokemon : t),
-            battleLog: newLogs.slice(-40),
-          };
-
-          if (nextBattle && nextBattle.playerPokemon.uid === pokemonUid) {
-            nextState.currentBattle = { ...nextBattle, playerPokemon: currentPokemon };
+            moveLearnProcessingRef.current = false;
+            return nextState;
           } else {
-            nextState.currentBattle = nextBattle;
-          }
-
-          if (remainingMoves.length > 0) {
-            nextState.__checkMoveLearnQueue = [
-              ...((prev as any).__checkMoveLearnQueue || []),
-              ...remainingMoves.map(m => ({
+            // Modal required
+            const nextState: any = {
+              ...prev,
+              pendingMoveLearn: {
                 pokemonUid,
-                level,
-                fromLevel: level,
-                _specificMoveId: m.moveId
-              }))
-            ];
-          }
+                pokemonName: currentPokemon.name,
+                newMove: firstMove,
+              },
+            };
 
-          moveLearnProcessingRef.current = false;
-          return nextState;
-        } else {
-          // Modal required
-          const nextState: any = {
-            ...prev,
-            pendingMoveLearn: {
-              pokemonUid,
-              pokemonName: currentPokemon.name,
-              newMove: firstMove,
+            // Re-queue remaining moves
+            if (remainingMoves.length > 0) {
+              nextState.__checkMoveLearnQueue = [
+                ...((prev as any).__checkMoveLearnQueue || []),
+                ...remainingMoves.map((m) => ({
+                  pokemonUid,
+                  level,
+                  fromLevel: level,
+                  _specificMoveId: m.moveId,
+                })),
+              ];
             }
-          };
 
-          // Re-queue remaining moves
-          if (remainingMoves.length > 0) {
-            nextState.__checkMoveLearnQueue = [
-              ...((prev as any).__checkMoveLearnQueue || []),
-              ...remainingMoves.map(m => ({
-                pokemonUid,
-                level,
-                fromLevel: level,
-                _specificMoveId: m.moveId
-              }))
-            ];
+            moveLearnProcessingRef.current = false;
+            return nextState;
           }
-
-          moveLearnProcessingRef.current = false;
-          return nextState;
-        }
+        });
+      })
+      .catch((err) => {
+        console.error("[MOVE LEARN ERROR]", err);
+        moveLearnProcessingRef.current = false;
       });
-    }).catch(err => {
-      console.error("[MOVE LEARN ERROR]", err);
-      moveLearnProcessingRef.current = false;
-    });
   }, [
     (run as any).__checkMoveLearnQueue,
     (run as any).__checkMoveLearnAt,
@@ -2371,23 +2540,33 @@ export function useEngineTick() {
 
   // ─── Async: Process Move Learn Queue ────────────────────────────────────
   useEffect(() => {
-    if (run.pendingMoveLearn || !run.pendingMoveLearnQueue || run.pendingMoveLearnQueue.length === 0) return;
+    if (
+      run.pendingMoveLearn ||
+      !run.pendingMoveLearnQueue ||
+      run.pendingMoveLearnQueue.length === 0
+    )
+      return;
 
-    setRun(prev => {
-      if (prev.pendingMoveLearn || !prev.pendingMoveLearnQueue || prev.pendingMoveLearnQueue.length === 0) return prev;
-      
+    setRun((prev) => {
+      if (
+        prev.pendingMoveLearn ||
+        !prev.pendingMoveLearnQueue ||
+        prev.pendingMoveLearnQueue.length === 0
+      )
+        return prev;
+
       const [next, ...rest] = prev.pendingMoveLearnQueue;
       return {
         ...prev,
         pendingMoveLearn: next,
-        pendingMoveLearnQueue: rest.length > 0 ? rest : null
+        pendingMoveLearnQueue: rest.length > 0 ? rest : null,
       };
     });
   }, [run.pendingMoveLearn, run.pendingMoveLearnQueue]);
 
   // ─── Async: Evolution Check on Level Up ─────────────────────────────────
   useEffect(() => {
-    const queue = (((run as any).__checkEvolutionQueue || []) as any[]);
+    const queue = ((run as any).__checkEvolutionQueue || []) as any[];
     const legacyMarker = (run as any).__checkEvolutionAt;
 
     if (queue.length === 0 && !legacyMarker) return;

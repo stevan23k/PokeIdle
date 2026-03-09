@@ -11,10 +11,16 @@ export default defineConfig({
         manualChunks: {
           vendor: ["react", "react-dom"],
           supabase: ["@supabase/supabase-js"],
+          icons: ["lucide-react"],
           "game-data": [
             "./src/lib/items.ts",
             "./src/lib/spriteRegistry.ts",
             "./src/lib/pokemonDictionary.ts",
+            "./src/lib/regions.ts",
+            "./src/lib/legendaries.ts",
+            "./src/lib/starters.ts",
+            "./src/lib/typeChart.ts",
+            "./src/lib/gymLeaders.ts",
           ],
         },
       },
