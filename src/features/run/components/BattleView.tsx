@@ -54,6 +54,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
   const [showConditionModal, setShowConditionModal] = useState(false);
   const [currentGym, setCurrentGym] = useState<GymDefinition | null>(null);
+  const [pendingLeaderName, setPendingLeaderName] = useState<string | null>(null);
 
   const [showLeaderSprite, setShowLeaderSprite] = useState(false);
   const [leaderSpriteOut, setLeaderSpriteOut] = useState(false);
@@ -194,15 +195,49 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
     }
   }, [battle?.phase]);
 
+  useEffect(() => {
+    if (!battle) {
+      gymIntroDialogShownRef.current = false;
+      gymVictoryDialogShownRef.current = false;
+      setCurrentGym(null);
+      setPendingLeaderName(null);
+      setGymDialogState(null);
+      setShowConditionModal(false);
+      // NO resetear showLeaderSprite aquí — lo maneja handleDialogFinish
+      setShowEnemyHP(true);
+      setRun((prev: any) => ({
+        ...prev,
+        pendingGymDialogue: false,
+        pendingGymCondition: false,
+        pendingGymIntro: false,
+      }));
+    }
+  }, [!!battle]);
+
   // --- Gym Introduction Logic ---
   useEffect(() => {
+    console.log("[GymIntro] Effect disparado:", {
+      pendingGymIntro: run.pendingGymIntro,
+      battleType: battle?.type,
+      hasBattle: !!battle,
+      gymTeamLength: battle?.gymTeam?.length,
+      gymIntroShown: gymIntroDialogShownRef.current,
+      currentRegion: run.currentRegion,
+    });
+
     if (
       run.pendingGymIntro &&
       battle?.type === "gym" &&
       !gymIntroDialogShownRef.current
     ) {
+      console.log("[GymIntro] ✅ Condición cumplida, iniciando intro...");
       gymIntroDialogShownRef.current = true;
       gymVictoryDialogShownRef.current = false; // reset para nueva batalla
+
+      // Intentar obtener nombre del líder desde battle.enemyTrainer inmediatamente
+      if (battle?.enemyTrainer?.name) {
+        setPendingLeaderName(battle.enemyTrainer.name);
+      }
 
       // SET IMMEDIATELY (Visuals)
       setShowLeaderSprite(true);
@@ -226,18 +261,26 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       getGymsForRegion(run.currentRegion).then((gyms) => {
         if (!isEffectActive) return;
 
+        console.log("[GymIntro] Gyms cargados:", gyms.length, "gymTeam[0]:", battle?.gymTeam?.[0]?.pokemonId);
+        if (!battle?.gymTeam?.length) {
+          console.log("[GymIntro] ❌ gymTeam vacío, abortando");
+          // gymTeam aún no está poblado, limpiar y esperar
+          setRun((prev: any) => ({ ...prev, pendingGymDialogue: false, pendingGymIntro: false }));
+          return;
+        }
         const gym = gyms.find((g) => {
-          return battle.gymTeam?.[0]?.pokemonId === g.pokemon?.[0]?.pokemonId;
+          return battle.gymTeam![0].pokemonId === g.pokemon?.[0]?.pokemonId;
         });
+        console.log("[GymIntro] Gym encontrado:", gym?.leaderName ?? "NO ENCONTRADO");
 
         if (gym) {
           setCurrentGym(gym);
+          setPendingLeaderName(gym.leaderName ?? null);
           if (gym.dialogIntro && gym.dialogIntro.length > 0) {
             const elapsed = Date.now() - startTime;
-            const remaining = Math.max(0, 2000 - elapsed);
+            const remaining = Math.max(0, 500 - elapsed);
 
             dialogTimer = setTimeout(() => {
-              if (!isEffectActive) return;
               setGymDialogState({
                 lines: gym.dialogIntro as string[],
                 variant: "intro",
@@ -267,25 +310,14 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
         clearTimeout(hpTimer);
         if (dialogTimer) clearTimeout(dialogTimer);
       };
+    } else if (run.pendingGymIntro) {
+      console.log("[GymIntro] ⚠️ pendingGymIntro=true pero condición no cumplida:", {
+        battleType: battle?.type,
+        gymIntroShown: gymIntroDialogShownRef.current,
+      });
     }
 
-    if (!battle) {
-      gymIntroDialogShownRef.current = false;
-      gymVictoryDialogShownRef.current = false;
-      setCurrentGym(null);
-      setGymDialogState(null);
-      setShowConditionModal(false);
-      setShowLeaderSprite(false);
-      setLeaderSpriteOut(false);
-      setShowEnemyHP(true);
-      setRun((prev: any) => ({
-        ...prev,
-        pendingGymDialogue: false,
-        pendingGymCondition: false,
-        pendingGymIntro: false,
-      }));
-    }
-  }, [run.pendingGymIntro, battle?.type, !!battle, run.currentRegion]);
+  }, [run.pendingGymIntro, battle?.type, !!battle, battle?.gymTeam, run.currentRegion]);
 
   // --- Gym Victory/Defeat Callbacks ---
   useEffect(() => {
@@ -356,8 +388,6 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
     }
 
     if (variant === "defeat") {
-      setLeaderSpriteOut(true);
-      setTimeout(() => setShowLeaderSprite(false), 500);
       setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
 
       // Mostrar modal de medalla
@@ -372,6 +402,11 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
     if (variant === "victory") {
       setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
+    }
+
+    if (variant === "defeat" || variant === "victory") {
+      setLeaderSpriteOut(true);
+      setTimeout(() => setShowLeaderSprite(false), 500);
     }
   };
 
@@ -572,14 +607,15 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
               >
                 <div className="absolute bottom-2 w-32 sm:w-48 h-10 rounded-[100%] bg-black/50 blur-xs -z-10"></div>
                 {showLeaderSprite &&
-                (battle?.enemyTrainer?.name || currentGym?.leaderName) ? (
+                (battle?.enemyTrainer?.name || currentGym?.leaderName || pendingLeaderName) ? (
                   <img
                     src={getLeaderSpriteUrl(
                       battle?.enemyTrainer?.name ||
                         currentGym?.leaderName ||
+                        pendingLeaderName ||
                         "",
                     )}
-                    alt={battle?.enemyTrainer?.name || currentGym?.leaderName}
+                    alt={battle?.enemyTrainer?.name || currentGym?.leaderName || pendingLeaderName || ""}
                     className={clsx(
                       "w-32 h-32 sm:w-48 sm:h-48 object-contain transition-all duration-500",
                       !leaderSpriteOut && "animate-gym-leader-intro",

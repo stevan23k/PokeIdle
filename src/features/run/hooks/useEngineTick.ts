@@ -445,13 +445,13 @@ export function useEngineTick() {
               boss: isBoss,
             });
 
-            return {
+            const nextState = {
               ...prev,
               currentZoneProgress: 0,
               currentBattle: {
                 type: battleType,
-                phase: battleType === "gym" ? "intro" : "active",
-                turnState: "idle",
+                phase: (battleType === "gym" ? "intro" : "active") as "intro" | "active",
+                turnState: "idle" as const,
                 playerPokemon: activePlayer!,
                 enemyPokemon: enemy,
                 enemyTrainer:
@@ -476,7 +476,6 @@ export function useEngineTick() {
                   battleType === "gym" && gymForBattle
                     ? gymForBattle.pokemon
                     : undefined,
-                pendingGymIntro: true,
               },
               battleLog: [
                 ...prev.battleLog,
@@ -497,6 +496,19 @@ export function useEngineTick() {
                 },
               ].slice(-40),
             };
+
+            if (battleType === "gym") {
+              (nextState as any).pendingGymIntro = true;
+            }
+
+            console.log("[Engine] Gym battle spawned:", {
+              pendingGymIntro: (nextState as any).pendingGymIntro,
+              gymTeamLength: nextState.currentBattle?.gymTeam?.length,
+              firstPokemonId: nextState.currentBattle?.gymTeam?.[0]?.pokemonId,
+              battleType: nextState.currentBattle?.type,
+            });
+
+            return nextState;
           });
         } catch (e) {
           console.error("Failed to spawn encounter", e);
