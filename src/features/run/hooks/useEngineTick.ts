@@ -150,7 +150,7 @@ export function useEngineTick() {
     if (run.team.length > 0 && run.team.every((p) => p.currentHP === 0)) {
       if (run.currentBattle) {
         setRun((p) => {
-          console.log("[useEngineTick] Clearing battle due to defeat");
+          // console.log("[useEngineTick] Clearing battle due to defeat");
           return {
             ...p,
             currentBattle: null,
@@ -440,17 +440,19 @@ export function useEngineTick() {
               return prev;
             }
 
-            console.log("[useEngineTick] Spawning Battle:", {
-              type: battleType,
-              boss: isBoss,
-            });
+            // console.log("[useEngineTick] Spawning Battle:", {
+            //   type: battleType,
+            //   boss: isBoss,
+            // });
 
             const nextState = {
               ...prev,
               currentZoneProgress: 0,
               currentBattle: {
                 type: battleType,
-                phase: (battleType === "gym" ? "intro" : "active") as "intro" | "active",
+                phase: (battleType === "gym" ? "intro" : "active") as
+                  | "intro"
+                  | "active",
                 turnState: "idle" as const,
                 playerPokemon: activePlayer!,
                 enemyPokemon: enemy,
@@ -501,12 +503,12 @@ export function useEngineTick() {
               (nextState as any).pendingGymIntro = true;
             }
 
-            console.log("[Engine] Gym battle spawned:", {
-              pendingGymIntro: (nextState as any).pendingGymIntro,
-              gymTeamLength: nextState.currentBattle?.gymTeam?.length,
-              firstPokemonId: nextState.currentBattle?.gymTeam?.[0]?.pokemonId,
-              battleType: nextState.currentBattle?.type,
-            });
+            // console.log("[Engine] Gym battle spawned:", {
+            //   pendingGymIntro: (nextState as any).pendingGymIntro,
+            //   gymTeamLength: nextState.currentBattle?.gymTeam?.length,
+            //   firstPokemonId: nextState.currentBattle?.gymTeam?.[0]?.pokemonId,
+            //   battleType: nextState.currentBattle?.type,
+            // });
 
             return nextState;
           });
@@ -1682,14 +1684,14 @@ export function useEngineTick() {
               (p: any) => p.pokemonId === bState.enemyPokemon.pokemonId,
             );
 
-          console.log("[AutoCaptura] Evaluando:", {
-            enemyName: bState.enemyPokemon.name,
-            enemyHP: bState.enemyPokemon.currentHP,
-            enemyMaxHP: bState.enemyPokemon.maxHP,
-            enemyHpRatio: enemyHpRatio.toFixed(2),
-            isOwned,
-            pokeBalls: nextState.items["poke-ball"],
-          });
+          // console.log("[AutoCaptura] Evaluando:", {
+          //   enemyName: bState.enemyPokemon.name,
+          //   enemyHP: bState.enemyPokemon.currentHP,
+          //   enemyMaxHP: bState.enemyPokemon.maxHP,
+          //   enemyHpRatio: enemyHpRatio.toFixed(2),
+          //   isOwned,
+          //   pokeBalls: nextState.items["poke-ball"],
+          // });
 
           if (!isOwned) {
             let shouldCapture = false;
@@ -1736,7 +1738,7 @@ export function useEngineTick() {
             }
 
             if (shouldCapture) {
-              console.log("[AutoCaptura] 🎯 Lanzando Poké Ball...");
+              // console.log("[AutoCaptura] 🎯 Lanzando Poké Ball...");
               nextState.items["poke-ball"] -= 1;
               const catchAttempt = calculateCaptureChance(
                 bState.enemyPokemon,
@@ -1759,24 +1761,24 @@ export function useEngineTick() {
               nextState.battleLog = logs.slice(-40);
               return nextState;
             } else {
-              console.log(
-                "[AutoCaptura] ⏳ Condiciones no cumplidas aún, esperando...",
-              );
+              // console.log(
+              //   "[AutoCaptura] ⏳ Condiciones no cumplidas aún, esperando...",
+              // );
             }
           } else {
-            console.log("[AutoCaptura] ⏭️ Pokémon ya poseído, saltando");
+            // console.log("[AutoCaptura] ⏭️ Pokémon ya poseído, saltando");
           }
         } else {
           // Log solo una vez por batalla para no spamear
           if (bState.turnCount === 0) {
-            console.log("[AutoCaptura] ❌ Guard bloqueado:", {
-              autoCapture: nextState.autoCapture,
-              type: bState.type,
-              isBossBattle: bState.isBossBattle,
-              pendingCaptureAnim: !!bState.pendingCaptureAnim,
-              phase: bState.phase,
-              pokeBalls: nextState.items["poke-ball"],
-            });
+            // console.log("[AutoCaptura] ❌ Guard bloqueado:", {
+            //   autoCapture: nextState.autoCapture,
+            //   type: bState.type,
+            //   isBossBattle: bState.isBossBattle,
+            //   pendingCaptureAnim: !!bState.pendingCaptureAnim,
+            //   phase: bState.phase,
+            //   pokeBalls: nextState.items["poke-ball"],
+            // });
           }
         }
 

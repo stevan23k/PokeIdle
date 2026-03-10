@@ -31,7 +31,7 @@ export interface BattleViewProps {
 }
 
 const ENEMY_SPRITE_POSITION: Record<string, string> = {
-  "grass-route": "translate-y-[60px] -translate-x-[20px]",
+  "grass-route": "-translate-y-[20px] -translate-x-[60px]",
   "cave-dirt": "translate-y-[55px] -translate-x-[15px]",
   "water-surf": "translate-y-[65px] -translate-x-[25px]",
   "pond-water": "translate-y-[65px] -translate-x-[25px]",
@@ -41,6 +41,19 @@ const ENEMY_SPRITE_POSITION: Record<string, string> = {
   "tower-psychic": "translate-y-[50px] -translate-x-[20px]",
   "forest-green": "translate-y-[60px] -translate-x-[20px]",
   underwater: "translate-y-[70px] -translate-x-[30px]",
+};
+
+const PLAYER_SPRITE_POSITION: Record<string, string> = {
+  "grass-route": "-translate-y-[60px] translate-x-[40px]",
+  "cave-dirt": "translate-y-0 translate-x-0",
+  "water-surf": "translate-y-0 translate-x-0",
+  "pond-water": "translate-y-0 translate-x-0",
+  "indoor-gray": "translate-y-0 translate-x-0",
+  "indoor-blue": "translate-y-0 translate-x-0",
+  "sand-route": "translate-y-0 translate-x-0",
+  "tower-psychic": "translate-y-0 translate-x-0",
+  "forest-green": "translate-y-0 translate-x-0",
+  underwater: "translate-y-0 translate-x-0",
 };
 
 export function BattleView({ onMoveClick }: BattleViewProps) {
@@ -54,7 +67,9 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
   const [showConditionModal, setShowConditionModal] = useState(false);
   const [currentGym, setCurrentGym] = useState<GymDefinition | null>(null);
-  const [pendingLeaderName, setPendingLeaderName] = useState<string | null>(null);
+  const [pendingLeaderName, setPendingLeaderName] = useState<string | null>(
+    null,
+  );
 
   const [showLeaderSprite, setShowLeaderSprite] = useState(false);
   const [leaderSpriteOut, setLeaderSpriteOut] = useState(false);
@@ -69,6 +84,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
   // Refs for dialogue tracking
   const gymIntroDialogShownRef = useRef(false);
   const gymVictoryDialogShownRef = useRef(false);
+  const dialogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isTraining = training.isActive;
   const battle = isTraining
@@ -216,21 +232,21 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
   // --- Gym Introduction Logic ---
   useEffect(() => {
-    console.log("[GymIntro] Effect disparado:", {
-      pendingGymIntro: run.pendingGymIntro,
-      battleType: battle?.type,
-      hasBattle: !!battle,
-      gymTeamLength: battle?.gymTeam?.length,
-      gymIntroShown: gymIntroDialogShownRef.current,
-      currentRegion: run.currentRegion,
-    });
+    // console.log("[GymIntro] Effect disparado:", {
+    //   pendingGymIntro: run.pendingGymIntro,
+    //   battleType: battle?.type,
+    //   hasBattle: !!battle,
+    //   gymTeamLength: battle?.gymTeam?.length,
+    //   gymIntroShown: gymIntroDialogShownRef.current,
+    //   currentRegion: run.currentRegion,
+    // });
 
     if (
       run.pendingGymIntro &&
       battle?.type === "gym" &&
       !gymIntroDialogShownRef.current
     ) {
-      console.log("[GymIntro] ✅ Condición cumplida, iniciando intro...");
+      // console.log("[GymIntro] ✅ Condición cumplida, iniciando intro...");
       gymIntroDialogShownRef.current = true;
       gymVictoryDialogShownRef.current = false; // reset para nueva batalla
 
@@ -244,6 +260,11 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
       setLeaderSpriteOut(false);
       setShowEnemyHP(false);
 
+      // console.log("[GymIntro] Setters llamados:", {
+      //   showLeaderSprite: true,
+      //   pendingLeaderName: battle?.enemyTrainer?.name ?? "(pendiente fetch)",
+      // });
+
       // Limpiar el flag del engine inmediatamente y activar guard de diálogo
       setRun((prev: any) => ({
         ...prev,
@@ -253,25 +274,36 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
       // Timers for sequence
       const hpTimer = setTimeout(() => setShowEnemyHP(true), 1500);
-
-      let isEffectActive = true;
-      let dialogTimer: any = null;
       const startTime = Date.now();
 
       getGymsForRegion(run.currentRegion).then((gyms) => {
-        if (!isEffectActive) return;
-
-        console.log("[GymIntro] Gyms cargados:", gyms.length, "gymTeam[0]:", battle?.gymTeam?.[0]?.pokemonId);
+        // console.log(
+        //   "[GymIntro] Gyms cargados:",
+        //   gyms.length,
+        //   "gymTeam[0]:",
+        //   battle?.gymTeam?.[0]?.pokemonId,
+        // );
         if (!battle?.gymTeam?.length) {
-          console.log("[GymIntro] ❌ gymTeam vacío, abortando");
-          // gymTeam aún no está poblado, limpiar y esperar
-          setRun((prev: any) => ({ ...prev, pendingGymDialogue: false, pendingGymIntro: false }));
+          // console.log("[GymIntro] ❌ gymTeam vacío, abortando");
+          setRun((prev: any) => ({
+            ...prev,
+            pendingGymDialogue: false,
+            pendingGymIntro: false,
+          }));
           return;
         }
         const gym = gyms.find((g) => {
           return battle.gymTeam![0].pokemonId === g.pokemon?.[0]?.pokemonId;
         });
-        console.log("[GymIntro] Gym encontrado:", gym?.leaderName ?? "NO ENCONTRADO");
+        // console.log(
+        //   "[GymIntro] Gym encontrado:",
+        //   gym?.leaderName ?? "NO ENCONTRADO",
+        // );
+        // console.log("[GymIntro] Gym data:", {
+        //   hasDialogIntro: !!gym?.dialogIntro,
+        //   dialogIntroLength: gym?.dialogIntro?.length,
+        //   activeMechanic: battle?.activeMechanic,
+        // });
 
         if (gym) {
           setCurrentGym(gym);
@@ -279,8 +311,8 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
           if (gym.dialogIntro && gym.dialogIntro.length > 0) {
             const elapsed = Date.now() - startTime;
             const remaining = Math.max(0, 500 - elapsed);
-
-            dialogTimer = setTimeout(() => {
+            dialogTimerRef.current = setTimeout(() => {
+              // console.log("[GymIntro] dialogTimer ejecutando!");
               setGymDialogState({
                 lines: gym.dialogIntro as string[],
                 variant: "intro",
@@ -289,7 +321,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
               });
             }, remaining);
           } else {
-            // No hay diálogo, asegurar que se muestre la vida y se desbloquee
+            // No hay diálogo, mostrar condición o desbloquear
             setShowEnemyHP(true);
             if (battle?.activeMechanic) {
               setRun((prev: any) => ({ ...prev, pendingGymCondition: true }));
@@ -299,25 +331,31 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
             }
           }
         } else {
-          // No se encontró el gimnasio, asegurar limpieza
           setShowEnemyHP(true);
           setRun((prev: any) => ({ ...prev, pendingGymDialogue: false }));
         }
       });
 
       return () => {
-        isEffectActive = false;
         clearTimeout(hpTimer);
-        if (dialogTimer) clearTimeout(dialogTimer);
+        // NO cancelar dialogTimerRef — debe sobrevivir el cleanup de StrictMode
       };
     } else if (run.pendingGymIntro) {
-      console.log("[GymIntro] ⚠️ pendingGymIntro=true pero condición no cumplida:", {
-        battleType: battle?.type,
-        gymIntroShown: gymIntroDialogShownRef.current,
-      });
+      // console.log(
+      //   "[GymIntro] ⚠️ pendingGymIntro=true pero condición no cumplida:",
+      //   {
+      //     battleType: battle?.type,
+      //     gymIntroShown: gymIntroDialogShownRef.current,
+      //   },
+      // );
     }
-
-  }, [run.pendingGymIntro, battle?.type, !!battle, battle?.gymTeam, run.currentRegion]);
+  }, [
+    run.pendingGymIntro,
+    battle?.type,
+    !!battle,
+    battle?.gymTeam,
+    run.currentRegion,
+  ]);
 
   // --- Gym Victory/Defeat Callbacks ---
   useEffect(() => {
@@ -530,6 +568,73 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
 
       {/* Enemy Side (Top Right) */}
       <div className="flex-1 relative p-4 flex justify-end items-start z-10 mt-4 mr-4">
+        {/* Sprite del líder — FUERA del bloque condicional del enemigo */}
+        {showLeaderSprite &&
+          (battle?.enemyTrainer?.name ||
+            currentGym?.leaderName ||
+            pendingLeaderName) && (
+            <div
+              className={clsx(
+                "w-40 h-40 sm:w-56 sm:h-56 flex items-end justify-center absolute",
+                ENEMY_SPRITE_POSITION[bgId] ||
+                  "translate-y-[60px] -translate-x-[20px]",
+              )}
+            >
+              <img
+                src={getLeaderSpriteUrl(
+                  battle?.enemyTrainer?.name ||
+                    currentGym?.leaderName ||
+                    pendingLeaderName ||
+                    "",
+                )}
+                alt={
+                  battle?.enemyTrainer?.name ||
+                  currentGym?.leaderName ||
+                  pendingLeaderName ||
+                  ""
+                }
+                className={clsx(
+                  "w-32 h-32 sm:w-48 sm:h-48 object-contain transition-all duration-500",
+                  !leaderSpriteOut && "animate-gym-leader-intro",
+                  leaderSpriteOut
+                    ? "opacity-0 translate-x-16"
+                    : "opacity-100 translate-x-0",
+                )}
+                style={{ imageRendering: "pixelated" }}
+                onLoad={() => {
+                  if (!battle?.enemyReady) {
+                    setRun((prev: any) => {
+                      if (!prev.currentBattle) return prev;
+                      return {
+                        ...prev,
+                        currentBattle: {
+                          ...prev.currentBattle,
+                          enemyReady: true,
+                        },
+                      };
+                    });
+                  }
+                }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                  if (!battle?.enemyReady) {
+                    setRun((prev: any) => {
+                      if (!prev.currentBattle) return prev;
+                      return {
+                        ...prev,
+                        currentBattle: {
+                          ...prev.currentBattle,
+                          enemyReady: true,
+                        },
+                      };
+                    });
+                  }
+                }}
+              />
+            </div>
+          )}
+
+        {/* Pokémon enemigo — solo cuando NO hay sprite del líder activo */}
         {enemyPokemon && (!showLeaderSprite || showEnemyHP) && (
           <div className="flex flex-col items-center relative">
             {/* Floating HP Bar Container above sprite */}
@@ -606,85 +711,36 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                 )}
               >
                 <div className="absolute bottom-2 w-32 sm:w-48 h-10 rounded-[100%] bg-black/50 blur-xs -z-10"></div>
-                {showLeaderSprite &&
-                (battle?.enemyTrainer?.name || currentGym?.leaderName || pendingLeaderName) ? (
-                  <img
-                    src={getLeaderSpriteUrl(
-                      battle?.enemyTrainer?.name ||
-                        currentGym?.leaderName ||
-                        pendingLeaderName ||
-                        "",
-                    )}
-                    alt={battle?.enemyTrainer?.name || currentGym?.leaderName || pendingLeaderName || ""}
-                    className={clsx(
-                      "w-32 h-32 sm:w-48 sm:h-48 object-contain transition-all duration-500",
-                      !leaderSpriteOut && "animate-gym-leader-intro",
-                      leaderSpriteOut
-                        ? "opacity-0 translate-x-16"
-                        : "opacity-100 translate-x-0",
-                    )}
-                    style={{ imageRendering: "pixelated" }}
-                    onLoad={() => {
-                      if (!battle?.enemyReady) {
-                        setRun((prev: any) => {
-                          if (!prev.currentBattle) return prev;
-                          return {
-                            ...prev,
-                            currentBattle: {
-                              ...prev.currentBattle,
-                              enemyReady: true,
-                            },
-                          };
-                        });
-                      }
-                    }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
-                      if (!battle?.enemyReady) {
-                        setRun((prev: any) => {
-                          if (!prev.currentBattle) return prev;
-                          return {
-                            ...prev,
-                            currentBattle: {
-                              ...prev.currentBattle,
-                              enemyReady: true,
-                            },
-                          };
-                        });
-                      }
-                    }}
-                  />
-                ) : (
-                  <PixelSprite
-                    pokemonId={enemyPokemon.pokemonId}
-                    variant="front"
-                    shiny={enemyPokemon.isShiny}
-                    size={160}
-                    showScanlines={false}
-                    alt={enemyPokemon.name}
-                    onLoad={() => {
-                      if (!battle?.enemyReady) {
-                        setRun((prev: any) => {
-                          if (!prev.currentBattle) return prev;
-                          return {
-                            ...prev,
-                            currentBattle: {
-                              ...prev.currentBattle,
-                              enemyReady: true,
-                            },
-                          };
-                        });
-                      }
-                    }}
-                    className={clsx(
-                      "w-32 h-32 sm:w-48 sm:h-48 drop-shadow-lg",
-                      enemyPokemon.currentHP === 0 &&
-                        "opacity-0 translate-y-8 transition-all duration-500",
-                      enemyHidden &&
-                        "opacity-0 transition-opacity duration-300",
-                    )}
-                  />
-                )}
+
+                <PixelSprite
+                  pokemonId={enemyPokemon.pokemonId}
+                  variant="front"
+                  shiny={enemyPokemon.isShiny}
+                  size={160}
+                  showScanlines={false}
+                  alt={enemyPokemon.name}
+                  onLoad={() => {
+                    if (!battle?.enemyReady) {
+                      setRun((prev: any) => {
+                        if (!prev.currentBattle) return prev;
+                        return {
+                          ...prev,
+                          currentBattle: {
+                            ...prev.currentBattle,
+                            enemyReady: true,
+                          },
+                        };
+                      });
+                    }
+                  }}
+                  className={clsx(
+                    "w-32 h-32 sm:w-48 sm:h-48 drop-shadow-lg",
+                    enemyPokemon.currentHP === 0 &&
+                      "opacity-0 translate-y-8 transition-all duration-500",
+                    enemyHidden && "opacity-0 transition-opacity duration-300",
+                  )}
+                />
+
                 {/* Pokeball capture animation */}
                 <PokeballCaptureAnimation
                   isActive={captureAnim.active}
@@ -768,6 +824,7 @@ export function BattleView({ onMoveClick }: BattleViewProps) {
                   animState.isPlayerAttacking && "anim-lunge-right",
                   animState.isPlayerDefending && "anim-shake",
                   animState.isPlayerFainting && "anim-faint-drop",
+                  PLAYER_SPRITE_POSITION[bgId] || "translate-y-0 translate-x-0",
                 )}
               >
                 <div className="absolute bottom-6 w-40 sm:w-56 h-12 rounded-[100%] bg-black/50 blur-xs -z-10"></div>

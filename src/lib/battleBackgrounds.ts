@@ -13,7 +13,7 @@ export const BATTLE_BACKGROUNDS: BattleBackground[] = [
   {
     id: "grass-route",
     name: "Ruta de Hierba",
-    spriteSheet: "battle-bg/grass-route.png",
+    spriteSheet: "battle-bg/ruta_1.png",
     frameHeight: 112,
     frameCount: 1,
     fps: 0,
